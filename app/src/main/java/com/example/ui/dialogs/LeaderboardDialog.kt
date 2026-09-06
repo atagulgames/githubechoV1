@@ -2,6 +2,7 @@ package com.example.ui.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +66,15 @@ fun LeaderboardDialog(
     val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
     val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
 
+    var selectedCategory by remember { mutableStateOf(0) } // 0: Global, 1: Türkiye, 2: Top 10
+    val filteredPlayers = remember(players, selectedCategory) {
+        when (selectedCategory) {
+            1 -> players.filter { it.username.contains("🇹🇷") || it.username.contains("TR") || it.isCurrentUser }
+            2 -> players.take(10)
+            else -> players
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -68,7 +82,7 @@ fun LeaderboardDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.94f)
-                .heightIn(max = 680.dp)
+                .heightIn(max = 700.dp)
                 .shadow(24.dp, RoundedCornerShape(24.dp))
                 .testTag("leaderboard_dialog"),
             shape = RoundedCornerShape(24.dp),
@@ -78,7 +92,7 @@ fun LeaderboardDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(18.dp)
             ) {
                 // Header
                 Row(
@@ -112,9 +126,10 @@ fun LeaderboardDialog(
                                 color = textPrimary
                             )
                             Text(
-                                text = "Global Yankı & Kupa Sıralaması",
+                                text = "Gerçek Global Oyuncu Sıralaması",
                                 fontSize = 11.sp,
-                                color = textSecondary
+                                color = Color(0xFF10B981),
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -131,14 +146,97 @@ fun LeaderboardDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Category Tabs: Global, Türkiye, Top 10
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val tabs = listOf("🌍 Global", "🇹🇷 Türkiye", "🏆 Top 10")
+                    tabs.forEachIndexed { index, tabTitle ->
+                        val isSelected = selectedCategory == index
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) Color(0xFF3B82F6) else if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFE2E8F0),
+                            border = BorderStroke(1.dp, if (isSelected) Color(0xFF60A5FA) else borderColor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { selectedCategory = index }
+                        ) {
+                            Text(
+                                text = tabTitle,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color.White else textSecondary,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Top 3 Podium (Shown on Global view if enough players)
+                if (selectedCategory == 0 && players.size >= 3) {
+                    val p1 = players.getOrNull(0)
+                    val p2 = players.getOrNull(1)
+                    val p3 = players.getOrNull(2)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        // 2nd Place (Silver)
+                        p2?.let {
+                            PodiumColumn(
+                                player = it,
+                                rank = 2,
+                                heightDp = 64,
+                                color = Color(0xFF94A3B8),
+                                isDarkTheme = isDarkTheme,
+                                onClick = { onSelectPlayer(it) }
+                            )
+                        }
+
+                        // 1st Place (Gold, Tallest)
+                        p1?.let {
+                            PodiumColumn(
+                                player = it,
+                                rank = 1,
+                                heightDp = 80,
+                                color = Color(0xFFF59E0B),
+                                isDarkTheme = isDarkTheme,
+                                onClick = { onSelectPlayer(it) }
+                            )
+                        }
+
+                        // 3rd Place (Bronze)
+                        p3?.let {
+                            PodiumColumn(
+                                player = it,
+                                rank = 3,
+                                heightDp = 52,
+                                color = Color(0xFFD97706),
+                                isDarkTheme = isDarkTheme,
+                                onClick = { onSelectPlayer(it) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
                 // Quick Action: "Benim Profilim" Button
                 OutlinedButton(
                     onClick = onViewMyProfile,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(40.dp)
+                        .height(38.dp)
                         .testTag("view_my_profile_button"),
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, Color(0xFF3B82F6)),
@@ -149,23 +247,23 @@ fun LeaderboardDialog(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Profilimi ve Bölüm İstatistiklerimi Görüntüle",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Table Column Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -197,9 +295,9 @@ fun LeaderboardDialog(
                         .fillMaxWidth()
                         .weight(1f),
                     contentPadding = PaddingValues(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(players, key = { it.id }) { player ->
+                    items(filteredPlayers, key = { it.id }) { player ->
                         LeaderboardPlayerItem(
                             player = player,
                             isDarkTheme = isDarkTheme,
@@ -410,4 +508,84 @@ private fun formatShortTime(seconds: Long): String {
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
     return if (hours > 0) "${hours}s ${minutes}d" else "${minutes} dk"
+}
+
+@Composable
+private fun PodiumColumn(
+    player: LeaderboardPlayer,
+    rank: Int,
+    heightDp: Int,
+    color: Color,
+    isDarkTheme: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp)
+    ) {
+        // Avatar + Crown
+        Box(contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFE2E8F0))
+                    .border(2.dp, color, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = player.avatarEmoji, fontSize = 20.sp)
+            }
+            if (rank == 1) {
+                Text(
+                    text = "👑",
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 36.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = player.username.replace("👑 ", "").replace("⚡ ", "").replace("🚀 ", ""),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isDarkTheme) Color.White else Color(0xFF0F172A),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = "${player.trophies} 🏆",
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = color
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Pedestal
+        Surface(
+            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+            color = color.copy(alpha = 0.25f),
+            border = BorderStroke(1.dp, color),
+            modifier = Modifier
+                .width(68.dp)
+                .height(heightDp.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "#$rank",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = color
+                )
+            }
+        }
+    }
 }

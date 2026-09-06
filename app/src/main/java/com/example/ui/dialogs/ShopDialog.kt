@@ -48,6 +48,10 @@ fun ShopDialog(
     currentTokens: Int,
     currentDiamonds: Int = 0,
     currentBreakers: Int,
+    multiAdWatchCount: Int = 0,
+    doubleTrophiesExpiresAt: Long = 0L,
+    infiniteBreakersExpiresAt: Long = 0L,
+    radiusShrinkerExpiresAt: Long = 0L,
     isDarkTheme: Boolean = true,
     onWatchRewardedAd: (String) -> Unit = {},
     onExchangeDiamondsForTokens: (Int, Int) -> Unit = { _, _ -> },
@@ -217,6 +221,152 @@ fun ShopDialog(
                         letterSpacing = 0.5.sp
                     )
                 }
+
+                // 3 TANE İZLE & AL MEKANİĞİ
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isDarkTheme) Color(0xFF1E1B4B) else Color(0xFFEEF2FF),
+                    border = BorderStroke(1.5.dp, Color(0xFF6366F1)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🎁 3 TANE İZLE & AL: MEGA SANDIK",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF818CF8)
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFF6366F1)
+                            ) {
+                                Text(
+                                    text = "$multiAdWatchCount / 3",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "3 reklam izle; dev ödül paketini kap! (+3 💎, +500 🪙, +3 ⚡, +5 Jeton ve 15 Dk 2x Kupa)",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (slot in 1..3) {
+                                val isDone = multiAdWatchCount >= slot
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isDone) Color(0xFF10B981) else if (isDarkTheme) Color(0xFF312E81) else Color(0xFFC7D2FE),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = if (isDone) "✓ $slot. İzlendi" else "$slot. Reklam",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isDone) Color.White else if (isDarkTheme) Color(0xFFA5B4FC) else Color(0xFF3730A3),
+                                        modifier = Modifier.padding(vertical = 6.dp),
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Button(
+                            onClick = { onWatchRewardedAd("WATCH_3_ADS_REWARD") },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = when (multiAdWatchCount) {
+                                    0 -> "1. Reklamı İzle (1/3)"
+                                    1 -> "2. Reklamı İzle (2/3)"
+                                    else -> "🎉 Son Reklamı İzle & Mega Sandığı Aç! (3/3)"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // SECTION: SÜRELİ GÜÇLENDİRİCİLER
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        text = "⏱️ SÜRELİ ÖZEL GÜÇLENDİRİCİLER",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF59E0B),
+                        letterSpacing = 0.5.sp
+                    )
+                }
+
+                // Timed Booster 1: 2x Kupa (15 Dk)
+                val doubleRemainingSec = ((doubleTrophiesExpiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+                val isDoubleActive = doubleRemainingSec > 0
+                TimedBoosterCard(
+                    title = "⏱️ 2x Kupa Katlayıcı (15 Dk)",
+                    description = "Bölüm kazançlarında iki kat kupa vererek liderlikte hızlı yükselmeni sağlar.",
+                    isActive = isDoubleActive,
+                    remainingSeconds = doubleRemainingSec,
+                    buttonText = "Reklam İzle & 15 Dk Aktif Et",
+                    accentColor = Color(0xFFF59E0B),
+                    isDarkTheme = isDarkTheme,
+                    onClick = { onWatchRewardedAd("BOOSTER_DOUBLE_TROPHIES") }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Timed Booster 2: Sınırsız Matkap (10 Dk)
+                val infiniteRemainingSec = ((infiniteBreakersExpiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+                val isInfiniteActive = infiniteRemainingSec > 0
+                TimedBoosterCard(
+                    title = "⏱️ Sınırsız Matkap Lazeri (10 Dk)",
+                    description = "10 dakika boyunca matkap lazelerin tükenmeden engelleri serbestçe del.",
+                    isActive = isInfiniteActive,
+                    remainingSeconds = infiniteRemainingSec,
+                    buttonText = "Reklam İzle & 10 Dk Aktif Et",
+                    accentColor = Color(0xFFEF4444),
+                    isDarkTheme = isDarkTheme,
+                    onClick = { onWatchRewardedAd("BOOSTER_INFINITE_BREAKERS") }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Timed Booster 3: Esnek Kalkan (20 Dk)
+                val shrinkerRemainingSec = ((radiusShrinkerExpiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+                val isShrinkerActive = shrinkerRemainingSec > 0
+                TimedBoosterCard(
+                    title = "⏱️ Esnek Yankı Kalkanı (20 Dk)",
+                    description = "Yankı engellerini 20 dakika boyunca %50 incelterek geçişi kolaylaştırır.",
+                    isActive = isShrinkerActive,
+                    remainingSeconds = shrinkerRemainingSec,
+                    buttonText = "Reklam İzle & 20 Dk Aktif Et",
+                    accentColor = Color(0xFF10B981),
+                    isDarkTheme = isDarkTheme,
+                    onClick = { onWatchRewardedAd("BOOSTER_SHIELD") }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Ad 1: Nadir Elmas (Rare Diamond)
                 AdRewardCard(
@@ -486,6 +636,82 @@ private fun ExchangeCard(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimedBoosterCard(
+    title: String,
+    description: String,
+    isActive: Boolean,
+    remainingSeconds: Long,
+    buttonText: String,
+    accentColor: Color,
+    isDarkTheme: Boolean,
+    onClick: () -> Unit
+) {
+    val cardBg = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF8FAFC)
+    val textPrimary = if (isDarkTheme) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, if (isActive) Color(0xFF10B981) else if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
+                )
+                if (isActive) {
+                    val m = remainingSeconds / 60
+                    val s = remainingSeconds % 60
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFF10B981)
+                    ) {
+                        Text(
+                            text = String.format("AKTİF %02d:%02d", m, s),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                fontSize = 11.sp,
+                color = textSecondary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (!isActive) {
+                Button(
+                    onClick = onClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = buttonText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }

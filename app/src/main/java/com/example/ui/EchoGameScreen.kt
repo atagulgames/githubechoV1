@@ -2,9 +2,11 @@ package com.example.ui
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -141,6 +143,19 @@ fun EchoGameScreen(
                             onActivateShrinker = { viewModel.activateEchoShrinker() },
                             onHint = { viewModel.useHint() }
                         )
+
+                        // Bottom docked Banner Ad - positioned safely below HUD to prevent interference with gameplay
+                        if (!state.isAdFree) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9))
+                                    .padding(vertical = 2.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                com.example.ads.StartAppBannerView()
+                            }
+                        }
                     }
                 }
             }
@@ -163,7 +178,11 @@ fun EchoGameScreen(
                     isDoubleClaimed = state.isDoubleRewardClaimedThisLevel,
                     onClaimDoubleReward = { viewModel.claimVictoryDoubleReward() },
                     onNextLevel = {
-                        onShowInterstitialAd {
+                        if (viewModel.shouldShowInterstitialOnNextLevel()) {
+                            onShowInterstitialAd {
+                                viewModel.nextLevel()
+                            }
+                        } else {
                             viewModel.nextLevel()
                         }
                     },
@@ -189,6 +208,10 @@ fun EchoGameScreen(
                     currentTokens = state.tokens,
                     currentDiamonds = state.diamonds,
                     currentBreakers = state.echoBreakers,
+                    multiAdWatchCount = state.multiAdWatchCount,
+                    doubleTrophiesExpiresAt = state.doubleTrophiesExpiresAt,
+                    infiniteBreakersExpiresAt = state.infiniteBreakersExpiresAt,
+                    radiusShrinkerExpiresAt = state.radiusShrinkerExpiresAt,
                     isDarkTheme = state.isDarkTheme,
                     onWatchRewardedAd = { rewardType -> onShowRewardedAd(rewardType) },
                     onExchangeDiamondsForTokens = { diamonds, tokens ->

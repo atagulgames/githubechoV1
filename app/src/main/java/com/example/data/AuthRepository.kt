@@ -200,21 +200,21 @@ class AuthRepository(context: Context) {
 
         // 3. Global rival champions to ensure rich global competition
         val globalRivals = listOf(
-            GlobalRivalTemplate("AuraMaster_TR", "👑", "Küresel Büyükusta", 3250, 12, 16820L, 24, 98),
-            GlobalRivalTemplate("EchoPhantom", "🌌", "Kusursuz Gölge", 2980, 8, 14200L, 21, 92),
-            GlobalRivalTemplate("KozmikGezgin", "🚀", "Yıldızlararası Rehber", 2740, 19, 12650L, 19, 87),
-            GlobalRivalTemplate("NovaRunner", "⚡", "Işık Hızı Şampiyonu", 2510, 14, 10980L, 17, 82),
-            GlobalRivalTemplate("Sessiz_Zihin", "🧘", "Zen Çizgici", 2320, 6, 9850L, 18, 76),
-            GlobalRivalTemplate("LazerPrens", "🎯", "Hedef Avcısı", 2150, 23, 8900L, 15, 71),
-            GlobalRivalTemplate("ZirveKaşifi", "🏔️", "Omega Fatihi", 1980, 27, 8100L, 14, 65),
-            GlobalRivalTemplate("Chronos_99", "⏱️", "Zaman Bükücü", 1820, 15, 7320L, 16, 60),
-            GlobalRivalTemplate("CyberVortex", "🌀", "Boyut Kırıcı", 1690, 31, 6740L, 13, 55),
-            GlobalRivalTemplate("SafirKalkan", "🛡️", "Kaya Muhafız", 1540, 38, 5920L, 12, 50),
-            GlobalRivalTemplate("FotonikAura", "✨", "Rezonans Virtüözü", 1380, 22, 5100L, 11, 45),
-            GlobalRivalTemplate("GeceKartalı", "🦅", "Karanlık Çizgici", 1210, 29, 4400L, 10, 40),
-            GlobalRivalTemplate("KuvarsRuhu", "🔮", "Kristal Simyager", 1060, 34, 3850L, 9, 35),
-            GlobalRivalTemplate("PrizmaGölge", "🌈", "Işık Spektrumu", 920, 41, 3200L, 8, 30),
-            GlobalRivalTemplate("MaviKıvılcım", "💫", "Genç Yetenek", 780, 45, 2700L, 7, 25)
+            GlobalRivalTemplate("👑 Can_Echo", "🇹🇷", "Küresel Büyükusta", 3420, 10, 18200L, 25, 99),
+            GlobalRivalTemplate("⚡ AlexVortex", "🇺🇸", "Kusursuz Gölge", 3180, 8, 15400L, 22, 94),
+            GlobalRivalTemplate("🚀 Lucas_M", "🇩🇪", "Yıldızlararası Rehber", 2940, 14, 13650L, 20, 89),
+            GlobalRivalTemplate("🎯 Kenji_Lines", "🇯🇵", "Hızlı Hat Ustası", 2710, 12, 11980L, 19, 85),
+            GlobalRivalTemplate("🧘 Oliver_99", "🇬🇧", "Zen Çizgici", 2520, 7, 10500L, 18, 79),
+            GlobalRivalTemplate("✨ Minho_Star", "🇰🇷", "Fotonik Virtüöz", 2350, 19, 9400L, 16, 74),
+            GlobalRivalTemplate("🎨 Camille_Art", "🇫🇷", "Geometri Kraliçesi", 2180, 22, 8600L, 15, 69),
+            GlobalRivalTemplate("⚽ Gabriel_R", "🇧🇷", "Samba Refleks", 2010, 18, 7900L, 14, 64),
+            GlobalRivalTemplate("🔥 Mehmet_Pro", "🇹🇷", "Anadolu Fatihi", 1880, 26, 7150L, 13, 59),
+            GlobalRivalTemplate("🛡️ Mateo_Arg", "🇦🇷", "Çelik Muhafız", 1720, 31, 6450L, 12, 54),
+            GlobalRivalTemplate("🌟 Sofia_Milano", "🇮🇹", "Zarif Çizgici", 1580, 24, 5800L, 11, 49),
+            GlobalRivalTemplate("🏔️ Elena_Nordic", "🇳🇴", "Buz Kaşifi", 1430, 29, 5100L, 10, 44),
+            GlobalRivalTemplate("🌀 Zeynep_Echo", "🇹🇷", "Boyut Bükücü", 1290, 33, 4450L, 9, 39),
+            GlobalRivalTemplate("🦅 Liam_Canada", "🇨🇦", "Kutup Kartalı", 1120, 38, 3800L, 8, 34),
+            GlobalRivalTemplate("💫 Arda_Yıldız", "🇹🇷", "Genç Yetenek", 950, 42, 3100L, 7, 28)
         )
 
         for (rival in globalRivals) {

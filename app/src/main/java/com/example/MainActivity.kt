@@ -22,6 +22,16 @@ class MainActivity : ComponentActivity() {
     StartIoManager.initialize(this, testMode = echoPrefs.isTestAdsEnabled)
     com.example.audio.HarmonicAudioEngine.init(this)
 
+    // Schedule 4 daily game motivation notifications (Sabah 09:00, Öğle 13:00, İkindi 17:00, Akşam 21:00)
+    com.example.notifications.EchoNotificationScheduler.scheduleAllDailyNotifications(this)
+
+    // Request notification permission on Android 13+ (API 33)
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+      if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+      }
+    }
+
     setContent {
       MyApplicationTheme(darkTheme = false) {
         val gameViewModel: EchoGameViewModel = viewModel()

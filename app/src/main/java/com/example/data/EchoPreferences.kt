@@ -67,7 +67,39 @@ class EchoPreferences(context: Context) {
         private const val KEY_MAX_COMBO = "echo_max_combo"
         private const val KEY_CURRENT_COMBO = "echo_current_combo"
         private const val KEY_LEVEL_STATS_CSV = "echo_level_stats_csv"
+
+        // Multi-ad rewards & Timed Boosters & Ad Pacing
+        private const val KEY_MULTI_AD_WATCH_COUNT = "echo_multi_ad_watch_count"
+        private const val KEY_DOUBLE_TROPHIES_EXPIRES = "echo_double_trophies_expires"
+        private const val KEY_INFINITE_BREAKERS_EXPIRES = "echo_infinite_breakers_expires"
+        private const val KEY_RADIUS_SHRINKER_EXPIRES = "echo_radius_shrinker_expires"
+        private const val KEY_LEVELS_SINCE_LAST_AD = "echo_levels_since_last_ad"
+        private const val KEY_NEXT_INTERSTITIAL_THRESHOLD = "echo_next_interstitial_threshold"
     }
+
+    var multiAdWatchCount: Int
+        get() = prefs.getInt(KEY_MULTI_AD_WATCH_COUNT, 0)
+        set(value) = prefs.edit().putInt(KEY_MULTI_AD_WATCH_COUNT, value.coerceIn(0, 3)).apply()
+
+    var doubleTrophiesExpiresAt: Long
+        get() = prefs.getLong(KEY_DOUBLE_TROPHIES_EXPIRES, 0L)
+        set(value) = prefs.edit().putLong(KEY_DOUBLE_TROPHIES_EXPIRES, value).apply()
+
+    var infiniteBreakersExpiresAt: Long
+        get() = prefs.getLong(KEY_INFINITE_BREAKERS_EXPIRES, 0L)
+        set(value) = prefs.edit().putLong(KEY_INFINITE_BREAKERS_EXPIRES, value).apply()
+
+    var radiusShrinkerExpiresAt: Long
+        get() = prefs.getLong(KEY_RADIUS_SHRINKER_EXPIRES, 0L)
+        set(value) = prefs.edit().putLong(KEY_RADIUS_SHRINKER_EXPIRES, value).apply()
+
+    var levelsSinceLastInterstitial: Int
+        get() = prefs.getInt(KEY_LEVELS_SINCE_LAST_AD, 0)
+        set(value) = prefs.edit().putInt(KEY_LEVELS_SINCE_LAST_AD, value).apply()
+
+    var nextInterstitialThreshold: Int
+        get() = prefs.getInt(KEY_NEXT_INTERSTITIAL_THRESHOLD, 2)
+        set(value) = prefs.edit().putInt(KEY_NEXT_INTERSTITIAL_THRESHOLD, value).apply()
 
     var trophies: Int
         get() = prefs.getInt(KEY_TROPHIES, 0)

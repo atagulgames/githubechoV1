@@ -28,6 +28,9 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toArgb
+import com.example.model.CandyCallout
+import com.example.model.CandyParticle
 import com.example.model.DirectedEdge
 import com.example.model.EchoStroke
 import com.example.model.EchoTheme
@@ -89,7 +92,7 @@ fun EchoCanvas(
         val virtualW = 360f
         val virtualH = 480f
 
-        val scale = min(canvasWidth / virtualW, canvasHeight / virtualH) * 0.90f
+        val scale = min(canvasWidth / virtualW, canvasHeight / virtualH) * 0.88f
         val offsetX = (canvasWidth - virtualW * scale) / 2f
         val offsetY = (canvasHeight - virtualH * scale) / 2f
 
@@ -208,6 +211,58 @@ fun EchoCanvas(
                     )
                 )
             }
+
+            // 9. Candy Crush Style Explosion Particles
+            if (state.candyParticles.isNotEmpty()) {
+                state.candyParticles.forEach { p ->
+                    val screenPos = toScreen(Point(p.x, p.y))
+                    val pColor = p.color.copy(alpha = p.alpha.coerceIn(0f, 1f))
+                    if (p.isStar) {
+                        drawCircle(
+                            color = pColor,
+                            radius = p.size * scale * 1.1f,
+                            center = screenPos
+                        )
+                        drawLine(
+                            color = pColor,
+                            start = Offset(screenPos.x - p.size * scale * 1.5f, screenPos.y),
+                            end = Offset(screenPos.x + p.size * scale * 1.5f, screenPos.y),
+                            strokeWidth = 2.5f * scale
+                        )
+                        drawLine(
+                            color = pColor,
+                            start = Offset(screenPos.x, screenPos.y - p.size * scale * 1.5f),
+                            end = Offset(screenPos.x, screenPos.y + p.size * scale * 1.5f),
+                            strokeWidth = 2.5f * scale
+                        )
+                    } else {
+                        drawCircle(
+                            color = pColor,
+                            radius = p.size * scale * 0.9f,
+                            center = screenPos
+                        )
+                    }
+                }
+            }
+
+            // 10. Candy Crush Pop Callout Text
+            state.candyCallout?.let { callout ->
+                val screenPos = toScreen(Point(callout.x, callout.y))
+                val paint = android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    textSize = 24f * scale * callout.scale
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    color = callout.color.copy(alpha = callout.alpha.coerceIn(0f, 1f)).toArgb()
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    setShadowLayer(8f * scale, 0f, 3f * scale, android.graphics.Color.BLACK)
+                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    callout.text,
+                    screenPos.x,
+                    screenPos.y,
+                    paint
+                )
+            }
         }
     }
 }
@@ -216,24 +271,20 @@ private fun DrawScope.drawGridBackground(w: Float, h: Float, isDarkTheme: Boolea
     val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
     drawRect(color = bgColor)
     val dotColor = if (isDarkTheme) Color(0x33475569) else Color(0x3394A3B8)
-    val step = 40f
-    val points = mutableListOf<Offset>()
+    val step = 42f
     var x = step / 2f
     while (x < w) {
         var y = step / 2f
         while (y < h) {
-            points.add(Offset(x, y))
+            drawCircle(
+                color = dotColor,
+                radius = 1.3f,
+                center = Offset(x, y)
+            )
             y += step
         }
         x += step
     }
-    drawPoints(
-        points = points,
-        pointMode = PointMode.Points,
-        color = dotColor,
-        strokeWidth = 2.5f,
-        cap = StrokeCap.Round
-    )
 }
 
 private fun DrawScope.drawDirectedEdgeArrows(
@@ -475,8 +526,16 @@ private fun DrawScope.drawNodes(
             }
         }
 
-        // Highlight next target node in the strict sequence (sıra numarası rehberi)
-        val nextExpectedId = if (visitedNodeIds.isEmpty()) 1 else (visitedNodeIds.lastOrNull() ?: 0) + 1
+        // Highlight next target node in the sequence (sıra numarası ve hedef rehberi)
+        val lastVisited = visitedNodeIds.lastOrNull()
+        val nextExpectedId = if (lastVisited == null) {
+            1
+        } else if (hintOrder.isNotEmpty()) {
+            val idx = hintOrder.indexOf(lastVisited)
+            if (idx != -1 && idx + 1 < hintOrder.size) hintOrder[idx + 1] else lastVisited + 1
+        } else {
+            lastVisited + 1
+        }
         val isNextTarget = isDrawing && node.id == nextExpectedId
         if (isNextTarget) {
             drawCircle(

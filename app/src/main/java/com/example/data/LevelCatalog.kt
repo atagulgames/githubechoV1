@@ -168,21 +168,33 @@ object LevelCatalog {
             "$name ($tier)"
         }
 
-        // Progressive node count from 3 up to 10
+        // Dynamically varying node counts so consecutive levels have different matching numbers
         val nodeCount = when {
-            clampedId <= 3 -> 3
-            clampedId <= 10 -> 4
-            clampedId <= 25 -> 5
-            clampedId <= 45 -> 6
-            clampedId <= 65 -> 7
-            clampedId <= 85 -> 8
-            clampedId <= 98 -> 9
-            else -> 10 // Level 99 and 100 (Grand Finale)
+            clampedId == 1 -> 3 // 2 matches
+            clampedId == 2 -> 4 // 3 matches
+            clampedId == 3 -> 5 // 4 matches
+            clampedId == 4 -> 4 // 3 matches
+            clampedId == 5 -> 6 // 5 matches
+            clampedId == 6 -> 5 // 4 matches
+            clampedId == 7 -> 7 // 6 matches
+            clampedId == 8 -> 6 // 5 matches
+            clampedId == 9 -> 8 // 7 matches
+            clampedId == 100 -> 12 // 11 matches (Grand Finale)
+            else -> {
+                val tierBase = ((clampedId - 1) / 10) + 4
+                val pattern = when (clampedId % 4) {
+                    0 -> 1
+                    1 -> -1
+                    2 -> 2
+                    else -> 0
+                }
+                (tierBase + pattern).coerceIn(4, 11)
+            }
         }
 
         val centerX = 180f
         val centerY = 220f
-        val baseRadius = (115f - (nodeCount * 2.0f)).coerceIn(70f, 110f)
+        val baseRadius = (110f - (nodeCount * 2.2f)).coerceIn(65f, 105f)
 
         // Key & Gate mechanics: Key appears early (index 2..nodeCount-1), Gate is always at the last node
         val hasKeyGate = (tierIndex == 2 || tierIndex == 6 || (tierIndex == 9 && clampedId % 2 == 0)) && nodeCount >= 4
@@ -277,8 +289,8 @@ object LevelCatalog {
                 }
             }
 
-            val clampedX = rawX.coerceIn(40f, 320f)
-            val clampedY = rawY.coerceIn(90f, 350f)
+            val clampedX = rawX.coerceIn(50f, 310f)
+            val clampedY = rawY.coerceIn(80f, 360f)
 
             val type = when (i) {
                 keyIndex -> NodeType.KEY

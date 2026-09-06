@@ -135,7 +135,14 @@ data class EchoUiState(
     val isProfileDialogVisible: Boolean = false,
     val selectedPlayerProfile: com.example.model.LeaderboardPlayer? = null,
     val leaderboardPlayers: List<com.example.model.LeaderboardPlayer> = emptyList(),
-    val lastTrophyRewardBreakdown: com.example.model.TrophyRewardBreakdown? = null
+    val lastTrophyRewardBreakdown: com.example.model.TrophyRewardBreakdown? = null,
+    // Multi-ad, Timed Boosters & Candy Crush Effects
+    val multiAdWatchCount: Int = 0,
+    val doubleTrophiesExpiresAt: Long = 0L,
+    val infiniteBreakersExpiresAt: Long = 0L,
+    val radiusShrinkerExpiresAt: Long = 0L,
+    val candyParticles: List<com.example.model.CandyParticle> = emptyList(),
+    val candyCallout: com.example.model.CandyCallout? = null
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -160,8 +167,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private var toastResetJob: Job? = null
     private var ghostFadeJob: Job? = null
 
-    private val nodeHitRadius: Float = 34f
-    private val deadlockThreshold: Int = 5
+    private val nodeHitRadius: Float = 42f
+    private val deadlockThreshold: Int = 8
 
     init {
         HarmonicAudioEngine.init(application)
@@ -223,6 +230,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 totalPlayTimeSec = prefs.totalPlayTimeSec,
                 maxCombo = prefs.maxCombo,
                 currentCombo = prefs.currentCombo,
+                multiAdWatchCount = prefs.multiAdWatchCount,
+                doubleTrophiesExpiresAt = prefs.doubleTrophiesExpiresAt,
+                infiniteBreakersExpiresAt = prefs.infiniteBreakersExpiresAt,
+                radiusShrinkerExpiresAt = prefs.radiusShrinkerExpiresAt,
                 isAuthenticated = false // Opening flow requires explicit login authentication verification
             )
         }
@@ -546,13 +557,34 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 return
             }
 
-            // User Rule: Sıra numaraları önemli olsun!
-            // Sıradaki bağlanacak düğüm bir önceki düğümün ardışık numarası (lastVisitedId + 1) olmalıdır.
-            val expectedNextId = lastVisitedId + 1
+            // Expected next node determination:
+            // 1. If level has an explicit hint order, follow hintOrder
+            // 2. Otherwise follow consecutive node numbers (1, 2, 3...)
+            val hintOrder = state.level.hintOrder
+            val expectedNextId = if (hintOrder.isNotEmpty()) {
+                val curIdx = hintOrder.indexOf(lastVisitedId)
+                if (curIdx != -1 && curIdx + 1 < hintOrder.size) hintOrder[curIdx + 1] else lastVisitedId + 1
+            } else {
+                lastVisitedId + 1
+            }
+
             if (hitNode.id != expectedNextId) {
-                showToast("Sıradaki numara $expectedNextId olmalı!")
+                showToast("Sıradaki hedef: $expectedNextId numaralı nokta!")
                 HarmonicAudioEngine.playCollisionBuzz()
                 triggerCollisionFeedback()
+                return
+            }
+
+            // Check collision of this target connection with past Echo Colliders
+            val connectionSegment = Segment(lastNode.toPoint(), hitNode.toPoint(), lastVisitedId, hitNode.id)
+            val echoHit = CollisionEngine.checkCollisionWithEchoes(
+                candidate = connectionSegment,
+                echoes = allPastSegments,
+                endpointTolerance = 14f,
+                hitboxScale = if (state.isEchoShrinkerActive) 0.5f else 1.0f
+            )
+            if (echoHit != null) {
+                triggerCollisionFailure("Geçmiş yankı bariyerine çarptın!")
                 return
             }
 
@@ -576,8 +608,26 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             HarmonicAudioEngine.playNodeTone(newVisited.size - 1)
             triggerHapticClick()
 
+            // Candy Crush style explosion & combo callouts!
+            val (calloutText, calloutColor) = com.example.model.CandyEffectsFactory.getCalloutText(newVisited.size)
+            val newParticles = com.example.model.CandyEffectsFactory.createNodeExplosion(hitNode.x, hitNode.y, count = 18)
+
             // Check Victory (All nodes connected)
             if (newVisited.size == state.nodes.size) {
+                val victoryConfetti = com.example.model.CandyEffectsFactory.createConfettiVictory(360f, 480f, count = 50)
+                _uiState.update {
+                    it.copy(
+                        candyParticles = (it.candyParticles.takeLast(25)) + newParticles + victoryConfetti,
+                        candyCallout = com.example.model.CandyCallout(
+                            text = "BÖLÜM TAMAMLANDI! 🏆",
+                            x = 180f,
+                            y = 150f,
+                            color = androidx.compose.ui.graphics.Color(0xFFFFB703),
+                            alpha = 1.0f,
+                            scale = 1.35f
+                        )
+                    )
+                }
                 handleVictory(newStrokeList)
                 return
             }
@@ -588,7 +638,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     collectedKeyIds = updatedKeys,
                     currentStrokeSegments = newStrokeList,
                     currentPointerPos = hitNode.toPoint(),
-                    nodes = newNodes
+                    nodes = newNodes,
+                    candyParticles = (it.candyParticles.takeLast(25)) + newParticles,
+                    candyCallout = com.example.model.CandyCallout(
+                        text = calloutText,
+                        x = hitNode.x,
+                        y = hitNode.y - 35f,
+                        color = calloutColor,
+                        alpha = 1.0f,
+                        scale = 1.15f
+                    )
                 )
             }
             return
@@ -601,7 +660,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val state = _uiState.value
         if (!state.isDrawing || state.gameStatus != GameStatus.PLAYING) return
 
-        // Lifting finger before completion turns current path into an echo barrier
+        // Only penalize with an echo barrier if the player actually drew segments and lifted mid-path.
+        // If they only touched node 1 and lifted without completing a segment, reset cleanly.
         if (state.currentStrokeSegments.isNotEmpty() && state.visitedNodeIds.size < state.nodes.size) {
             triggerEarlyLiftFailure("Hamle yarım bırakıldı!")
         } else {
@@ -647,7 +707,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val zeroEchoBonus = if (echoCount == 0) 50 else 0
         val comboBonus = if (newCombo > 1) newCombo * 10 else 0
         val speedBonus = if (durationSeconds <= 12f) 15 else 0
-        val totalLevelTrophies = baseTrophies + zeroEchoBonus + comboBonus + speedBonus
+        val isDoubleBoosterActive = System.currentTimeMillis() < prefs.doubleTrophiesExpiresAt
+        val rawTrophies = baseTrophies + zeroEchoBonus + comboBonus + speedBonus
+        val totalLevelTrophies = if (isDoubleBoosterActive) rawTrophies * 2 else rawTrophies
 
         prefs.addTrophies(totalLevelTrophies)
         prefs.addPlayTime(durationSeconds.toLong())
@@ -815,7 +877,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             showToast("Kırılacak aktif yankı bulunmuyor.")
             return
         }
-        if (prefs.useBreaker()) {
+        val isInfiniteActive = System.currentTimeMillis() < prefs.infiniteBreakersExpiresAt
+        if (isInfiniteActive || prefs.useBreaker()) {
             HarmonicAudioEngine.playBrokenRedLine()
             triggerHapticClick()
             // Remove the most recent echo stroke
@@ -826,7 +889,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     echoBreakers = prefs.echoBreakers
                 )
             }
-            showToast("Matkap lazeri son yankıyı imha etti!")
+            showToast(if (isInfiniteActive) "⏱️ Sonsuz Matkap aktif: Yankı imha edildi!" else "Matkap lazeri son yankıyı imha etti!")
         } else {
             showToast("Yetersiz Matkap Jetonu! Mağazadan temin edebilirsin.")
             setShopVisible(true)
@@ -950,6 +1013,99 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     tokensAdded = 2
                 )
             }
+            "WATCH_3_ADS_REWARD" -> {
+                val currentCount = prefs.multiAdWatchCount + 1
+                if (currentCount >= 3) {
+                    prefs.multiAdWatchCount = 0
+                    prefs.addDiamonds(3)
+                    prefs.addCoins(500)
+                    prefs.addBreakers(3)
+                    prefs.addTokens(5)
+                    val expires = System.currentTimeMillis() + 15 * 60 * 1000L
+                    prefs.doubleTrophiesExpiresAt = expires
+                    _uiState.update {
+                        it.copy(
+                            isRewardedSimulating = false,
+                            isAdLoading = false,
+                            multiAdWatchCount = 0,
+                            diamonds = prefs.diamonds,
+                            coins = prefs.coins,
+                            echoBreakers = prefs.echoBreakers,
+                            tokens = prefs.tokens,
+                            doubleTrophiesExpiresAt = expires
+                        )
+                    }
+                    RewardClaimedInfo(
+                        title = "🎉 3-REKLAM MEGA ÖDÜLÜ AÇILDI!",
+                        subtitle = "Tebrikler! +3 💎 Elmas, +500 🪙 Altın, +3 ⚡ Matkap, +5 Jeton ve 15 Dk 2x Kupa kazandınız!",
+                        rewardType = type,
+                        diamondsAdded = 3,
+                        coinsAdded = 500,
+                        breakersAdded = 3,
+                        tokensAdded = 5
+                    )
+                } else {
+                    prefs.multiAdWatchCount = currentCount
+                    _uiState.update {
+                        it.copy(
+                            isRewardedSimulating = false,
+                            isAdLoading = false,
+                            multiAdWatchCount = currentCount
+                        )
+                    }
+                    showToast("1 Reklam İzlendi ($currentCount/3)! ${3 - currentCount} reklam sonra Büyük Mega Sandık açılacak.")
+                    return
+                }
+            }
+            "BOOSTER_DOUBLE_TROPHIES" -> {
+                val expires = System.currentTimeMillis() + 15 * 60 * 1000L
+                prefs.doubleTrophiesExpiresAt = expires
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false,
+                        doubleTrophiesExpiresAt = expires
+                    )
+                }
+                RewardClaimedInfo(
+                    title = "⏱️ 2x Kupa Katlayıcı Aktif!",
+                    subtitle = "Önümüzdeki 15 dakika boyunca her kazanılan bölümde 2 kat kupa alacaksınız!",
+                    rewardType = type
+                )
+            }
+            "BOOSTER_INFINITE_BREAKERS" -> {
+                val expires = System.currentTimeMillis() + 10 * 60 * 1000L
+                prefs.infiniteBreakersExpiresAt = expires
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false,
+                        infiniteBreakersExpiresAt = expires
+                    )
+                }
+                RewardClaimedInfo(
+                    title = "⏱️ Sınırsız Matkap Lazeri Aktif!",
+                    subtitle = "Önümüzdeki 10 dakika boyunca matkap lazeleriniz tükenmeden serbestçe kullanılabilir!",
+                    rewardType = type
+                )
+            }
+            "BOOSTER_SHIELD" -> {
+                val expires = System.currentTimeMillis() + 20 * 60 * 1000L
+                prefs.radiusShrinkerExpiresAt = expires
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false,
+                        radiusShrinkerExpiresAt = expires,
+                        isEchoShrinkerActive = true
+                    )
+                }
+                RewardClaimedInfo(
+                    title = "⏱️ Esnek Yankı Kalkanı Aktif!",
+                    subtitle = "Önümüzdeki 20 dakika boyunca yankı bariyerleri %50 inceltildi.",
+                    rewardType = type
+                )
+            }
             "OPEN_CHEST" -> {
                 _uiState.update {
                     it.copy(
@@ -1016,7 +1172,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 delay(6000)
                 if (_uiState.value.isAdLoading) {
                     _uiState.update { it.copy(isAdLoading = false) }
-                    showToast("Reklam yüklenemedi. Ödül almak için reklamın izlenmesi gerekmektedir.")
+                    showToast("Sorun oluştu! Reklam yüklenemedi veya istek zaman aşımına uğradı.")
                 }
             }
         }
@@ -1029,7 +1185,22 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isRewardedSimulating = false
             )
         }
-        showToast("Reklam yüklenemedi. Lütfen daha sonra tekrar deneyin.")
+        showToast("Sorun oluştu! Reklama gönderilen istek reddedildi veya yüklenemedi.")
+    }
+
+    fun shouldShowInterstitialOnNextLevel(): Boolean {
+        if (_uiState.value.isAdFree) return false
+        val currentCount = prefs.levelsSinceLastInterstitial + 1
+        val threshold = prefs.nextInterstitialThreshold
+        if (currentCount >= threshold) {
+            prefs.levelsSinceLastInterstitial = 0
+            // Randomly set next threshold between 1, 2, or 3 levels
+            prefs.nextInterstitialThreshold = kotlin.random.Random.nextInt(1, 4)
+            return true
+        } else {
+            prefs.levelsSinceLastInterstitial = currentCount
+            return false
+        }
     }
 
     fun toggleTestAds(enabled: Boolean) {
