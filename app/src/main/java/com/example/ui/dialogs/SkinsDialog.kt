@@ -21,7 +21,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -44,6 +46,8 @@ import com.example.model.StrokeTheme
 fun SkinsDialog(
     currentStroke: StrokeTheme,
     currentEcho: EchoTheme,
+    unlockedThemes: Set<String> = emptySet(),
+    totalStars: Int = 0,
     onSelectStroke: (StrokeTheme) -> Unit,
     onSelectEcho: (EchoTheme) -> Unit,
     onDismiss: () -> Unit
@@ -86,12 +90,28 @@ fun SkinsDialog(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "Temalar",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A)
-                        )
+                        Column {
+                            Text(
+                                text = "Temalar & Nadirlik",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F172A)
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "$totalStars Yıldız Toplandı",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF64748B)
+                                )
+                            }
+                        }
                     }
 
                     IconButton(
@@ -119,23 +139,35 @@ fun SkinsDialog(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     StrokeTheme.entries.forEach { theme ->
+                        val isUnlocked = theme.requiredStars == 0 ||
+                                totalStars >= theme.requiredStars ||
+                                unlockedThemes.contains(theme.name)
                         val isSelected = theme == currentStroke
+
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .clickable { onSelectStroke(theme) },
+                                .clickable(enabled = isUnlocked) { onSelectStroke(theme) },
                             shape = RoundedCornerShape(14.dp),
-                            color = if (isSelected) Color(0xFFF0FDF4) else Color(0xFFF8FAFC),
+                            color = when {
+                                !isUnlocked -> Color(0xFFF8FAFC)
+                                isSelected -> Color(0xFFF0FDF4)
+                                else -> Color(0xFFFFFFFF)
+                            },
                             border = BorderStroke(
                                 if (isSelected) 2.dp else 1.dp,
-                                if (isSelected) Color(0xFF22C55E) else Color(0xFFE2E8F0)
+                                when {
+                                    isSelected -> Color(0xFF22C55E)
+                                    !isUnlocked -> Color(0xFFE2E8F0)
+                                    else -> Color(0xFFE2E8F0)
+                                }
                             )
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -147,13 +179,37 @@ fun SkinsDialog(
                                             .background(theme.primaryColor)
                                             .border(2.dp, Color.White, CircleShape)
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = theme.displayName,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color(0xFF15803D) else Color(0xFF1E293B)
-                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = theme.displayName,
+                                                fontSize = 13.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (!isUnlocked) Color(0xFF94A3B8) else if (isSelected) Color(0xFF15803D) else Color(0xFF1E293B)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = theme.rarity.backgroundColor
+                                            ) {
+                                                Text(
+                                                    text = theme.rarity.title,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = theme.rarity.color,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                        if (!isUnlocked) {
+                                            Text(
+                                                text = if (theme.requiredStars > 0) "${theme.requiredStars} Yıldız ile açılır" else "Giriş / Sandık Ödülü",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                        }
+                                    }
                                 }
 
                                 if (isSelected) {
@@ -162,6 +218,13 @@ fun SkinsDialog(
                                         contentDescription = "Seçili",
                                         tint = Color(0xFF22C55E),
                                         modifier = Modifier.size(20.dp)
+                                    )
+                                } else if (!isUnlocked) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Kilitli",
+                                        tint = Color(0xFF94A3B8),
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
@@ -182,23 +245,35 @@ fun SkinsDialog(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     EchoTheme.entries.forEach { theme ->
+                        val isUnlocked = theme.requiredStars == 0 ||
+                                totalStars >= theme.requiredStars ||
+                                unlockedThemes.contains(theme.name)
                         val isSelected = theme == currentEcho
+
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .clickable { onSelectEcho(theme) },
+                                .clickable(enabled = isUnlocked) { onSelectEcho(theme) },
                             shape = RoundedCornerShape(14.dp),
-                            color = if (isSelected) Color(0xFFF0FDF4) else Color(0xFFF8FAFC),
+                            color = when {
+                                !isUnlocked -> Color(0xFFF8FAFC)
+                                isSelected -> Color(0xFFF0FDF4)
+                                else -> Color(0xFFFFFFFF)
+                            },
                             border = BorderStroke(
                                 if (isSelected) 2.dp else 1.dp,
-                                if (isSelected) Color(0xFF22C55E) else Color(0xFFE2E8F0)
+                                when {
+                                    isSelected -> Color(0xFF22C55E)
+                                    !isUnlocked -> Color(0xFFE2E8F0)
+                                    else -> Color(0xFFE2E8F0)
+                                }
                             )
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -210,13 +285,37 @@ fun SkinsDialog(
                                             .background(theme.echoColor)
                                             .border(2.dp, Color.White, CircleShape)
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = theme.displayName,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color(0xFF15803D) else Color(0xFF1E293B)
-                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = theme.displayName,
+                                                fontSize = 13.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (!isUnlocked) Color(0xFF94A3B8) else if (isSelected) Color(0xFF15803D) else Color(0xFF1E293B)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = theme.rarity.backgroundColor
+                                            ) {
+                                                Text(
+                                                    text = theme.rarity.title,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = theme.rarity.color,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                        if (!isUnlocked) {
+                                            Text(
+                                                text = if (theme.requiredStars > 0) "${theme.requiredStars} Yıldız ile açılır" else "Giriş / Sandık Ödülü",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                        }
+                                    }
                                 }
 
                                 if (isSelected) {
@@ -225,6 +324,13 @@ fun SkinsDialog(
                                         contentDescription = "Seçili",
                                         tint = Color(0xFF22C55E),
                                         modifier = Modifier.size(20.dp)
+                                    )
+                                } else if (!isUnlocked) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Kilitli",
+                                        tint = Color(0xFF94A3B8),
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
@@ -235,3 +341,4 @@ fun SkinsDialog(
         }
     }
 }
+

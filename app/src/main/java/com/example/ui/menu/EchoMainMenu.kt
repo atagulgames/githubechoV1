@@ -23,10 +23,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CrisisAlert
 import androidx.compose.material.icons.filled.Diamond
+import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
@@ -69,6 +72,9 @@ fun EchoMainMenu(
     onOpenShop: () -> Unit,
     onOpenSkins: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenDailyQuests: () -> Unit = {},
+    onOpenDailyLogin: () -> Unit = {},
+    onOpenChest: () -> Unit = {},
     onWatchRewardedAd: () -> Unit = {},
     onBannerAdLoaded: () -> Unit = {},
     onBannerAdFailed: (String) -> Unit = {},
@@ -297,6 +303,174 @@ fun EchoMainMenu(
                         color = Color(0xFF0284C7),
                         fontSize = 13.sp
                     )
+                }
+            }
+
+            // Game Systems Quick Access: Görevler, Giriş Takvimi, Gizemli Sandık
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 1. Görevler Card
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(72.dp)
+                        .shadow(2.dp, RoundedCornerShape(16.dp))
+                        .clickable { onOpenDailyQuests() }
+                        .testTag("menu_daily_quests_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (state.unclaimedQuestsCount > 0) Color(0xFF0284C7) else Color(0xFFE2E8F0)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(
+                                imageVector = Icons.Default.CrisisAlert,
+                                contentDescription = "Görevler",
+                                tint = Color(0xFF0284C7),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            if (state.unclaimedQuestsCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFEF4444))
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Görevler",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A)
+                        )
+                        Text(
+                            text = if (state.unclaimedQuestsCount > 0) "${state.unclaimedQuestsCount} Hazır" else "Günlük",
+                            fontSize = 10.sp,
+                            color = if (state.unclaimedQuestsCount > 0) Color(0xFF10B981) else Color(0xFF64748B),
+                            fontWeight = if (state.unclaimedQuestsCount > 0) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+
+                // 2. Giriş Takvimi Card
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(72.dp)
+                        .shadow(2.dp, RoundedCornerShape(16.dp))
+                        .clickable { onOpenDailyLogin() }
+                        .testTag("menu_daily_login_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (state.isLoginRewardAvailableToday) Color(0xFFF59E0B) else Color(0xFFE2E8F0)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = "Giriş",
+                                tint = Color(0xFFD97706),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            if (state.isLoginRewardAvailableToday) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFF59E0B))
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${state.loginStreak}. Gün",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A)
+                        )
+                        Text(
+                            text = if (state.isLoginRewardAvailableToday) "Ödül Al!" else "Alındı ✓",
+                            fontSize = 10.sp,
+                            color = if (state.isLoginRewardAvailableToday) Color(0xFFD97706) else Color(0xFF64748B),
+                            fontWeight = if (state.isLoginRewardAvailableToday) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+
+                // 3. Sandık Card
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(72.dp)
+                        .shadow(2.dp, RoundedCornerShape(16.dp))
+                        .clickable { onOpenChest() }
+                        .testTag("menu_mystery_chest_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (state.isFreeChestAvailable) Color(0xFF9333EA) else Color(0xFFE2E8F0)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(
+                                imageVector = Icons.Default.Redeem,
+                                contentDescription = "Sandık",
+                                tint = Color(0xFF9333EA),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            if (state.isFreeChestAvailable) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF9333EA))
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Sandık",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A)
+                        )
+                        Text(
+                            text = if (state.isFreeChestAvailable) "ÜCRETSİZ" else "Aç (${state.adChestsRemainingToday})",
+                            fontSize = 10.sp,
+                            color = if (state.isFreeChestAvailable) Color(0xFF9333EA) else Color(0xFF64748B),
+                            fontWeight = if (state.isFreeChestAvailable) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 }
             }
 

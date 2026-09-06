@@ -278,6 +278,45 @@ object HarmonicAudioEngine {
     }
 
     /**
+     * Plays the user-provided MP3 sound effect directly on the login screen.
+     * Strictly avoids any synthetic or placeholder sound if the user's file is not present.
+     */
+    fun playLoginEffect(context: Context) {
+        if (!isSoundEnabled) return
+        try {
+            if (com.example.media.GameMediaAssets.isAssetAvailable(context, com.example.media.GameMediaAssets.LOGIN_AUDIO_PATH)) {
+                val afd = context.assets.openFd(com.example.media.GameMediaAssets.LOGIN_AUDIO_PATH)
+                val mp = MediaPlayer()
+                mp.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                afd.close()
+                mp.prepare()
+                mp.setOnCompletionListener { it.release() }
+                mp.start()
+                return
+            }
+            if (com.example.media.GameMediaAssets.isAssetAvailable(context, com.example.media.GameMediaAssets.LOGIN_AUDIO_ROOT_PATH)) {
+                val afd = context.assets.openFd(com.example.media.GameMediaAssets.LOGIN_AUDIO_ROOT_PATH)
+                val mp = MediaPlayer()
+                mp.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                afd.close()
+                mp.prepare()
+                mp.setOnCompletionListener { it.release() }
+                mp.start()
+                return
+            }
+            val resId = context.resources.getIdentifier("effect", "raw", context.packageName)
+            if (resId != 0) {
+                val mp = MediaPlayer.create(context, resId)
+                mp?.setOnCompletionListener { it.release() }
+                mp?.start()
+                return
+            }
+        } catch (_: Exception) {
+            // Strictly respect mandate: no AI synthesis or placeholder sound
+        }
+    }
+
+    /**
      * Plays Atagul Games Intro fanfare chime.
      */
     fun playIntroJingle() {

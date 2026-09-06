@@ -3,6 +3,6 @@
     <item
         android:width="72dp"
         android:height="72dp"
-        android:drawable="@drawable/echo_app_icon"
+        android:drawable="@drawable/ic_echo_launcher"
         android:gravity="center" />
 </layer-list>

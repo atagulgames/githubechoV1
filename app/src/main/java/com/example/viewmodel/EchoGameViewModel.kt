@@ -17,6 +17,9 @@ import com.example.data.LevelCatalog
 import com.example.data.local.LevelEntity
 import com.example.game.CollisionEngine
 import com.example.localization.Language
+import com.example.model.ChestReward
+import com.example.model.DailyLoginDay
+import com.example.model.DailyQuest
 import com.example.model.DirectedEdge
 import com.example.model.EchoStroke
 import com.example.model.EchoTheme
@@ -29,6 +32,7 @@ import com.example.model.Point
 import com.example.model.ScreenState
 import com.example.model.Segment
 import com.example.model.StrokeTheme
+import com.example.model.ThemeRarity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +41,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -96,7 +101,24 @@ data class EchoUiState(
     val pendingLevelToStart: Int? = null,
     val pendingIsDailyChallenge: Boolean = false,
     val rewardClaimedData: RewardClaimedInfo? = null,
-    val toastMessage: String? = null
+    val toastMessage: String? = null,
+    // Game Systems
+    val dailyQuests: List<DailyQuest> = emptyList(),
+    val unclaimedQuestsCount: Int = 0,
+    val loginStreak: Int = 1,
+    val isLoginRewardAvailableToday: Boolean = true,
+    val loginDays: List<DailyLoginDay> = emptyList(),
+    val isFreeChestAvailable: Boolean = true,
+    val adChestsRemainingToday: Int = 2,
+    val unlockedThemes: Set<String> = emptySet(),
+    val isDailyQuestsDialogVisible: Boolean = false,
+    val isDailyLoginDialogVisible: Boolean = false,
+    val isChestDialogVisible: Boolean = false,
+    val lastOpenedChestReward: ChestReward? = null,
+    val isDoubleRewardClaimedThisLevel: Boolean = false,
+    val isAuthenticated: Boolean = false,
+    val authenticatedUser: String = "",
+    val rememberMe: Boolean = false
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -173,9 +195,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 soundEnabled = prefs.soundEnabled,
                 hapticsEnabled = prefs.hapticsEnabled,
                 testAdsEnabled = prefs.isTestAdsEnabled,
-                isDailyCompletedToday = isDailyDone
+                isDailyCompletedToday = isDailyDone,
+                authenticatedUser = prefs.authenticatedUsername,
+                rememberMe = prefs.rememberMe,
+                isAuthenticated = false // Opening flow requires explicit login authentication verification
             )
         }
+
+        refreshDailySystems()
     }
 
     fun setLanguage(lang: Language) {
@@ -184,6 +211,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun startPlayingLevel(levelIndex: Int? = null) {
+        if (!_uiState.value.isAuthenticated) {
+            _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+            return
+        }
         val targetIdx = levelIndex ?: _uiState.value.currentLevelIndex
         viewModelScope.launch {
             loadAndStartLevel(targetIdx)
@@ -217,12 +248,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isEchoShrinkerActive = false,
                 gameStatus = GameStatus.PLAYING,
                 isHintActive = false,
-                isDailyChallenge = false
+                isDailyChallenge = false,
+                isDoubleRewardClaimedThisLevel = false
             )
         }
     }
 
     fun startDailyChallenge() {
+        if (!_uiState.value.isAuthenticated) {
+            _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+            return
+        }
         val todaySeed = (SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date()).hashCode() and 0x7FFFFFFF) % 250
         viewModelScope.launch {
             loadAndStartDailyChallenge(todaySeed)
@@ -249,19 +285,54 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isEchoShrinkerActive = false,
                 gameStatus = GameStatus.PLAYING,
                 isHintActive = false,
-                isDailyChallenge = true
+                isDailyChallenge = true,
+                isDoubleRewardClaimedThisLevel = false
             )
         }
     }
 
+    /**
+     * User requested opening flow:
+     * intro.mp4 -> Login Screen -> Authentication Verification -> Main Menu
+     */
     fun finishIntro() {
-        _uiState.update { it.copy(screenState = ScreenState.MAIN_MENU) }
+        _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+    }
+
+    /**
+     * Authenticates user session and unlocks access to Main Menu.
+     */
+    fun onLoginSuccess(username: String, rememberMe: Boolean) {
+        prefs.setAuthenticatedUser(username, rememberMe)
+        _uiState.update {
+            it.copy(
+                isAuthenticated = true,
+                authenticatedUser = username,
+                rememberMe = rememberMe,
+                screenState = ScreenState.MAIN_MENU
+            )
+        }
+    }
+
+    /**
+     * Terminate user session and return to Login Screen.
+     */
+    fun logout() {
+        prefs.clearAuthentication()
+        _uiState.update {
+            it.copy(
+                isAuthenticated = false,
+                screenState = ScreenState.LOGIN,
+                isSettingsDialogVisible = false
+            )
+        }
     }
 
     fun returnToMainMenu() {
+        val isAuth = _uiState.value.isAuthenticated
         _uiState.update {
             it.copy(
-                screenState = ScreenState.MAIN_MENU,
+                screenState = if (isAuth) ScreenState.MAIN_MENU else ScreenState.LOGIN,
                 isLevelSelectVisible = false,
                 isShopDialogVisible = false,
                 isSettingsDialogVisible = false,
@@ -446,18 +517,36 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val echoCount = state.echoCountForLevel
         val parEchoes = state.level.parEchoes
 
+        val stars = when {
+            echoCount <= parEchoes -> 3
+            echoCount <= parEchoes + 2 -> 2
+            else -> 1
+        }
+
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        prefs.checkAndResetDailyQuests(todayStr)
+        prefs.levelsCompletedToday = prefs.levelsCompletedToday + 1
+        prefs.starsEarnedToday = prefs.starsEarnedToday + stars
+        if (echoCount == 0) {
+            prefs.flawlessLevelsToday = prefs.flawlessLevelsToday + 1
+        }
+
         if (state.isDailyChallenge) {
             // 2x Token reward for Daily Challenge
             prefs.addTokens(4)
-            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             prefs.lastDailyCompletedDate = todayStr
+            prefs.dailyChallengeCompletedToday = true
             showToast("Tebrikler! Günün Bulmacası Tamamlandı (+4 Jeton!)")
         } else {
+            // Normal level gives base +1 token reward
+            prefs.addTokens(1)
             viewModelScope.launch {
                 repo.recordVictory(state.level.levelId, echoCount, parEchoes)
             }
             prefs.markLevelCompleted(state.currentLevelIndex)
         }
+
+        refreshDailySystems()
 
         _uiState.update {
             it.copy(
@@ -466,7 +555,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 currentStrokeSegments = completedSegments,
                 gameStatus = GameStatus.VICTORY,
                 tokens = prefs.tokens,
-                isDailyCompletedToday = if (state.isDailyChallenge) true else it.isDailyCompletedToday
+                isDailyCompletedToday = if (state.isDailyChallenge) true else it.isDailyCompletedToday,
+                isDoubleRewardClaimedThisLevel = false
             )
         }
     }
@@ -648,6 +738,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     rewardType = type,
                     tokensAdded = 2
                 )
+            }
+            "OPEN_CHEST" -> {
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false
+                    )
+                }
+                return
             }
             else -> {
                 prefs.addTokens(1)
@@ -841,6 +940,304 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun setShopVisible(visible: Boolean) { _uiState.update { it.copy(isShopDialogVisible = visible) } }
     fun setSettingsVisible(visible: Boolean) { _uiState.update { it.copy(isSettingsDialogVisible = visible) } }
     fun setSkinsVisible(visible: Boolean) { _uiState.update { it.copy(isSkinsDialogVisible = visible) } }
+    fun setDailyQuestsVisible(visible: Boolean) {
+        if (visible) refreshDailySystems()
+        _uiState.update { it.copy(isDailyQuestsDialogVisible = visible) }
+    }
+    fun setDailyLoginVisible(visible: Boolean) {
+        if (visible) refreshDailySystems()
+        _uiState.update { it.copy(isDailyLoginDialogVisible = visible) }
+    }
+    fun setChestVisible(visible: Boolean) {
+        if (visible) refreshDailySystems()
+        _uiState.update { it.copy(isChestDialogVisible = visible) }
+    }
+
+    // --- Game Systems: Daily Quests, Login Calendar, Mystery Chest ---
+    fun refreshDailySystems() {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        prefs.checkAndResetDailyQuests(todayStr)
+
+        // 1. Daily Quests (100% connected to real game activity)
+        val q1 = DailyQuest(
+            id = 1,
+            title = "3 Bölüm Çöz",
+            description = "Bugün 3 farklı bölümü başarıyla tamamla",
+            current = prefs.levelsCompletedToday,
+            target = 3,
+            rewardTokens = 2,
+            rewardBreakers = 0,
+            isClaimed = prefs.isQuestClaimed(1)
+        )
+        val q2 = DailyQuest(
+            id = 2,
+            title = "Yıldız Avcısı",
+            description = "Bugün toplam en az 6 yıldız topla",
+            current = prefs.starsEarnedToday,
+            target = 6,
+            rewardTokens = 0,
+            rewardBreakers = 1,
+            isClaimed = prefs.isQuestClaimed(2)
+        )
+        val q3 = DailyQuest(
+            id = 3,
+            title = "Günün Özel Bulmacası",
+            description = "Bugünün özel eko bulmacasını çöz",
+            current = if (prefs.dailyChallengeCompletedToday) 1 else 0,
+            target = 1,
+            rewardTokens = 3,
+            rewardBreakers = 0,
+            isClaimed = prefs.isQuestClaimed(3)
+        )
+        val q4 = DailyQuest(
+            id = 4,
+            title = "Kusursuz Çizim (0 Yankı)",
+            description = "En az 2 bölümü tek bir hata/yankı yapmadan bitir",
+            current = prefs.flawlessLevelsToday,
+            target = 2,
+            rewardTokens = 2,
+            rewardBreakers = 1,
+            isClaimed = prefs.isQuestClaimed(4)
+        )
+        val quests = listOf(q1, q2, q3, q4)
+        val unclaimedCount = quests.count { it.isCompleted && !it.isClaimed }
+
+        // 2. Daily Login Streak (7-day calendar)
+        val lastClaim = prefs.lastLoginClaimDate
+        val isClaimedToday = lastClaim == todayStr
+        val currentStreak = prefs.loginStreak
+
+        val streakToUse: Int
+        if (!isClaimedToday && lastClaim.isNotEmpty()) {
+            val cal = Calendar.getInstance()
+            cal.add(Calendar.DAY_OF_YEAR, -1)
+            val yesterdayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
+            if (lastClaim != yesterdayStr) {
+                // Streak broken due to missed day
+                prefs.loginStreak = 1
+                streakToUse = 1
+            } else {
+                streakToUse = currentStreak
+            }
+        } else {
+            streakToUse = currentStreak
+        }
+
+        val loginDays = (1..7).map { day ->
+            val isClaimed = if (isClaimedToday) day <= streakToUse else day < streakToUse
+            val isToday = if (isClaimedToday) false else day == streakToUse
+            val isPast = day < streakToUse
+            val (tok, brk) = when (day) {
+                1 -> Pair(2, 0)
+                2 -> Pair(0, 1)
+                3 -> Pair(3, 0)
+                4 -> Pair(0, 2)
+                5 -> Pair(5, 0)
+                6 -> Pair(0, 3)
+                else -> Pair(10, 5) // Day 7
+            }
+            DailyLoginDay(
+                dayNumber = day,
+                title = when (day) {
+                    1 -> "+2 Jeton"
+                    2 -> "+1 Matkap"
+                    3 -> "+3 Jeton"
+                    4 -> "+2 Matkap"
+                    5 -> "+5 Jeton"
+                    6 -> "+3 Matkap"
+                    else -> "Büyük Ödül"
+                },
+                tokens = tok,
+                breakers = brk,
+                isLegendary = day == 7,
+                isClaimed = isClaimed,
+                isToday = isToday,
+                isPast = isPast
+            )
+        }
+
+        // 3. Mystery Echo Chest
+        val freeChestAvail = prefs.isFreeChestAvailable(todayStr)
+        val adChestsOpened = prefs.getAdChestsOpenedToday(todayStr)
+        val adRemaining = (2 - adChestsOpened).coerceAtLeast(0)
+
+        val unlocked = prefs.getUnlockedThemes()
+
+        _uiState.update {
+            it.copy(
+                dailyQuests = quests,
+                unclaimedQuestsCount = unclaimedCount,
+                loginStreak = streakToUse,
+                isLoginRewardAvailableToday = !isClaimedToday,
+                loginDays = loginDays,
+                isFreeChestAvailable = freeChestAvail,
+                adChestsRemainingToday = adRemaining,
+                unlockedThemes = unlocked
+            )
+        }
+    }
+
+    fun claimDailyQuest(questId: Int) {
+        val quest = _uiState.value.dailyQuests.firstOrNull { it.id == questId } ?: return
+        if (!quest.isCompleted || quest.isClaimed) return
+
+        prefs.setQuestClaimed(questId, true)
+        if (quest.rewardTokens > 0) prefs.addTokens(quest.rewardTokens)
+        if (quest.rewardBreakers > 0) prefs.addBreakers(quest.rewardBreakers)
+
+        HarmonicAudioEngine.playVictoryCascade()
+        triggerHapticVictory()
+        showToast("Görev Ödülü Alındı! (+${quest.rewardTokens} Jeton, +${quest.rewardBreakers} Matkap)")
+        refreshDailySystems()
+        _uiState.update {
+            it.copy(
+                tokens = prefs.tokens,
+                echoBreakers = prefs.echoBreakers
+            )
+        }
+    }
+
+    fun claimDailyLoginReward() {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        if (prefs.isLoginRewardClaimedToday(todayStr)) {
+            showToast("Bugünkü giriş ödülü zaten alındı!")
+            return
+        }
+
+        val streak = _uiState.value.loginStreak
+        val (tok, brk) = when (streak) {
+            1 -> Pair(2, 0)
+            2 -> Pair(0, 1)
+            3 -> Pair(3, 0)
+            4 -> Pair(0, 2)
+            5 -> Pair(5, 0)
+            6 -> Pair(0, 3)
+            else -> Pair(10, 5)
+        }
+
+        prefs.addTokens(tok)
+        if (brk > 0) prefs.addBreakers(brk)
+        if (streak == 7) {
+            prefs.unlockTheme("GOLDEN_PULSE")
+        }
+
+        prefs.lastLoginClaimDate = todayStr
+        prefs.loginStreak = if (streak >= 7) 1 else streak + 1
+
+        HarmonicAudioEngine.playVictoryCascade()
+        triggerHapticVictory()
+
+        showToast("Gün $streak Ödülü Alındı! (+$tok Jeton${if (brk > 0) ", +$brk Matkap Lazeri" else ""})")
+        refreshDailySystems()
+        _uiState.update {
+            it.copy(
+                tokens = prefs.tokens,
+                echoBreakers = prefs.echoBreakers
+            )
+        }
+    }
+
+    fun openEchoChest(isAd: Boolean) {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        if (!isAd) {
+            if (!prefs.isFreeChestAvailable(todayStr)) {
+                showToast("Bugünkü ücretsiz sandık zaten açıldı!")
+                return
+            }
+            prefs.lastFreeChestDate = todayStr
+        } else {
+            val opened = prefs.getAdChestsOpenedToday(todayStr)
+            if (opened >= 2) {
+                showToast("Bugünkü reklamlı sandık limiti doldu!")
+                return
+            }
+            prefs.incrementAdChestOpened(todayStr)
+        }
+
+        val roll = (1..100).random()
+        val reward: ChestReward = when {
+            roll <= 60 -> {
+                val t = (2..3).random()
+                prefs.addTokens(t)
+                ChestReward(
+                    rarity = ThemeRarity.COMMON,
+                    title = "Yaygın Yankı Parçacığı",
+                    subtitle = "$t İpucu Jetonu kazandınız!",
+                    tokens = t,
+                    breakers = 0
+                )
+            }
+            roll <= 85 -> {
+                prefs.addTokens(1)
+                prefs.addBreakers(1)
+                ChestReward(
+                    rarity = ThemeRarity.RARE,
+                    title = "Nadir Lazer Kristali",
+                    subtitle = "1 İpucu Jetonu & 1 Matkap Lazeri kazandınız!",
+                    tokens = 1,
+                    breakers = 1
+                )
+            }
+            roll <= 97 -> {
+                prefs.addTokens(5)
+                prefs.addBreakers(2)
+                prefs.unlockTheme("AURORA_EMERALD")
+                ChestReward(
+                    rarity = ThemeRarity.EPIC,
+                    title = "Epik Kozmik Kasa",
+                    subtitle = "5 Jeton, 2 Matkap ve 'Kutup Zümrüdü' Teması açıldı!",
+                    tokens = 5,
+                    breakers = 2,
+                    unlockedThemeName = "Kutup Zümrüdü"
+                )
+            }
+            else -> {
+                prefs.addTokens(10)
+                prefs.addBreakers(4)
+                prefs.unlockTheme("GOLDEN_PULSE")
+                ChestReward(
+                    rarity = ThemeRarity.LEGENDARY,
+                    title = "Efsanevi Omega Sandığı!",
+                    subtitle = "10 Jeton, 4 Matkap ve Efsanevi 'Altın Lazer' Teması açıldı!",
+                    tokens = 10,
+                    breakers = 4,
+                    unlockedThemeName = "Altın Lazer"
+                )
+            }
+        }
+
+        HarmonicAudioEngine.playVictoryCascade()
+        triggerHapticVictory()
+
+        refreshDailySystems()
+        _uiState.update {
+            it.copy(
+                tokens = prefs.tokens,
+                echoBreakers = prefs.echoBreakers,
+                lastOpenedChestReward = reward
+            )
+        }
+    }
+
+    fun dismissChestReward() {
+        _uiState.update { it.copy(lastOpenedChestReward = null) }
+    }
+
+    fun claimVictoryDoubleReward() {
+        if (_uiState.value.isDoubleRewardClaimedThisLevel) return
+        prefs.addTokens(2)
+        prefs.addBreakers(1)
+        HarmonicAudioEngine.playVictoryCascade()
+        triggerHapticVictory()
+        _uiState.update {
+            it.copy(
+                tokens = prefs.tokens,
+                echoBreakers = prefs.echoBreakers,
+                isDoubleRewardClaimedThisLevel = true
+            )
+        }
+        showToast("2X Ödül Alındı! (+2 Jeton & +1 Matkap Lazeri)")
+    }
 
     private fun findNodeAtPoint(point: Point, nodes: List<Node>): Node? {
         return nodes.firstOrNull { node ->

@@ -78,6 +78,7 @@ enum class GameStatus {
 
 enum class ScreenState {
     INTRO,
+    LOGIN,
     MAIN_MENU,
     PLAYING_LEVEL,
     DAILY_CHALLENGE
@@ -89,23 +90,76 @@ data class EchoStats(
     val totalPlayTimeSec: Long = 0L
 )
 
+enum class ThemeRarity(
+    val title: String,
+    val color: Color,
+    val backgroundColor: Color
+) {
+    COMMON("Yaygın", Color(0xFF64748B), Color(0xFFF1F5F9)),
+    RARE("Nadir", Color(0xFF0284C7), Color(0xFFE0F2FE)),
+    EPIC("Epik", Color(0xFF9333EA), Color(0xFFF3E8FF)),
+    LEGENDARY("Efsanevi", Color(0xFFD97706), Color(0xFFFEF3C7))
+}
+
 enum class StrokeTheme(
     val displayName: String,
     val primaryColor: Color,
-    val glowColor: Color
+    val glowColor: Color,
+    val rarity: ThemeRarity = ThemeRarity.COMMON,
+    val requiredStars: Int = 0
 ) {
-    NEON_CYAN("Okyanus Mavisi", Color(0xFF0284C7), Color(0x440284C7)),
-    SOLAR_FLAME("Güneş Turuncusu", Color(0xFFEA580C), Color(0x44EA580C)),
-    CYBER_MAGENTA("Fuşya Enerji", Color(0xFFD946EF), Color(0x44D946EF)),
-    ZEN_INK("Gece Kobaltı", Color(0xFF312E81), Color(0x44312E81))
+    NEON_CYAN("Okyanus Mavisi", Color(0xFF0284C7), Color(0x440284C7), ThemeRarity.COMMON, 0),
+    SOLAR_FLAME("Güneş Turuncusu", Color(0xFFEA580C), Color(0x44EA580C), ThemeRarity.COMMON, 0),
+    CYBER_MAGENTA("Fuşya Enerji", Color(0xFFD946EF), Color(0x44D946EF), ThemeRarity.RARE, 30),
+    ZEN_INK("Gece Kobaltı", Color(0xFF312E81), Color(0x44312E81), ThemeRarity.RARE, 60),
+    AURORA_EMERALD("Kutup Zümrüdü", Color(0xFF10B981), Color(0x4410B981), ThemeRarity.EPIC, 120),
+    GOLDEN_PULSE("Altın Lazer", Color(0xFFF59E0B), Color(0x44F59E0B), ThemeRarity.LEGENDARY, 200)
 }
 
 enum class EchoTheme(
     val displayName: String,
     val echoColor: Color,
-    val glowColor: Color
+    val glowColor: Color,
+    val rarity: ThemeRarity = ThemeRarity.COMMON,
+    val requiredStars: Int = 0
 ) {
-    ELECTRIC_RED("Kızıl Lazer", Color(0xFFDC2626), Color(0x44DC2626)),
-    SHATTERED_ICE("Buz Mavisi", Color(0xFF0284C7), Color(0x440284C7)),
-    VOID_DARK("Mor Sis", Color(0xFF7C3AED), Color(0x447C3AED))
+    ELECTRIC_RED("Kızıl Lazer", Color(0xFFDC2626), Color(0x44DC2626), ThemeRarity.COMMON, 0),
+    SHATTERED_ICE("Buz Mavisi", Color(0xFF0284C7), Color(0x440284C7), ThemeRarity.COMMON, 0),
+    VOID_DARK("Mor Sis", Color(0xFF7C3AED), Color(0x447C3AED), ThemeRarity.RARE, 45),
+    CRIMSON_NEBULA("Karanlık Nebula", Color(0xFFBE123C), Color(0x44BE123C), ThemeRarity.EPIC, 100),
+    SOLAR_PLASMA("Güneş Plazması", Color(0xFFF97316), Color(0x44F97316), ThemeRarity.LEGENDARY, 180)
 }
+
+data class DailyQuest(
+    val id: Int,
+    val title: String,
+    val description: String,
+    val current: Int,
+    val target: Int,
+    val rewardTokens: Int,
+    val rewardBreakers: Int,
+    val isClaimed: Boolean
+) {
+    val isCompleted: Boolean get() = current >= target
+}
+
+data class DailyLoginDay(
+    val dayNumber: Int,
+    val title: String,
+    val tokens: Int,
+    val breakers: Int,
+    val isLegendary: Boolean = false,
+    val isClaimed: Boolean = false,
+    val isToday: Boolean = false,
+    val isPast: Boolean = false
+)
+
+data class ChestReward(
+    val rarity: ThemeRarity,
+    val title: String,
+    val subtitle: String,
+    val tokens: Int,
+    val breakers: Int,
+    val unlockedThemeName: String? = null
+)
+

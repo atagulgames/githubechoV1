@@ -24,6 +24,9 @@ import com.example.ui.components.EchoCanvas
 import com.example.ui.components.EchoToastBanner
 import com.example.ui.components.EchoTopHUD
 import com.example.ui.dialogs.AdLoadingDialog
+import com.example.ui.dialogs.ChestDialog
+import com.example.ui.dialogs.DailyLoginDialog
+import com.example.ui.dialogs.DailyQuestsDialog
 import com.example.ui.dialogs.DeadlockDialog
 import com.example.ui.dialogs.LevelSelectDialog
 import com.example.ui.dialogs.RewardClaimedDialog
@@ -31,7 +34,8 @@ import com.example.ui.dialogs.SettingsDialog
 import com.example.ui.dialogs.ShopDialog
 import com.example.ui.dialogs.SkinsDialog
 import com.example.ui.dialogs.VictoryDialog
-import com.example.ui.intro.IntroLandscapeScreen
+import com.example.ui.auth.LoginScreen
+import com.example.ui.intro.IntroVideoScreen
 import com.example.ui.menu.EchoMainMenu
 import com.example.viewmodel.EchoGameViewModel
 
@@ -45,8 +49,12 @@ fun EchoGameScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Handle system back button to return to Main Menu from game
-    BackHandler(enabled = state.screenState != ScreenState.MAIN_MENU && state.screenState != ScreenState.INTRO) {
+    // Handle system back button to return to Main Menu from game (disabled during Intro and Login)
+    BackHandler(
+        enabled = state.screenState != ScreenState.MAIN_MENU &&
+                state.screenState != ScreenState.INTRO &&
+                state.screenState != ScreenState.LOGIN
+    ) {
         viewModel.returnToMainMenu()
     }
 
@@ -63,9 +71,20 @@ fun EchoGameScreen(
         ) {
             when (state.screenState) {
                 ScreenState.INTRO -> {
-                    // Fluid, modern intro with official logo and auto/tap transition
-                    IntroLandscapeScreen(
+                    // Direct intro.mp4 video playback as specified by user
+                    IntroVideoScreen(
                         onIntroFinished = { viewModel.finishIntro() }
+                    )
+                }
+
+                ScreenState.LOGIN -> {
+                    // Mandatory authentication gatekeeper: Main Menu strictly inaccessible until verified
+                    LoginScreen(
+                        initialUsername = state.authenticatedUser,
+                        initialRememberMe = state.rememberMe,
+                        onLoginSuccess = { username, rememberMe ->
+                            viewModel.onLoginSuccess(username, rememberMe)
+                        }
                     )
                 }
 
@@ -78,6 +97,9 @@ fun EchoGameScreen(
                         onOpenShop = { viewModel.setShopVisible(true) },
                         onOpenSkins = { viewModel.setSkinsVisible(true) },
                         onOpenSettings = { viewModel.setSettingsVisible(true) },
+                        onOpenDailyQuests = { viewModel.setDailyQuestsVisible(true) },
+                        onOpenDailyLogin = { viewModel.setDailyLoginVisible(true) },
+                        onOpenChest = { viewModel.setChestVisible(true) },
                         onWatchRewardedAd = { onShowRewardedAd("REWARD_DAILY") },
                         onBannerAdLoaded = { viewModel.onBannerAdLoaded() },
                         onBannerAdFailed = { err -> viewModel.onBannerAdFailed(err) }
@@ -132,6 +154,8 @@ fun EchoGameScreen(
                     levelId = state.level.levelId,
                     echoCount = state.echoCountForLevel,
                     parEchoes = state.level.parEchoes,
+                    isDoubleClaimed = state.isDoubleRewardClaimedThisLevel,
+                    onClaimDoubleReward = { viewModel.claimVictoryDoubleReward() },
                     onNextLevel = {
                         onShowInterstitialAd {
                             viewModel.nextLevel()
@@ -191,6 +215,7 @@ fun EchoGameScreen(
                     onToggleHaptics = { viewModel.toggleHaptics(it) },
                     onToggleTestAds = { viewModel.toggleTestAds(it) },
                     onResetAllProgress = { viewModel.resetAllGameProgress() },
+                    onLogout = { viewModel.logout() },
                     onDismiss = { viewModel.setSettingsVisible(false) }
                 )
             }
@@ -200,20 +225,58 @@ fun EchoGameScreen(
                 SkinsDialog(
                     currentStroke = state.strokeTheme,
                     currentEcho = state.echoTheme,
+                    unlockedThemes = state.unlockedThemes,
+                    totalStars = state.totalStars,
                     onSelectStroke = { viewModel.setStrokeTheme(it) },
                     onSelectEcho = { viewModel.setEchoTheme(it) },
                     onDismiss = { viewModel.setSkinsVisible(false) }
                 )
             }
 
-            // 8. Ad Loading Overlay Dialog
+            // 8. Daily Quests Dialog
+            if (state.isDailyQuestsDialogVisible) {
+                DailyQuestsDialog(
+                    quests = state.dailyQuests,
+                    onClaimQuest = { questId -> viewModel.claimDailyQuest(questId) },
+                    onDismiss = { viewModel.setDailyQuestsVisible(false) }
+                )
+            }
+
+            // 9. Daily Login Calendar Dialog
+            if (state.isDailyLoginDialogVisible) {
+                DailyLoginDialog(
+                    days = state.loginDays,
+                    currentStreak = state.loginStreak,
+                    isRewardAvailableToday = state.isLoginRewardAvailableToday,
+                    onClaimToday = { viewModel.claimDailyLoginReward() },
+                    onDismiss = { viewModel.setDailyLoginVisible(false) }
+                )
+            }
+
+            // 10. Mystery Echo Chest Dialog
+            if (state.isChestDialogVisible || state.lastOpenedChestReward != null) {
+                ChestDialog(
+                    isFreeAvailable = state.isFreeChestAvailable,
+                    adRemainingToday = state.adChestsRemainingToday,
+                    reward = state.lastOpenedChestReward,
+                    onOpenFree = { viewModel.openEchoChest(isAd = false) },
+                    onOpenWithAd = {
+                        onShowRewardedAd("OPEN_CHEST")
+                        viewModel.openEchoChest(isAd = true)
+                    },
+                    onDismissReward = { viewModel.dismissChestReward() },
+                    onDismiss = { viewModel.setChestVisible(false) }
+                )
+            }
+
+            // 11. Ad Loading Overlay Dialog
             if (state.isAdLoading) {
                 AdLoadingDialog(
                     onDismiss = { viewModel.setAdLoading(false) }
                 )
             }
 
-            // 9. Reward Claimed Celebration Dialog
+            // 12. Reward Claimed Celebration Dialog
             state.rewardClaimedData?.let { rewardInfo ->
                 RewardClaimedDialog(
                     title = rewardInfo.title,
