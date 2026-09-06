@@ -59,9 +59,19 @@ object CollisionEngine {
         endpointTolerance: Float = 8.0f,
         hitboxScale: Float = 1.0f
     ): Segment? {
-        val effectiveTolerance = endpointTolerance * hitboxScale
+        val effectiveTolerance = if (hitboxScale < 1.0f) endpointTolerance * 1.75f else endpointTolerance
         for (echo in echoes) {
-            if (doLinesIntersect(candidate.p1, candidate.p2, echo.p1, echo.p2, effectiveTolerance)) {
+            val echoToTest = if (hitboxScale < 1.0f) {
+                // Physically shrink the echo segment towards its midpoint so player can slip past ends
+                val midX = (echo.p1.x + echo.p2.x) * 0.5f
+                val midY = (echo.p1.y + echo.p2.y) * 0.5f
+                val p1Shrunk = Point(midX + (echo.p1.x - midX) * hitboxScale, midY + (echo.p1.y - midY) * hitboxScale)
+                val p2Shrunk = Point(midX + (echo.p2.x - midX) * hitboxScale, midY + (echo.p2.y - midY) * hitboxScale)
+                Segment(p1Shrunk, p2Shrunk, echo.fromNodeId, echo.toNodeId)
+            } else {
+                echo
+            }
+            if (doLinesIntersect(candidate.p1, candidate.p2, echoToTest.p1, echoToTest.p2, effectiveTolerance)) {
                 return echo
             }
         }

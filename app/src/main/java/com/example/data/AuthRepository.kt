@@ -164,7 +164,10 @@ class AuthRepository(context: Context) {
             rank = 1,
             username = activeUsername,
             avatarEmoji = "⚡",
-            title = if (preferences.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
+            avatarUri = preferences.userAvatarUri,
+            title = preferences.userCustomTitle.ifBlank {
+                if (preferences.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi"
+            },
             trophies = preferences.trophies,
             totalEchoes = preferences.totalEchoes,
             totalPlayTimeSec = preferences.totalPlayTimeSec,
@@ -186,7 +189,8 @@ class AuthRepository(context: Context) {
                     rank = 1,
                     username = u.username,
                     avatarEmoji = "👤",
-                    title = if (u.trophies > 1500) "Usta Çizgici" else "Kozmik Oyuncu",
+                    avatarUri = u.avatarUri,
+                    title = u.customTitle.ifBlank { if (u.trophies > 1500) "Usta Çizgici" else "Kozmik Oyuncu" },
                     trophies = u.trophies,
                     totalEchoes = u.totalEchoes,
                     totalPlayTimeSec = u.totalPlayTimeSec,
@@ -349,6 +353,8 @@ class AuthRepository(context: Context) {
         preferences.maxCombo = user.maxCombo
         preferences.levelStatsCsv = user.levelStatsCsv
         preferences.isDarkTheme = user.isDarkTheme
+        preferences.userAvatarUri = user.avatarUri
+        preferences.userCustomTitle = user.customTitle
         if (user.languageCode.isNotBlank()) {
             preferences.languageCode = user.languageCode
         }
@@ -360,6 +366,17 @@ class AuthRepository(context: Context) {
         // Sync completed levels in preferences
         val stringSet = completedSet.map { it.toString() }.toSet()
         preferences.setCompletedLevelsRaw(stringSet)
+    }
+
+    suspend fun updateUserProfile(avatarUri: String, customTitle: String) = withContext(Dispatchers.IO) {
+        preferences.userAvatarUri = avatarUri
+        preferences.userCustomTitle = customTitle
+        val activeUsername = preferences.authenticatedUsername
+        if (activeUsername.isNotBlank()) {
+            val user = userDao.getUserByUsername(activeUsername) ?: userDao.getUserByEmail(activeUsername)
+            val actual = user?.username ?: activeUsername
+            userDao.updateProfile(actual, avatarUri, customTitle)
+        }
     }
 
     private fun hashPassword(password: String): String {

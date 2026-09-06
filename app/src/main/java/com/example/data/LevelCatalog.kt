@@ -1,11 +1,13 @@
 package com.example.data
 
 import com.example.data.local.LevelEntity
+import com.example.localization.Language
 import com.example.model.DirectedEdge
 import com.example.model.LevelData
 import com.example.model.LevelNode
 import com.example.model.NodeType
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -14,9 +16,22 @@ object LevelCatalog {
 
     const val TOTAL_LEVELS = 100
 
-    private val TIER_NAMES = listOf(
+    private val TIER_NAMES_EN = listOf(
+        "Harmonic Genesis", // Tier 1 (1..10)
+        "Vector Flow",       // Tier 2 (11..20)
+        "Lock & Key",        // Tier 3 (21..30)
+        "Decaying Echoes",   // Tier 4 (31..40)
+        "Ghost Resonance",   // Tier 5 (41..50)
+        "Fractal Matrix",    // Tier 6 (51..60)
+        "Quantum Gates",     // Tier 7 (61..70)
+        "Temporal Drift",    // Tier 8 (71..80)
+        "Master Lattice",    // Tier 9 (81..90)
+        "Omega Peak"         // Tier 10 (91..100)
+    )
+
+    private val TIER_NAMES_TR = listOf(
         "Harmonik Başlangıç", // Tier 1 (1..10)
-        "Yönlü Enerji",       // Tier 2 (11..20)
+        "Vektör Akışı",       // Tier 2 (11..20)
         "Kilit & Anahtar",    // Tier 3 (21..30)
         "Sönen Dalgalar",     // Tier 4 (31..40)
         "Gölge Rezonansı",    // Tier 5 (41..50)
@@ -27,7 +42,40 @@ object LevelCatalog {
         "Omega Zirvesi"       // Tier 10 (91..100)
     )
 
-    private val UNIQUE_NAMES = listOf(
+    private val UNIQUE_NAMES_EN = listOf(
+        // Tier 1 (1..10)
+        "Pure Triangle", "Golden Square", "Resonance Pentagon", "Crystal Hexagon", "Bright Star",
+        "Prism Dome", "Twin Loops", "Lapis Ring", "Aura Spark", "Geometric Matrix",
+        // Tier 2 (11..20)
+        "Vector Stream", "Polar Arc", "Spiral Orbit", "Nebula Spine", "Cosmic Needle",
+        "Ion Net", "Vortex Ray", "Zenith Beam", "Pyramid Line", "Infinity Curve",
+        // Tier 3 (21..30)
+        "Copper Vault", "Silver Gateway", "Sapphire Key", "Ruby Barrier", "Emerald Gate",
+        "Mystic Maze", "Hidden Sanctum", "Sacred Portal", "Crystal Seal", "Unlocked Arch",
+        // Tier 4 (31..40)
+        "Fading Spark", "Vapor Trail", "Fragile Pulse", "Temporal Mark", "Lost Wave",
+        "Faint Echo", "Transient Bridge", "Dispersed Photon", "Melting Grid", "Final Reverb",
+        // Tier 5 (41..50)
+        "Shadow Twin", "Phantom Path", "Invisible Wire", "Illusion Web", "Dark Reflection",
+        "Phantom Node", "Reflected Mist", "Stardust Trail", "Shadow Hall", "Broken Mirrors",
+        // Tier 6 (51..60)
+        "Fractal Tree", "Double Helix", "Dual Core", "Hex Honeycomb", "Crystal Cage",
+        "Nested Rings", "Cosmic Blossom", "Fractal Star", "Matrix Weave", "Complex Knot",
+        // Tier 7 (61..70)
+        "Quantum Tunnel", "Entangled Particle", "Superposition", "Photonic Net", "Hypercube",
+        "Multi-Pass", "Dimensional Rift", "Plasma Gate", "Gravity Wave", "Quantum Core",
+        // Tier 8 (71..80)
+        "Time Loop", "Relativity Line", "Chronos Spiral", "Light Cone", "Time Crystal",
+        "Deceleration", "Return Vector", "Time Mirror", "Cosmic Clock", "Interdimensional Flow",
+        // Tier 9 (81..90)
+        "Master Labyrinth", "Node Metropolis", "Grand Weave", "Intricate Lattice", "Cobweb Strand",
+        "Geometric Chaos", "Harmonic Balance", "Supreme Network", "Cosmic Architecture", "Great Portal",
+        // Tier 10 (91..100)
+        "Zenith Ascent", "Interstellar", "Supernova", "Hyperspace", "Galactic Core",
+        "The Crucible", "Cosmos Pulse", "Grand Convergence", "Master Trial", "ECHO OMEGA"
+    )
+
+    private val UNIQUE_NAMES_TR = listOf(
         // Tier 1 (1..10)
         "Saf Üçgen", "Altın Kare", "Rezonans Beşgeni", "Kristal Altıgen", "Parlak Yıldız",
         "Prizma Kubbesi", "Çifte Halka", "Lapis Çemberi", "Aura Kristali", "Geometrik Matris",
@@ -60,10 +108,24 @@ object LevelCatalog {
         "Son Sınav", "Kozmos Nabzı", "Büyük Birleşme", "Usta İmtihanı", "ECHO OMEGA"
     )
 
+    fun getLevelTitle(id: Int, language: Language = Language.EN): String {
+        val clampedId = id.coerceIn(1, TOTAL_LEVELS)
+        val tierIndex = ((clampedId - 1) / 10).coerceIn(0, 9)
+        return if (language == Language.TR) {
+            val name = UNIQUE_NAMES_TR.getOrNull(clampedId - 1) ?: "Seviye $clampedId"
+            val tier = TIER_NAMES_TR[tierIndex]
+            "$name ($tier)"
+        } else {
+            val name = UNIQUE_NAMES_EN.getOrNull(clampedId - 1) ?: "Level $clampedId"
+            val tier = TIER_NAMES_EN[tierIndex]
+            "$name ($tier)"
+        }
+    }
+
     /**
-     * Generates a complete set of 100 unique, non-repeating, guaranteed playable puzzle levels.
-     * Every level has mathematically distinct geometry, unique title, verified hint order,
-     * and a smooth progressive difficulty curve from 1 to 100.
+     * Generates a complete set of 100 unique, guaranteed playable puzzle levels.
+     * Every level has mathematically distinct geometry, non-crossing solution path,
+     * and generous node spacing.
      */
     fun create100Levels(): List<LevelEntity> {
         val list = ArrayList<LevelEntity>(TOTAL_LEVELS)
@@ -94,7 +156,6 @@ object LevelCatalog {
         return list
     }
 
-    // Keep legacy name as alias to prevent compile issues anywhere
     fun create250Levels(): List<LevelEntity> = create100Levels()
 
     private fun serializeNodes(nodes: List<LevelNode>): String {
@@ -160,146 +221,99 @@ object LevelCatalog {
         val clampedId = id.coerceIn(1, TOTAL_LEVELS)
         val tierIndex = ((clampedId - 1) / 10).coerceIn(0, 9)
 
-        val title = if (clampedId == 100) {
-            "ECHO OMEGA (100. Zirve Finali)"
-        } else {
-            val name = UNIQUE_NAMES.getOrNull(clampedId - 1) ?: "Seviye $clampedId"
-            val tier = TIER_NAMES[tierIndex]
-            "$name ($tier)"
-        }
+        // Default title in English (as requested: "Herşey başlangıçta ingilizce olacak")
+        val title = getLevelTitle(clampedId, Language.EN)
 
-        // Dynamically varying node counts so consecutive levels have different matching numbers
-        val nodeCount = when {
-            clampedId == 1 -> 3 // 2 matches
-            clampedId == 2 -> 4 // 3 matches
-            clampedId == 3 -> 5 // 4 matches
-            clampedId == 4 -> 4 // 3 matches
-            clampedId == 5 -> 6 // 5 matches
-            clampedId == 6 -> 5 // 4 matches
-            clampedId == 7 -> 7 // 6 matches
-            clampedId == 8 -> 6 // 5 matches
-            clampedId == 9 -> 8 // 7 matches
-            clampedId == 100 -> 12 // 11 matches (Grand Finale)
-            else -> {
-                val tierBase = ((clampedId - 1) / 10) + 4
-                val pattern = when (clampedId % 4) {
-                    0 -> 1
-                    1 -> -1
-                    2 -> 2
-                    else -> 0
-                }
-                (tierBase + pattern).coerceIn(4, 11)
-            }
-        }
+        // Dynamic node count from 3 to 36 with smooth difficulty progression
+        val nodeCount = (3 + ((clampedId - 1) * 33.0 / 99.0).roundToInt()).coerceIn(3, 36)
 
         val centerX = 180f
         val centerY = 220f
-        val baseRadius = (110f - (nodeCount * 2.2f)).coerceIn(65f, 105f)
 
-        // Key & Gate mechanics: Key appears early (index 2..nodeCount-1), Gate is always at the last node
+        // Key & Gate mechanics: Key appears early (index 2..nodeCount-2), Gate is at index nodeCount
         val hasKeyGate = (tierIndex == 2 || tierIndex == 6 || (tierIndex == 9 && clampedId % 2 == 0)) && nodeCount >= 4
-        val keyIndex = if (hasKeyGate) 2 + ((clampedId % (nodeCount - 3)).coerceAtLeast(0)) else -1
+        val keyIndex = if (hasKeyGate) (2 + ((clampedId % (nodeCount - 3)).coerceAtLeast(0))).coerceIn(2, nodeCount - 1) else -1
         val gateIndex = if (hasKeyGate) nodeCount else -1
-
-        // 7 Distinct Geometric Archetypes for diverse shapes across the 100 levels
-        val archetype = (clampedId - 1) % 7
-        val rotationOffset = ((clampedId * 43) % 360) * (PI / 180.0)
 
         val nodes = ArrayList<LevelNode>(nodeCount)
 
-        for (i in 1..nodeCount) {
-            val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
-
-            val (rawX, rawY) = when (archetype) {
-                0 -> {
-                    // Regular & breathing Polygon (Convex perimeter, guaranteed non-crossing)
-                    val angle = (2 * PI * (i - 1) / nodeCount) - (PI / 2) + rotationOffset
-                    val r = baseRadius * (1.0f + ((i * clampedId) % 5 - 2) * 0.03f)
-                    Pair(
-                        centerX + r * cos(angle).toFloat(),
-                        centerY + r * sin(angle).toFloat()
-                    )
-                }
-                1 -> {
-                    // Archimedean Spiral / Nautilus (Monotonically expanding radius, unrolling path)
-                    val turns = 1.35
-                    val angle = (turns * 2 * PI * progress) - (PI / 2) + rotationOffset
-                    val r = (baseRadius * 0.35f) + (baseRadius * 0.70f * progress)
-                    Pair(
-                        centerX + r * cos(angle).toFloat(),
-                        centerY + r * sin(angle).toFloat()
-                    )
-                }
-                2 -> {
-                    // Elliptical Cosmic Orbit
-                    val angle = (2 * PI * (i - 1) / nodeCount) - (PI / 2) + rotationOffset
-                    val rX = baseRadius * 1.22f
-                    val rY = baseRadius * 0.82f
-                    Pair(
-                        centerX + rX * cos(angle).toFloat(),
-                        centerY + rY * sin(angle).toFloat()
-                    )
-                }
-                3 -> {
-                    // Star Sawtooth (Outer and inner alternating points around perimeter)
-                    val angle = (2 * PI * (i - 1) / nodeCount) - (PI / 2) + rotationOffset
-                    val r = if (i % 2 == 0) baseRadius * 0.65f else baseRadius * 1.05f
-                    Pair(
-                        centerX + r * cos(angle).toFloat(),
-                        centerY + r * sin(angle).toFloat()
-                    )
-                }
-                4 -> {
-                    // Sinusoidal Energy Ribbon (S-Curve flowing through canvas)
-                    val spanX = baseRadius * 1.8f
-                    val startX = centerX - (spanX / 2f)
-                    val px = startX + (spanX * progress)
-                    val py = centerY + (sin(progress * 2 * PI.toFloat()) * (baseRadius * 0.75f))
-                    // Rotate around center
-                    val dx = px - centerX
-                    val dy = py - centerY
-                    val rx = dx * cos(rotationOffset).toFloat() - dy * sin(rotationOffset).toFloat()
-                    val ry = dx * sin(rotationOffset).toFloat() + dy * cos(rotationOffset).toFloat()
-                    Pair(centerX + rx, centerY + ry)
-                }
-                5 -> {
-                    // Horseshoe / Crescent Arc
-                    val arcSpan = 1.6 * PI
-                    val angle = - (arcSpan / 2) + (arcSpan * progress) + rotationOffset
-                    val r = baseRadius * (0.90f + 0.20f * sin(progress * PI.toFloat()))
-                    Pair(
-                        centerX + r * cos(angle).toFloat(),
-                        centerY + r * sin(angle).toFloat()
-                    )
-                }
-                else -> {
-                    // Concentric Dual Ring (First half outer, second half inner, seamless turnaround)
-                    val half = (nodeCount + 1) / 2
-                    val (angle, r) = if (i <= half) {
-                        val p = (i - 1).toFloat() / (half - 1).coerceAtLeast(1)
-                        Pair(p * PI + rotationOffset, baseRadius * 1.05f)
-                    } else {
-                        val p = (i - half - 1).toFloat() / (nodeCount - half - 1).coerceAtLeast(1)
-                        Pair((1f - p) * PI + rotationOffset + PI, baseRadius * 0.58f)
-                    }
-                    Pair(
-                        centerX + r * cos(angle).toFloat(),
-                        centerY + r * sin(angle).toFloat()
-                    )
-                }
+        if (nodeCount <= 10) {
+            // Tier 1: Harmonic cosmic arcs (3 to 10 nodes)
+            val rx = when (clampedId % 4) {
+                0 -> 96f
+                1 -> 104f
+                2 -> 90f
+                else -> 98f
             }
-
-            val clampedX = rawX.coerceIn(50f, 310f)
-            val clampedY = rawY.coerceIn(80f, 360f)
-
-            val type = when (i) {
-                keyIndex -> NodeType.KEY
-                gateIndex -> NodeType.GATE
-                else -> NodeType.NORMAL
+            val ry = when (clampedId % 4) {
+                0 -> 96f
+                1 -> 88f
+                2 -> 106f
+                else -> 94f
             }
-            val keyForGateId = if (type == NodeType.KEY) gateIndex else -1
+            val baseAngle = ((clampedId * 37) % 360) * (PI / 180.0)
+            val isCounterClockwise = clampedId % 3 == 0
+            val sweepSpan = (1.52 + ((clampedId % 5) * 0.03)) * PI
+            val harmonicFreq = (clampedId % 3) + 1
+            val harmonicAmp = if (clampedId % 3 == 1) 0.05f else if (clampedId % 3 == 2) -0.04f else 0.0f
 
-            nodes.add(LevelNode(i, clampedX, clampedY, type, keyForGateId))
+            for (i in 1..nodeCount) {
+                val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
+                val dir = if (isCounterClockwise) -1.0 else 1.0
+                val angle = baseAngle + (dir * sweepSpan * progress)
+                val ripple = 1.0f + (harmonicAmp * sin(harmonicFreq * progress * PI.toFloat()))
+                val px = centerX + (rx * ripple * cos(angle).toFloat())
+                val py = centerY + (ry * ripple * sin(angle).toFloat())
+
+                val type = when (i) {
+                    keyIndex -> NodeType.KEY
+                    gateIndex -> NodeType.GATE
+                    else -> NodeType.NORMAL
+                }
+                val keyForGateId = if (type == NodeType.KEY) gateIndex else -1
+                nodes.add(LevelNode(i, px, py, type, keyForGateId))
+            }
+        } else {
+            // Tier 2-4: Clean serpentine constellation tracks (11 to 36 nodes)
+            val numRows = when {
+                nodeCount <= 18 -> 2
+                nodeCount <= 27 -> 3
+                else -> 4
+            }
+            val nodesPerRow = (nodeCount + numRows - 1) / numRows
+            val yStart = when (numRows) {
+                2 -> 155f
+                3 -> 115f
+                else -> 90f
+            }
+            val ySpacing = when (numRows) {
+                2 -> 130f
+                3 -> 100f
+                else -> 78f
+            }
+            val xMin = 65f + (clampedId % 3) * 3f
+            val xMax = 295f - (clampedId % 4) * 3f
+
+            for (i in 1..nodeCount) {
+                val index0 = i - 1
+                val rowIndex = (index0 / nodesPerRow).coerceAtMost(numRows - 1)
+                val inRowIndex = index0 % nodesPerRow
+                val rowTotal = if (rowIndex == numRows - 1) (nodeCount - rowIndex * nodesPerRow) else nodesPerRow
+                val rowProgress = if (rowTotal > 1) inRowIndex.toFloat() / (rowTotal - 1) else 0.5f
+
+                val isLeftToRight = rowIndex % 2 == 0
+                val effectiveProgress = if (isLeftToRight) rowProgress else (1f - rowProgress)
+                val px = xMin + (xMax - xMin) * effectiveProgress
+                val py = yStart + (rowIndex * ySpacing)
+
+                val type = when (i) {
+                    keyIndex -> NodeType.KEY
+                    gateIndex -> NodeType.GATE
+                    else -> NodeType.NORMAL
+                }
+                val keyForGateId = if (type == NodeType.KEY) gateIndex else -1
+                nodes.add(LevelNode(i, px, py, type, keyForGateId))
+            }
         }
 
         // Mechanic classification for the 10 tiers
@@ -325,7 +339,7 @@ object LevelCatalog {
 
         val isGhostEchoes = mechanicType == "GHOST_ECHO" || (tierIndex >= 7 && clampedId % 3 == 0)
 
-        // Directed edges for ONE_WAY mechanics (guaranteed solvable along hint order)
+        // Directed edges always follow forward solution order: from i to i+1
         val directedEdges = if (mechanicType == "ONE_WAY" || tierIndex == 6) {
             val edges = ArrayList<DirectedEdge>()
             for (i in 1 until nodeCount) {
@@ -342,9 +356,9 @@ object LevelCatalog {
         val parEchoes = (nodeCount / 3).coerceIn(1, 4)
 
         val description = if (clampedId == 100) {
-            "BÜYÜK FİNAL: ECHO Evreninin 100. ve son zirve bulmacasını çöz ve zaferi kazan!"
+            "GRAND FINALE: Complete the 100th and final puzzle of the ECHO universe to claim total mastery!"
         } else {
-            "Bölüm $clampedId: $nodeCount düğümlü ${TIER_NAMES[tierIndex]} geometrisini tek kesintisiz çizgiyle tamamla!"
+            "Level $clampedId: Connect all $nodeCount nodes with a single continuous stroke without colliding with echoes!"
         }
 
         return LevelData(

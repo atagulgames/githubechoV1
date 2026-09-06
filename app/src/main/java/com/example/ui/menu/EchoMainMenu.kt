@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CrisisAlert
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Leaderboard
@@ -78,6 +79,7 @@ fun EchoMainMenu(
     onOpenShop: () -> Unit,
     onOpenSkins: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenSupport: () -> Unit = {},
     onOpenLeaderboard: () -> Unit = {},
     onOpenMyProfile: () -> Unit = {},
     onToggleDarkTheme: () -> Unit = {},
@@ -267,6 +269,24 @@ fun EchoMainMenu(
                             imageVector = if (state.isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
                             contentDescription = "Tema Değiştir (Dark / White)",
                             tint = if (state.isDarkTheme) Color(0xFF38BDF8) else Color(0xFFF59E0B),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onOpenSupport,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .shadow(2.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(cardBg)
+                            .border(1.dp, borderColor, CircleShape)
+                            .testTag("support_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = "Destek & İletişim",
+                            tint = Color(0xFF0284C7),
                             modifier = Modifier.size(18.dp)
                         )
                     }

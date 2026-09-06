@@ -164,40 +164,7 @@ fun IntroVideoScreen(
                     }
                 )
 
-                // Skip intro button overlay
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 44.dp, end = 20.dp),
-                    contentAlignment = Alignment.TopEnd
-                ) {
-                    Surface(
-                        onClick = onIntroFinished,
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color.Black.copy(alpha = 0.65f),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
-                        modifier = Modifier.testTag("intro_video_skip_button")
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "Geç",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Default.SkipNext,
-                                contentDescription = "İntroyu Geç",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
+
             } else {
                 // Media file not yet found on disk: Report exact required path as mandated by Rule 5
                 Card(

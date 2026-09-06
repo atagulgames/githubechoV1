@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,6 +65,7 @@ fun SettingsDialog(
     onToggleHaptics: (Boolean) -> Unit,
     onToggleTestAds: (Boolean) -> Unit = {},
     onResetAllProgress: () -> Unit = {},
+    onOpenSupport: () -> Unit = {},
     onLogout: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
@@ -132,7 +135,7 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 10 Languages Selection Section
+                // Language Selection Section (English & Türkçe)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -157,7 +160,7 @@ fun SettingsDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "(10 Dilde Tam Destek)",
+                            text = "(English & Türkçe)",
                             fontSize = 11.sp,
                             color = textSecondary
                         )
@@ -166,15 +169,14 @@ fun SettingsDialog(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Language.entries.forEach { lang ->
                             val isSelected = lang == currentLanguage
                             Box(
                                 modifier = Modifier
+                                    .weight(1f)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
                                         if (isSelected) Color(0xFF0284C7) else (if (isDarkTheme) Color(0xFF1E293B) else Color.White)
@@ -185,18 +187,19 @@ fun SettingsDialog(
                                         shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable { onSelectLanguage(lang) }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                                    .testTag("lang_chip_${lang.code}")
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    .testTag("lang_chip_${lang.code}"),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = lang.flag,
-                                        fontSize = 15.sp
+                                        fontSize = 18.sp
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = lang.displayName,
-                                        fontSize = 12.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isSelected) Color.White else textPrimary
                                     )
@@ -474,6 +477,36 @@ fun SettingsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Support & Contact Button ("Destek & İletişim")
+                Button(
+                    onClick = {
+                        onOpenSupport()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                        .testTag("open_support_button"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF0284C7),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Destek & İletişim (E-posta)",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Reset All Progress Button ("Sıfırdan Başla")
                 OutlinedButton(

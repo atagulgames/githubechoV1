@@ -462,6 +462,52 @@ object HarmonicAudioEngine {
     }
 
     /**
+     * Plays juicy popping candy sound effect when a node connects.
+     * Scales pitch with connected node count for satisfying musical progression!
+     */
+    fun playCandyPop(comboCount: Int) {
+        if (!isSoundEnabled) return
+        val baseFreq = 520f + (comboCount * 65f).coerceAtMost(600f)
+        audioScope.launch {
+            playSynthTone(baseFreq, 65, 0.65f)
+            delay(40)
+            playSynthTone(baseFreq * 1.25f, 90, 0.50f)
+        }
+    }
+
+    /**
+     * Plays explosive harmonic combo crush sound effect for high combos (4+ nodes).
+     */
+    fun playComboCrush(comboCount: Int) {
+        if (!isSoundEnabled) return
+        audioScope.launch {
+            playSynthTone(440f, 90, 0.70f)
+            delay(50)
+            playSynthTone(554.37f, 100, 0.75f)
+            delay(50)
+            playSynthTone(659.25f, 140, 0.80f)
+            delay(70)
+            playSynthTone(880.00f, 220, 0.85f)
+        }
+    }
+
+    /**
+     * Plays sparkling fanfare for victory callout.
+     */
+    fun playVictoryCallout() {
+        if (!isSoundEnabled) return
+        audioScope.launch {
+            playSynthTone(659.25f, 100, 0.70f)
+            delay(70)
+            playSynthTone(830.61f, 120, 0.75f)
+            delay(80)
+            playSynthTone(987.77f, 150, 0.80f)
+            delay(90)
+            playSynthTone(1318.51f, 320, 0.85f)
+        }
+    }
+
+    /**
      * Plays melodic harmonic tone when a node is connected during drawing.
      */
     fun playNodeTone(sequenceIndex: Int) {

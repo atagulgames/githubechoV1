@@ -75,7 +75,22 @@ class EchoPreferences(context: Context) {
         private const val KEY_RADIUS_SHRINKER_EXPIRES = "echo_radius_shrinker_expires"
         private const val KEY_LEVELS_SINCE_LAST_AD = "echo_levels_since_last_ad"
         private const val KEY_NEXT_INTERSTITIAL_THRESHOLD = "echo_next_interstitial_threshold"
+        private const val KEY_SHRINKER_ADS_WATCHED = "echo_shrinker_ads_watched"
+        private const val KEY_USER_AVATAR_URI = "echo_user_avatar_uri"
+        private const val KEY_USER_CUSTOM_TITLE = "echo_user_custom_title"
     }
+
+    var shrinkerAdsWatched: Int
+        get() = prefs.getInt(KEY_SHRINKER_ADS_WATCHED, 0)
+        set(value) = prefs.edit().putInt(KEY_SHRINKER_ADS_WATCHED, value.coerceAtLeast(0)).apply()
+
+    var userAvatarUri: String
+        get() = prefs.getString(KEY_USER_AVATAR_URI, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_USER_AVATAR_URI, value).apply()
+
+    var userCustomTitle: String
+        get() = prefs.getString(KEY_USER_CUSTOM_TITLE, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_USER_CUSTOM_TITLE, value).apply()
 
     var multiAdWatchCount: Int
         get() = prefs.getInt(KEY_MULTI_AD_WATCH_COUNT, 0)

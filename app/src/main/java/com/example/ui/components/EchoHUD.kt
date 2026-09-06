@@ -376,8 +376,8 @@ fun EchoBottomHUD(
                     )
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(
-                        text = if (state.isEchoShrinkerActive) "Esnek Aktif" else "Esnek Alan",
-                        fontSize = 12.sp,
+                        text = if (state.isEchoShrinkerActive) "Esnek Aktif" else if (state.shrinkerAdsWatched in 1..2) "Esnek (${state.shrinkerAdsWatched}/3)" else "Esnek (3🎬+5💎)",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -468,8 +468,8 @@ fun EchoBottomHUD(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "İpucu",
-                        fontSize = 12.sp,
+                        text = if (state.isHintActive) "İpucu Aktif" else if (state.tokens > 0) "İpucu (${state.tokens})" else "İpucu (🎬)",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }

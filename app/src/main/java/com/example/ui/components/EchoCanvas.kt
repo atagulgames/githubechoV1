@@ -212,56 +212,83 @@ fun EchoCanvas(
                 )
             }
 
-            // 9. Candy Crush Style Explosion Particles
+            // 9. Candy Crush Style Explosion Particles (Animated & naturally fade out)
             if (state.candyParticles.isNotEmpty()) {
+                val now = System.currentTimeMillis()
                 state.candyParticles.forEach { p ->
-                    val screenPos = toScreen(Point(p.x, p.y))
-                    val pColor = p.color.copy(alpha = p.alpha.coerceIn(0f, 1f))
-                    if (p.isStar) {
-                        drawCircle(
-                            color = pColor,
-                            radius = p.size * scale * 1.1f,
-                            center = screenPos
-                        )
-                        drawLine(
-                            color = pColor,
-                            start = Offset(screenPos.x - p.size * scale * 1.5f, screenPos.y),
-                            end = Offset(screenPos.x + p.size * scale * 1.5f, screenPos.y),
-                            strokeWidth = 2.5f * scale
-                        )
-                        drawLine(
-                            color = pColor,
-                            start = Offset(screenPos.x, screenPos.y - p.size * scale * 1.5f),
-                            end = Offset(screenPos.x, screenPos.y + p.size * scale * 1.5f),
-                            strokeWidth = 2.5f * scale
-                        )
-                    } else {
-                        drawCircle(
-                            color = pColor,
-                            radius = p.size * scale * 0.9f,
-                            center = screenPos
-                        )
+                    val elapsed = (now - p.createdAt).coerceAtLeast(0L)
+                    if (elapsed < 1100L) {
+                        val t = elapsed / 1000f
+                        val currentX = p.x + (p.vx * t * 18f)
+                        val currentY = p.y + (p.vy * t * 18f) + (t * t * 25f) // subtle gravity
+                        val screenPos = toScreen(Point(currentX, currentY))
+                        val currentAlpha = ((1.0f - (elapsed / 1100f)) * p.alpha).coerceIn(0f, 1f)
+                        val pColor = p.color.copy(alpha = currentAlpha)
+
+                        if (p.isStar) {
+                            drawCircle(
+                                color = pColor,
+                                radius = (p.size * scale * (1.1f - t * 0.4f)).coerceAtLeast(1f),
+                                center = screenPos
+                            )
+                            val starArm = (p.size * scale * (1.5f - t * 0.5f)).coerceAtLeast(1f)
+                            drawLine(
+                                color = pColor,
+                                start = Offset(screenPos.x - starArm, screenPos.y),
+                                end = Offset(screenPos.x + starArm, screenPos.y),
+                                strokeWidth = 2.5f * scale
+                            )
+                            drawLine(
+                                color = pColor,
+                                start = Offset(screenPos.x, screenPos.y - starArm),
+                                end = Offset(screenPos.x, screenPos.y + starArm),
+                                strokeWidth = 2.5f * scale
+                            )
+                        } else {
+                            drawCircle(
+                                color = pColor,
+                                radius = (p.size * scale * (0.9f - t * 0.3f)).coerceAtLeast(0.8f),
+                                center = screenPos
+                            )
+                        }
                     }
                 }
             }
 
-            // 10. Candy Crush Pop Callout Text
+            // 10. Candy Crush Pop Callout Text (Animated for 2 seconds, then slowly fades out)
             state.candyCallout?.let { callout ->
-                val screenPos = toScreen(Point(callout.x, callout.y))
-                val paint = android.graphics.Paint().apply {
-                    isAntiAlias = true
-                    textSize = 24f * scale * callout.scale
-                    textAlign = android.graphics.Paint.Align.CENTER
-                    color = callout.color.copy(alpha = callout.alpha.coerceIn(0f, 1f)).toArgb()
-                    typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    setShadowLayer(8f * scale, 0f, 3f * scale, android.graphics.Color.BLACK)
+                val elapsed = (System.currentTimeMillis() - callout.createdAt).coerceAtLeast(0L)
+                if (elapsed < 2900L) {
+                    val animScale = when {
+                        elapsed < 180L -> 0.6f + (elapsed / 180f) * 0.7f // pop up to 1.3f
+                        elapsed < 320L -> 1.3f - ((elapsed - 180L) / 140f) * 0.2f // settle to 1.1f
+                        else -> 1.1f + (sin((elapsed - 320L) / 250.0).toFloat() * 0.04f) // gentle pulse
+                    }
+                    val currentAlpha = when {
+                        elapsed < 2000L -> 1.0f // stays for 2 seconds
+                        else -> (1.0f - ((elapsed - 2000L) / 900f)).coerceIn(0f, 1f) // then fades out gradually
+                    }
+                    val upwardFloat = (elapsed / 1000f) * 14f * scale // gentle upward drift
+                    val screenPos = toScreen(Point(callout.x, callout.y))
+                    val adjustedY = screenPos.y - upwardFloat
+
+                    if (currentAlpha > 0.01f) {
+                        val paint = android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            textSize = 24f * scale * callout.scale * animScale
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            color = callout.color.copy(alpha = (callout.alpha * currentAlpha).coerceIn(0f, 1f)).toArgb()
+                            typeface = android.graphics.Typeface.DEFAULT_BOLD
+                            setShadowLayer(10f * scale, 0f, 3f * scale, android.graphics.Color.BLACK)
+                        }
+                        drawContext.canvas.nativeCanvas.drawText(
+                            callout.text,
+                            screenPos.x,
+                            adjustedY,
+                            paint
+                        )
+                    }
                 }
-                drawContext.canvas.nativeCanvas.drawText(
-                    callout.text,
-                    screenPos.x,
-                    screenPos.y,
-                    paint
-                )
             }
         }
     }

@@ -196,6 +196,7 @@ data class LeaderboardPlayer(
     val rank: Int,
     val username: String,
     val avatarEmoji: String,
+    val avatarUri: String = "",
     val title: String,
     val trophies: Int,
     val totalEchoes: Int,

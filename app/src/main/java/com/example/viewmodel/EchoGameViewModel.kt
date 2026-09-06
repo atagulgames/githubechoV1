@@ -142,7 +142,11 @@ data class EchoUiState(
     val infiniteBreakersExpiresAt: Long = 0L,
     val radiusShrinkerExpiresAt: Long = 0L,
     val candyParticles: List<com.example.model.CandyParticle> = emptyList(),
-    val candyCallout: com.example.model.CandyCallout? = null
+    val candyCallout: com.example.model.CandyCallout? = null,
+    val isSupportDialogVisible: Boolean = false,
+    val shrinkerAdsWatched: Int = 0,
+    val userAvatarUri: String = "",
+    val userCustomTitle: String = ""
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -169,6 +173,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     private val nodeHitRadius: Float = 42f
     private val deadlockThreshold: Int = 8
+    private var candyCalloutDismissJob: kotlinx.coroutines.Job? = null
 
     init {
         HarmonicAudioEngine.init(application)
@@ -234,6 +239,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 doubleTrophiesExpiresAt = prefs.doubleTrophiesExpiresAt,
                 infiniteBreakersExpiresAt = prefs.infiniteBreakersExpiresAt,
                 radiusShrinkerExpiresAt = prefs.radiusShrinkerExpiresAt,
+                shrinkerAdsWatched = prefs.shrinkerAdsWatched,
+                userAvatarUri = prefs.userAvatarUri,
+                userCustomTitle = prefs.userCustomTitle,
                 isAuthenticated = false // Opening flow requires explicit login authentication verification
             )
         }
@@ -285,6 +293,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 gameStatus = GameStatus.PLAYING,
                 isHintActive = false,
                 isDailyChallenge = false,
+                candyParticles = emptyList(),
+                candyCallout = null,
                 levelStartTimeMs = System.currentTimeMillis(),
                 isDoubleRewardClaimedThisLevel = false
             )
@@ -606,20 +616,28 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             val newNodes = state.nodes.map { n -> if (n.id == hitNode.id) n.copy(connected = true) else n }
 
             HarmonicAudioEngine.playNodeTone(newVisited.size - 1)
+            HarmonicAudioEngine.playCandyPop(newVisited.size)
+            if (newVisited.size >= 4) {
+                HarmonicAudioEngine.playComboCrush(newVisited.size)
+            }
             triggerHapticClick()
 
             // Candy Crush style explosion & combo callouts!
-            val (calloutText, calloutColor) = com.example.model.CandyEffectsFactory.getCalloutText(newVisited.size)
+            val (calloutText, calloutColor) = com.example.model.CandyEffectsFactory.getCalloutText(newVisited.size, state.language)
             val newParticles = com.example.model.CandyEffectsFactory.createNodeExplosion(hitNode.x, hitNode.y, count = 18)
+            val now = System.currentTimeMillis()
 
             // Check Victory (All nodes connected)
             if (newVisited.size == state.nodes.size) {
+                HarmonicAudioEngine.playVictoryCallout()
                 val victoryConfetti = com.example.model.CandyEffectsFactory.createConfettiVictory(360f, 480f, count = 50)
+                val victoryText = com.example.model.CandyEffectsFactory.getVictoryCalloutText(state.language)
+                candyCalloutDismissJob?.cancel()
                 _uiState.update {
                     it.copy(
-                        candyParticles = (it.candyParticles.takeLast(25)) + newParticles + victoryConfetti,
+                        candyParticles = it.candyParticles.filter { p -> now - p.createdAt < 1100L } + newParticles + victoryConfetti,
                         candyCallout = com.example.model.CandyCallout(
-                            text = "BÖLÜM TAMAMLANDI! 🏆",
+                            text = victoryText,
                             x = 180f,
                             y = 150f,
                             color = androidx.compose.ui.graphics.Color(0xFFFFB703),
@@ -628,10 +646,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         )
                     )
                 }
+                candyCalloutDismissJob = viewModelScope.launch {
+                    kotlinx.coroutines.delay(2900L)
+                    _uiState.update { it.copy(candyCallout = null) }
+                }
                 handleVictory(newStrokeList)
                 return
             }
 
+            candyCalloutDismissJob?.cancel()
             _uiState.update {
                 it.copy(
                     visitedNodeIds = newVisited,
@@ -639,7 +662,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     currentStrokeSegments = newStrokeList,
                     currentPointerPos = hitNode.toPoint(),
                     nodes = newNodes,
-                    candyParticles = (it.candyParticles.takeLast(25)) + newParticles,
+                    candyParticles = it.candyParticles.filter { p -> now - p.createdAt < 1100L } + newParticles,
                     candyCallout = com.example.model.CandyCallout(
                         text = calloutText,
                         x = hitNode.x,
@@ -649,6 +672,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         scale = 1.15f
                     )
                 )
+            }
+            candyCalloutDismissJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(2900L)
+                _uiState.update { it.copy(candyCallout = null) }
             }
             return
         }
@@ -896,14 +923,35 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun activateEchoShrinker() {
+    fun activateEchoShrinker(onTriggerAd: () -> Unit = {}) {
+        val state = _uiState.value
+        if (state.isEchoShrinkerActive) {
+            showToast("Esnek Alan zaten bu bölümde aktif!")
+            return
+        }
+        val adsWatched = prefs.shrinkerAdsWatched
+        if (adsWatched < 3) {
+            showToast("Esnek Alan için 3 reklam izlenmeli ve 5 Elmas gereklidir! ($adsWatched/3 izlendi). Reklam açılıyor...")
+            onTriggerAd()
+            return
+        }
+        if (prefs.diamonds < 5) {
+            showToast("3 reklam izlendi fakat 5 Elmas zorunludur! (Mevcut: ${prefs.diamonds} Elmas)")
+            setShopVisible(true)
+            return
+        }
+        // Both conditions met: 3 ads watched + 5 diamonds
+        prefs.useDiamond(5)
+        prefs.shrinkerAdsWatched = 0
         _uiState.update {
             it.copy(
                 isEchoShrinkerActive = true,
+                diamonds = prefs.diamonds,
+                shrinkerAdsWatched = 0,
                 gameStatus = GameStatus.PLAYING
             )
         }
-        showToast("Esnek Alan Aktif! Yankı bariyerleri %50 inceldi.")
+        showToast("🌟 Esnek Alan Aktif! 5 Elmas harcandı ve bariyerler inceltildi.")
     }
 
     fun grantRewardedReward(type: String) {
@@ -927,18 +975,67 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 )
             }
             "SHRINKER" -> {
+                val current = (prefs.shrinkerAdsWatched + 1).coerceAtMost(3)
+                prefs.shrinkerAdsWatched = current
                 _uiState.update {
                     it.copy(
                         isRewardedSimulating = false,
                         isAdLoading = false,
-                        isEchoShrinkerActive = true,
+                        shrinkerAdsWatched = current
+                    )
+                }
+                if (current < 3) {
+                    showToast("Esnek Alan için reklam ($current/3) izlendi! ${3 - current} reklam daha izleyin.")
+                    RewardClaimedInfo(
+                        title = "Esnek Alan İlerlemesi ($current/3)",
+                        subtitle = "Esnek Alan için ${3 - current} reklam daha izlenmeli ve 5 Elmas gereklidir.",
+                        rewardType = type
+                    )
+                } else {
+                    if (prefs.diamonds >= 5) {
+                        prefs.useDiamond(5)
+                        prefs.shrinkerAdsWatched = 0
+                        _uiState.update {
+                            it.copy(
+                                isEchoShrinkerActive = true,
+                                diamonds = prefs.diamonds,
+                                shrinkerAdsWatched = 0,
+                                gameStatus = GameStatus.PLAYING
+                            )
+                        }
+                        showToast("🌟 Esnek Alan Aktif! 3 reklam tamamlandı ve 5 Elmas harcandı.")
+                        RewardClaimedInfo(
+                            title = "🌟 Esnek Alan Aktif!",
+                            subtitle = "3 reklam izlendi ve 5 Elmas ile yankı bariyerleri inceltildi.",
+                            rewardType = type
+                        )
+                    } else {
+                        showToast("3 reklam tamamlandı! Şimdi aktifleştirmek için 5 Elmas zorunludur (Mevcut: ${prefs.diamonds}).")
+                        RewardClaimedInfo(
+                            title = "3/3 Reklam Tamamlandı!",
+                            subtitle = "Esnek Alanı aktifleştirmek için 5 Elmas zorunludur (Mevcut: ${prefs.diamonds} Elmas).",
+                            rewardType = type
+                        )
+                    }
+                }
+            }
+            "HINT" -> {
+                prefs.addTokens(1)
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false,
+                        isHintActive = true,
+                        tokens = prefs.tokens,
                         gameStatus = GameStatus.PLAYING
                     )
                 }
+                showToast("İpucu Aktif! Reklam izlendiği için rota açıldı.")
                 RewardClaimedInfo(
-                    title = "Esnek Alan Aktif!",
-                    subtitle = "Yankı bariyerleri %50 inceltildi.",
-                    rewardType = type
+                    title = "İpucu Aktif!",
+                    subtitle = "Reklam başarıyla izlendi ve rota rehberi açıldı.",
+                    rewardType = type,
+                    tokensAdded = 1
                 )
             }
             "FREE_BREAKER", "REWARD_DAILY" -> {
@@ -1190,12 +1287,24 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun shouldShowInterstitialOnNextLevel(): Boolean {
         if (_uiState.value.isAdFree) return false
-        val currentCount = prefs.levelsSinceLastInterstitial + 1
-        val threshold = prefs.nextInterstitialThreshold
-        if (currentCount >= threshold) {
+        val currentLvl = _uiState.value.level.levelId
+
+        // Rule: Level 1 completed -> No ad ("1 bölüm geçsin sonra ilk başta reklamlarala sıkma")
+        if (currentLvl <= 1) {
+            prefs.levelsSinceLastInterstitial = 1
+            return false
+        }
+
+        // Rule: After Level 20 -> show ad consecutively after every completed level ("20 geçince art arda koyabilirsin her bölüm sonrası")
+        if (currentLvl > 20) {
             prefs.levelsSinceLastInterstitial = 0
-            // Randomly set next threshold between 1, 2, or 3 levels
-            prefs.nextInterstitialThreshold = kotlin.random.Random.nextInt(1, 4)
+            return true
+        }
+
+        // Rule: Levels 2 to 20 -> show ad every 2 completed levels ("2 bölüm geçsin sonra olsun")
+        val currentCount = prefs.levelsSinceLastInterstitial + 1
+        if (currentCount >= 2) {
+            prefs.levelsSinceLastInterstitial = 0
             return true
         } else {
             prefs.levelsSinceLastInterstitial = currentCount
@@ -1230,7 +1339,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         showToast("Yankılar temizlendi!")
     }
 
-    fun useHint() {
+    fun useHint(onTriggerAd: () -> Unit = {}) {
         val state = _uiState.value
         if (state.isHintActive) return
         if (prefs.useToken()) {
@@ -1242,8 +1351,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             showToast("İdeal rota ve ipucu düğüm sırası gösteriliyor.")
         } else {
-            showToast("Yetersiz İpucu Jetonu! Mağazadan veya reklamla al.")
-            setShopVisible(true)
+            showToast("İpucu için reklam izleniyor...")
+            onTriggerAd()
         }
     }
 
@@ -1260,6 +1369,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 echoCountForLevel = if (clearEchoes) 0 else it.echoCountForLevel,
                 gameStatus = GameStatus.PLAYING,
                 levelStartTimeMs = System.currentTimeMillis(),
+                candyParticles = emptyList(),
+                candyCallout = null,
                 nodes = it.nodes.map { n -> n.copy(connected = false) }
             )
         }
@@ -1832,6 +1943,27 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     isProfileDialogVisible = true
                 )
             }
+        }
+    }
+
+    fun setSupportVisible(visible: Boolean) {
+        _uiState.update { it.copy(isSupportDialogVisible = visible) }
+    }
+
+    fun updateProfile(avatarUri: String, customTitle: String) {
+        viewModelScope.launch {
+            authRepo.updateUserProfile(avatarUri, customTitle)
+            val updatedPlayers = authRepo.getLeaderboardPlayers()
+            val myPlayer = updatedPlayers.firstOrNull { it.isCurrentUser }
+            _uiState.update {
+                it.copy(
+                    userAvatarUri = avatarUri,
+                    userCustomTitle = customTitle,
+                    leaderboardPlayers = updatedPlayers,
+                    selectedPlayerProfile = if (it.selectedPlayerProfile?.isCurrentUser == true) myPlayer else it.selectedPlayerProfile
+                )
+            }
+            showToast("Profil başarıyla güncellendi!")
         }
     }
 }

@@ -47,7 +47,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
 import com.example.model.LeaderboardPlayer
 import com.example.model.LevelRecord
 
@@ -55,6 +71,7 @@ import com.example.model.LevelRecord
 fun PlayerProfileDialog(
     player: LeaderboardPlayer,
     isDarkTheme: Boolean = true,
+    onUpdateProfile: ((avatarUri: String, customTitle: String) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFFFFFFF)
@@ -65,6 +82,20 @@ fun PlayerProfileDialog(
     val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
 
     val formattedPlayTime = formatPlayTime(player.totalPlayTimeSec)
+
+    var isEditing by remember { mutableStateOf(false) }
+    var currentAvatarUri by remember(player.avatarUri) { mutableStateOf(player.avatarUri) }
+    var currentTitle by remember(player.title) { mutableStateOf(player.title) }
+
+    // Android Photo Picker contract (Zero broad storage permissions needed, fully Play Policy compliant)
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            currentAvatarUri = uri.toString()
+            onUpdateProfile?.invoke(uri.toString(), currentTitle)
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -95,14 +126,49 @@ fun PlayerProfileDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
+                        // Avatar with photo picker trigger
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(CircleShape)
-                                .background(if (isDarkTheme) Color(0xFF312E81) else Color(0xFFEEF2FF)),
+                                .background(if (isDarkTheme) Color(0xFF312E81) else Color(0xFFEEF2FF))
+                                .border(1.5.dp, Color(0xFF00E5FF), CircleShape)
+                                .clickable(enabled = player.isCurrentUser) {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = player.avatarEmoji, fontSize = 28.sp)
+                            if (currentAvatarUri.isNotBlank()) {
+                                AsyncImage(
+                                    model = currentAvatarUri,
+                                    contentDescription = "Profil Resmi",
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Text(text = player.avatarEmoji, fontSize = 28.sp)
+                            }
+
+                            if (player.isCurrentUser) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .align(Alignment.BottomEnd)
+                                        .background(Color(0xFF00E5FF), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "Fotoğraf Yükle",
+                                        tint = Color(0xFF0F172A),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(12.dp))
@@ -137,22 +203,124 @@ fun PlayerProfileDialog(
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                text = "${player.title} • Sıra #${player.rank}",
+                                text = "${currentTitle} • Sıra #${player.rank}",
                                 fontSize = 12.sp,
                                 color = textSecondary
                             )
                         }
                     }
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.testTag("profile_close_button")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (player.isCurrentUser) {
+                            IconButton(
+                                onClick = { isEditing = !isEditing },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
+                                    contentDescription = "Profili Düzenle",
+                                    tint = Color(0xFF00E5FF)
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("profile_close_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Kapat",
+                                tint = textSecondary
+                            )
+                        }
+                    }
+                }
+
+                // Profile Editor Panel when isEditing is true
+                if (isEditing && player.isCurrentUser) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = cardBg,
+                        border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
-                            tint = textSecondary
-                        )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Profilini Kişiselleştir",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF00E5FF)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(
+                                    onClick = {
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f).height(38.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF00E5FF),
+                                        contentColor = Color(0xFF0F172A)
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Fotoğraf Yükle", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                if (currentAvatarUri.isNotBlank()) {
+                                    Button(
+                                        onClick = {
+                                            currentAvatarUri = ""
+                                            onUpdateProfile?.invoke("", currentTitle)
+                                        },
+                                        modifier = Modifier.height(38.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFEF4444).copy(alpha = 0.2f),
+                                            contentColor = Color(0xFFEF4444)
+                                        )
+                                    ) {
+                                        Text("Sıfırla", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = currentTitle,
+                                onValueChange = {
+                                    currentTitle = it
+                                    onUpdateProfile?.invoke(currentAvatarUri, it)
+                                },
+                                label = { Text("Özel Unvan / Açıklama") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF00E5FF),
+                                    unfocusedBorderColor = borderColor,
+                                    focusedTextColor = textPrimary,
+                                    unfocusedTextColor = textPrimary
+                                )
+                            )
+                        }
                     }
                 }
 

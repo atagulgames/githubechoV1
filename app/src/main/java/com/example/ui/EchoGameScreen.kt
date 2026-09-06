@@ -37,6 +37,7 @@ import com.example.ui.dialogs.RewardClaimedDialog
 import com.example.ui.dialogs.SettingsDialog
 import com.example.ui.dialogs.ShopDialog
 import com.example.ui.dialogs.SkinsDialog
+import com.example.ui.dialogs.SupportDialog
 import com.example.ui.dialogs.VictoryDialog
 import com.example.ui.auth.LoginScreen
 import com.example.ui.intro.IntroVideoScreen
@@ -101,6 +102,7 @@ fun EchoGameScreen(
                         onOpenShop = { viewModel.setShopVisible(true) },
                         onOpenSkins = { viewModel.setSkinsVisible(true) },
                         onOpenSettings = { viewModel.setSettingsVisible(true) },
+                        onOpenSupport = { viewModel.setSupportVisible(true) },
                         onOpenLeaderboard = { viewModel.openLeaderboard() },
                         onOpenMyProfile = { viewModel.openMyProfile() },
                         onToggleDarkTheme = { viewModel.toggleDarkTheme() },
@@ -140,8 +142,16 @@ fun EchoGameScreen(
                             onReset = { viewModel.restartLevel(clearEchoes = false) },
                             onClearEchoes = { viewModel.clearAllEchoes() },
                             onUseBreaker = { viewModel.useEchoBreaker() },
-                            onActivateShrinker = { viewModel.activateEchoShrinker() },
-                            onHint = { viewModel.useHint() }
+                            onActivateShrinker = {
+                                viewModel.activateEchoShrinker(
+                                    onTriggerAd = { onShowRewardedAd("SHRINKER") }
+                                )
+                            },
+                            onHint = {
+                                viewModel.useHint(
+                                    onTriggerAd = { onShowRewardedAd("HINT") }
+                                )
+                            }
                         )
 
                         // Bottom docked Banner Ad - positioned safely below HUD to prevent interference with gameplay
@@ -253,6 +263,10 @@ fun EchoGameScreen(
                     onToggleHaptics = { viewModel.toggleHaptics(it) },
                     onToggleTestAds = { viewModel.toggleTestAds(it) },
                     onResetAllProgress = { viewModel.resetAllGameProgress() },
+                    onOpenSupport = {
+                        viewModel.setSettingsVisible(false)
+                        viewModel.setSupportVisible(true)
+                    },
                     onLogout = { viewModel.logout() },
                     onDismiss = { viewModel.setSettingsVisible(false) }
                 )
@@ -340,12 +354,23 @@ fun EchoGameScreen(
                 )
             }
 
-            // 14. Player Profile Dialog (Kaç yankı ve süreyle tamamladığı detayları)
+            // 14. Player Profile Dialog (Kaç yankı ve süreyle tamamladığı detayları + fotoğraf ve unvan)
             if (state.isProfileDialogVisible && state.selectedPlayerProfile != null) {
                 PlayerProfileDialog(
                     player = state.selectedPlayerProfile!!,
                     isDarkTheme = state.isDarkTheme,
+                    onUpdateProfile = { avatarUri, customTitle ->
+                        viewModel.updateProfile(avatarUri, customTitle)
+                    },
                     onDismiss = { viewModel.closePlayerProfile() }
+                )
+            }
+
+            // 15. Destek & İletişim Dialog (atagulgamesdestek@gmail.com)
+            if (state.isSupportDialogVisible) {
+                SupportDialog(
+                    isDarkTheme = state.isDarkTheme,
+                    onDismiss = { viewModel.setSupportVisible(false) }
                 )
             }
         }

@@ -25,5 +25,7 @@ data class UserAccountEntity(
     val lastDailyCompletedDate: String = "",
     val loginStreak: Int = 1,
     val lastLoginDate: String = "",
+    val avatarUri: String = "",
+    val customTitle: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

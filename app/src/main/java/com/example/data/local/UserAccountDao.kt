@@ -42,4 +42,7 @@ interface UserAccountDao {
 
     @Query("UPDATE user_accounts SET languageCode = :lang WHERE LOWER(username) = LOWER(:username)")
     suspend fun updateLanguage(username: String, lang: String)
+
+    @Query("UPDATE user_accounts SET avatarUri = :avatarUri, customTitle = :title WHERE LOWER(username) = LOWER(:username)")
+    suspend fun updateProfile(username: String, avatarUri: String, title: String)
 }
