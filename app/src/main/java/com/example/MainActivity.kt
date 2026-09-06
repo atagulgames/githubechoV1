@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ads.StartIoManager
 import com.example.ui.EchoGameScreen
+import com.example.ui.components.PortraitRequiredOverlay
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.EchoGameViewModel
 
@@ -15,6 +17,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     enableEdgeToEdge()
 
     // Initialize Start.io Ads SDK with App ID: 208838202 (Test Ads Mode)
@@ -36,41 +39,44 @@ class MainActivity : ComponentActivity() {
       MyApplicationTheme(darkTheme = false) {
         val gameViewModel: EchoGameViewModel = viewModel()
         activeGameViewModel = gameViewModel
-        EchoGameScreen(
-          viewModel = gameViewModel,
-          onShowRewardedAd = { type ->
-            gameViewModel.setAdLoading(true, type)
-            StartIoManager.showRewardedVideoAd(
-              activity = this,
-              onRewardEarned = {
-                gameViewModel.grantRewardedReward(type)
-              },
-              onAdDisplayed = {
-                gameViewModel.setAdLoading(false)
-              },
-              onAdClosed = {
-                gameViewModel.setAdLoading(false)
-              },
-              onAdUnavailable = { reason ->
-                gameViewModel.setAdLoading(false)
-                gameViewModel.onAdUnavailable(type, reason)
-              }
-            )
-          },
-          onShowInterstitialAd = { onAdFinished ->
-            StartIoManager.showInterstitialAd(
-              activity = this,
-              onAdDisplayed = { },
-              onAdClosed = { onAdFinished() }
-            )
-          }
-        )
+        PortraitRequiredOverlay {
+          EchoGameScreen(
+            viewModel = gameViewModel,
+            onShowRewardedAd = { type ->
+              gameViewModel.setAdLoading(true, type)
+              StartIoManager.showRewardedVideoAd(
+                activity = this,
+                onRewardEarned = {
+                  gameViewModel.grantRewardedReward(type)
+                },
+                onAdDisplayed = {
+                  gameViewModel.setAdLoading(false)
+                },
+                onAdClosed = {
+                  gameViewModel.setAdLoading(false)
+                },
+                onAdUnavailable = { reason ->
+                  gameViewModel.setAdLoading(false)
+                  gameViewModel.onAdUnavailable(type, reason)
+                }
+              )
+            },
+            onShowInterstitialAd = { onAdFinished ->
+              StartIoManager.showInterstitialAd(
+                activity = this,
+                onAdDisplayed = { },
+                onAdClosed = { onAdFinished() }
+              )
+            }
+          )
+        }
       }
     }
   }
 
   override fun onResume() {
     super.onResume()
+    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     com.example.audio.HarmonicAudioEngine.resumeBgm()
     StartIoManager.preloadAds(this)
   }

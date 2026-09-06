@@ -237,82 +237,209 @@ object LevelCatalog {
 
         val nodes = ArrayList<LevelNode>(nodeCount)
 
-        if (nodeCount <= 10) {
-            // Tier 1: Harmonic cosmic arcs (3 to 10 nodes)
-            val rx = when (clampedId % 4) {
-                0 -> 96f
-                1 -> 104f
-                2 -> 90f
-                else -> 98f
-            }
-            val ry = when (clampedId % 4) {
-                0 -> 96f
-                1 -> 88f
-                2 -> 106f
-                else -> 94f
-            }
-            val baseAngle = ((clampedId * 37) % 360) * (PI / 180.0)
-            val isCounterClockwise = clampedId % 3 == 0
-            val sweepSpan = (1.52 + ((clampedId % 5) * 0.03)) * PI
-            val harmonicFreq = (clampedId % 3) + 1
-            val harmonicAmp = if (clampedId % 3 == 1) 0.05f else if (clampedId % 3 == 2) -0.04f else 0.0f
-
-            for (i in 1..nodeCount) {
-                val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
-                val dir = if (isCounterClockwise) -1.0 else 1.0
-                val angle = baseAngle + (dir * sweepSpan * progress)
-                val ripple = 1.0f + (harmonicAmp * sin(harmonicFreq * progress * PI.toFloat()))
-                val px = centerX + (rx * ripple * cos(angle).toFloat())
-                val py = centerY + (ry * ripple * sin(angle).toFloat())
-
-                val type = when (i) {
-                    keyIndex -> NodeType.KEY
-                    gateIndex -> NodeType.GATE
-                    else -> NodeType.NORMAL
+        when (tierIndex) {
+            0 -> {
+                // Tier 1: Pure Harmonic Polygons & Celestial Arcs (3 to 6 nodes)
+                val rx = 96f + (clampedId % 3) * 4f
+                val ry = 92f + (clampedId % 2) * 6f
+                val baseAngle = ((clampedId * 41) % 360) * (PI / 180.0)
+                val sweepSpan = (1.55 + ((clampedId % 4) * 0.04)) * PI
+                for (i in 1..nodeCount) {
+                    val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
+                    val angle = baseAngle + (sweepSpan * progress)
+                    val px = (centerX + rx * cos(angle).toFloat()).coerceIn(45f, 315f)
+                    val py = (centerY + ry * sin(angle).toFloat()).coerceIn(90f, 370f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
                 }
-                val keyForGateId = if (type == NodeType.KEY) gateIndex else -1
-                nodes.add(LevelNode(i, px, py, type, keyForGateId))
             }
-        } else {
-            // Tier 2-4: Clean serpentine constellation tracks (11 to 36 nodes)
-            val numRows = when {
-                nodeCount <= 18 -> 2
-                nodeCount <= 27 -> 3
-                else -> 4
-            }
-            val nodesPerRow = (nodeCount + numRows - 1) / numRows
-            val yStart = when (numRows) {
-                2 -> 155f
-                3 -> 115f
-                else -> 90f
-            }
-            val ySpacing = when (numRows) {
-                2 -> 130f
-                3 -> 100f
-                else -> 78f
-            }
-            val xMin = 65f + (clampedId % 3) * 3f
-            val xMax = 295f - (clampedId % 4) * 3f
-
-            for (i in 1..nodeCount) {
-                val index0 = i - 1
-                val rowIndex = (index0 / nodesPerRow).coerceAtMost(numRows - 1)
-                val inRowIndex = index0 % nodesPerRow
-                val rowTotal = if (rowIndex == numRows - 1) (nodeCount - rowIndex * nodesPerRow) else nodesPerRow
-                val rowProgress = if (rowTotal > 1) inRowIndex.toFloat() / (rowTotal - 1) else 0.5f
-
-                val isLeftToRight = rowIndex % 2 == 0
-                val effectiveProgress = if (isLeftToRight) rowProgress else (1f - rowProgress)
-                val px = xMin + (xMax - xMin) * effectiveProgress
-                val py = yStart + (rowIndex * ySpacing)
-
-                val type = when (i) {
-                    keyIndex -> NodeType.KEY
-                    gateIndex -> NodeType.GATE
-                    else -> NodeType.NORMAL
+            1 -> {
+                // Tier 2: Polar Celestial Spiral & Inward Vortex (7 to 10 nodes)
+                val spiralTurns = 1.45 * PI
+                val startR = 118f
+                val endR = 42f
+                val baseAngle = ((clampedId * 67) % 360) * (PI / 180.0)
+                for (i in 1..nodeCount) {
+                    val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
+                    val r = startR + (endR - startR) * progress
+                    val angle = baseAngle + (spiralTurns * progress)
+                    val px = (centerX + r * cos(angle).toFloat()).coerceIn(45f, 315f)
+                    val py = (centerY + r * sin(angle).toFloat()).coerceIn(90f, 370f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
                 }
-                val keyForGateId = if (type == NodeType.KEY) gateIndex else -1
-                nodes.add(LevelNode(i, px, py, type, keyForGateId))
+            }
+            2 -> {
+                // Tier 3: Diamond Fortress & Gateway (10 to 13 nodes)
+                val w = 115f
+                val h = 130f
+                for (i in 1..nodeCount) {
+                    val t = (i - 1).toFloat() / nodeCount
+                    val angle = t * 2.0 * PI
+                    // Diamond superellipse formula: |x/a| + |y/b| = 1
+                    val ca = cos(angle).toFloat()
+                    val sa = sin(angle).toFloat()
+                    val denom = (abs(ca) + abs(sa)).coerceAtLeast(0.001f)
+                    val px = (centerX + (w * ca / denom)).coerceIn(48f, 312f)
+                    val py = (centerY + (h * sa / denom)).coerceIn(88f, 372f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
+            }
+            3 -> {
+                // Tier 4: Lemniscate Infinity Hourglass (13 to 16 nodes)
+                val a = 112f
+                val b = 105f
+                for (i in 1..nodeCount) {
+                    val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
+                    val t = (progress * 2.0 * PI) - PI
+                    val scale = (1.0 + sin(t) * sin(t)).toFloat()
+                    val px = (centerX + (a * cos(t).toFloat() / scale)).coerceIn(46f, 314f)
+                    val py = (centerY + (b * sin(t).toFloat() * cos(t).toFloat() / scale) * 1.5f).coerceIn(90f, 370f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
+            }
+            4 -> {
+                // Tier 5: Mirrored Chevron Wings (17 to 20 nodes)
+                val half = nodeCount / 2
+                for (i in 1..nodeCount) {
+                    val isLeft = i <= half
+                    val step = if (isLeft) (i - 1) else (nodeCount - i)
+                    val prog = step.toFloat() / (half.coerceAtLeast(1))
+                    val px = if (isLeft) {
+                        (centerX - 24f - (prog * 105f)).coerceIn(45f, 315f)
+                    } else {
+                        (centerX + 24f + (prog * 105f)).coerceIn(45f, 315f)
+                    }
+                    val py = (100f + prog * 240f + ((i % 2) * 14f)).coerceIn(90f, 370f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
+            }
+            5 -> {
+                // Tier 6: Hexagonal Honeycomb Matrix (20 to 23 nodes)
+                val cols = 3
+                val rows = (nodeCount + cols - 1) / cols
+                val xSpacing = 92f
+                val ySpacing = 260f / (rows - 1).coerceAtLeast(1)
+                for (i in 1..nodeCount) {
+                    val idx = i - 1
+                    val r = idx / cols
+                    val c = if (r % 2 == 0) (idx % cols) else (cols - 1 - (idx % cols))
+                    val stagger = if (c % 2 == 1) 18f else -18f
+                    val px = (centerX - xSpacing + (c * xSpacing)).coerceIn(45f, 315f)
+                    val py = (92f + (r * ySpacing) + stagger).coerceIn(88f, 372f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
+            }
+            6 -> {
+                // Tier 7: Concentric Cybernetic Rings (23 to 26 nodes)
+                val innerCount = nodeCount / 3
+                val outerCount = nodeCount - innerCount
+                for (i in 1..nodeCount) {
+                    val isOuter = i <= outerCount
+                    val r = if (isOuter) 115f else 58f
+                    val count = if (isOuter) outerCount else innerCount
+                    val prog = if (isOuter) (i - 1).toFloat() / count else (i - outerCount - 1).toFloat() / count
+                    val angle = (prog * 2.0 * PI) + (if (isOuter) 0.0 else 0.5)
+                    val px = (centerX + r * cos(angle).toFloat()).coerceIn(45f, 315f)
+                    val py = (centerY + r * sin(angle).toFloat()).coerceIn(90f, 370f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
+            }
+            7 -> {
+                // Tier 8: Sinusoidal Undulating Wave Labyrinth (27 to 30 nodes)
+                val rows = 4
+                val nodesPerRow = (nodeCount + rows - 1) / rows
+                val rowHeight = 255f / (rows - 1).coerceAtLeast(1)
+                for (i in 1..nodeCount) {
+                    val idx = i - 1
+                    val r = idx / nodesPerRow
+                    val c = idx % nodesPerRow
+                    val isLtr = r % 2 == 0
+                    val colProg = if (isLtr) c.toFloat() / (nodesPerRow - 1).coerceAtLeast(1) else (nodesPerRow - 1 - c).toFloat() / (nodesPerRow - 1).coerceAtLeast(1)
+                    val px = (50f + colProg * 260f).coerceIn(45f, 315f)
+                    val waveOffset = (sin(colProg * 2.0 * PI) * 16f).toFloat()
+                    val py = (92f + r * rowHeight + waveOffset).coerceIn(88f, 372f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
+            }
+            8 -> {
+                // Tier 9: Grand Neural Constellation (30 to 33 nodes)
+                val numArms = 5
+                val nodesPerArm = (nodeCount + numArms - 1) / numArms
+                for (i in 1..nodeCount) {
+                    val idx = i - 1
+                    val arm = idx / nodesPerArm
+                    val step = idx % nodesPerArm
+                    val armProg = step.toFloat() / (nodesPerArm - 1).coerceAtLeast(1)
+                    val armAngle = (arm * 2.0 * PI / numArms) + (armProg * 0.4)
+                    val armRadius = 38f + (armProg * 82f)
+                    val px = (centerX + armRadius * cos(armAngle).toFloat()).coerceIn(45f, 315f)
+                    val py = (centerY + armRadius * sin(armAngle).toFloat()).coerceIn(90f, 370f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
+            }
+            else -> {
+                // Tier 10: Omega Hyper-Lattice & Galactic Core (34 to 36 nodes)
+                // 36 nodes: Galactic Golden Spiral with guaranteed solvable sequential track
+                val totalRotations = 2.65 * PI
+                val minR = 30f
+                val maxR = 124f
+                for (i in 1..nodeCount) {
+                    val prog = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
+                    val currentR = minR + (maxR - minR) * prog
+                    val currentAngle = prog * totalRotations
+                    val px = (centerX + currentR * cos(currentAngle).toFloat()).coerceIn(44f, 316f)
+                    val py = (centerY + currentR * sin(currentAngle).toFloat()).coerceIn(88f, 372f)
+                    val type = when (i) {
+                        keyIndex -> NodeType.KEY
+                        gateIndex -> NodeType.GATE
+                        else -> NodeType.NORMAL
+                    }
+                    nodes.add(LevelNode(i, px, py, type, if (type == NodeType.KEY) gateIndex else -1))
+                }
             }
         }
 

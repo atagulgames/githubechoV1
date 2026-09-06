@@ -95,30 +95,7 @@ object AdBlockDetector {
                 )
             }
 
-            // 3. Instant check: /etc/hosts file (< 1ms)
-            if (checkHostsFile()) {
-                Log.w(TAG, "AdBlock detected via Hosts file modification")
-                return@withContext AdHealthResult.AdBlockerDetected(
-                    reason = "Hosts Dosyası",
-                    details = "Cihazınızın hosts dosyasında reklam engelleme yönlendirmeleri tespit edildi."
-                )
-            }
-
-            // 4. Instant check: Installed adblock packages (< 2ms)
-            if (checkAdBlockerPackages(context)) {
-                Log.w(TAG, "AdBlock detected via installed package")
-                return@withContext AdHealthResult.AdBlockerDetected(
-                    reason = "Reklam Engelleyici Uygulama",
-                    details = "AdGuard, Blokada veya benzeri reklam engelleyici VPN uygulamasını duraklatın."
-                )
-            }
-
-            // 5. Fast Parallel DNS & probe check (~150-300ms)
-            val parallelResult = checkAdDomainBlockingParallel()
-            if (parallelResult != null) {
-                return@withContext parallelResult
-            }
-
+            // 3. Network health check
             AdHealthResult.Healthy
         } catch (e: Exception) {
             Log.e(TAG, "Error checking ad health status", e)
@@ -127,8 +104,7 @@ object AdBlockDetector {
     }
 
     suspend fun isAdBlockerActive(context: Context): Boolean = withContext(Dispatchers.IO) {
-        val result = checkAdHealth(context)
-        !result.isHealthy
+        false
     }
 
     private fun hasNetworkCapability(context: Context): Boolean {
@@ -142,78 +118,16 @@ object AdBlockDetector {
         }
     }
 
-    /**
-     * Checks if Private DNS is enabled with an ad-blocking provider.
-     */
     private fun checkPrivateDnsSettings(context: Context): Boolean {
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val privateDnsSpecifier = Settings.Global.getString(
-                    context.contentResolver,
-                    "private_dns_specifier"
-                )?.lowercase()?.trim() ?: ""
-
-                if (privateDnsSpecifier.isNotEmpty()) {
-                    val adBlockDnsKeywords = listOf(
-                        "adguard", "nextdns", "controld", "mullvad",
-                        "cleanbrowsing", "adblock", "block", "filter", "dnsforge", "ahadns"
-                    )
-                    if (adBlockDnsKeywords.any { privateDnsSpecifier.contains(it) }) {
-                        return true
-                    }
-                }
-            }
-            false
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    /**
-     * Checks if /etc/hosts contains ad network domains mapped to 127.0.0.1 or 0.0.0.0.
-     */
-    private fun checkHostsFile(): Boolean {
-        val paths = listOf("/system/etc/hosts", "/etc/hosts")
-        for (path in paths) {
-            val file = File(path)
-            if (file.exists() && file.canRead()) {
-                try {
-                    BufferedReader(FileReader(file)).use { reader ->
-                        var line: String?
-                        while (reader.readLine().also { line = it } != null) {
-                            val l = line?.trim()?.lowercase() ?: continue
-                            if (l.startsWith("#") || l.isEmpty()) continue
-
-                            val isSinkholed = l.startsWith("127.0.0.1") || l.startsWith("0.0.0.0") || l.startsWith("::1")
-                            if (isSinkholed) {
-                                if (l.contains("startappservice") || l.contains("pagead2.googlesyndication.com") || l.contains("googleads.g.doubleclick.net")) {
-                                    return true
-                                }
-                            }
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
-        }
         return false
     }
 
-    /**
-     * Checks if an ad-blocking package is installed.
-     */
+    private fun checkHostsFile(): Boolean {
+        return false
+    }
+
     private fun checkAdBlockerPackages(context: Context): Boolean {
-        try {
-            val pm = context.packageManager
-            for (pkg in ADBLOCK_PACKAGES) {
-                try {
-                    pm.getPackageInfo(pkg, 0)
-                    return true
-                } catch (_: Exception) {}
-            }
-            return false
-        } catch (_: Exception) {
-            return false
-        }
+        return false
     }
 
     private enum class ProbeResult {

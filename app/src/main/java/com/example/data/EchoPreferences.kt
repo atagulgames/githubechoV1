@@ -78,7 +78,33 @@ class EchoPreferences(context: Context) {
         private const val KEY_SHRINKER_ADS_WATCHED = "echo_shrinker_ads_watched"
         private const val KEY_USER_AVATAR_URI = "echo_user_avatar_uri"
         private const val KEY_USER_CUSTOM_TITLE = "echo_user_custom_title"
+        private const val KEY_KVKK_CONSENT_ACCEPTED = "echo_kvkk_consent_accepted"
+        private const val KEY_HINT_ADS_WATCHED = "echo_hint_ads_watched"
+        private const val KEY_SHOWN_MECHANIC_TIERS = "echo_shown_mechanic_tiers"
     }
+
+    var shownMechanicTiersCsv: String
+        get() = prefs.getString(KEY_SHOWN_MECHANIC_TIERS, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_SHOWN_MECHANIC_TIERS, value).apply()
+
+    fun isMechanicIntroShown(tier: Int): Boolean {
+        val tiers = shownMechanicTiersCsv.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+        return tiers.contains(tier)
+    }
+
+    fun markMechanicIntroShown(tier: Int) {
+        val tiers = shownMechanicTiersCsv.split(",").mapNotNull { it.trim().toIntOrNull() }.toMutableSet()
+        tiers.add(tier)
+        shownMechanicTiersCsv = tiers.joinToString(",")
+    }
+
+    var isKvkkConsentAccepted: Boolean
+        get() = prefs.getBoolean(KEY_KVKK_CONSENT_ACCEPTED, false)
+        set(value) = prefs.edit().putBoolean(KEY_KVKK_CONSENT_ACCEPTED, value).apply()
+
+    var hintAdsWatched: Int
+        get() = prefs.getInt(KEY_HINT_ADS_WATCHED, 0)
+        set(value) = prefs.edit().putInt(KEY_HINT_ADS_WATCHED, value.coerceIn(0, 3)).apply()
 
     var shrinkerAdsWatched: Int
         get() = prefs.getInt(KEY_SHRINKER_ADS_WATCHED, 0)

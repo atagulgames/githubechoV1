@@ -143,14 +143,10 @@ fun EchoGameScreen(
                             onClearEchoes = { viewModel.clearAllEchoes() },
                             onUseBreaker = { viewModel.useEchoBreaker() },
                             onActivateShrinker = {
-                                viewModel.activateEchoShrinker(
-                                    onTriggerAd = { onShowRewardedAd("SHRINKER") }
-                                )
+                                viewModel.activateEchoShrinker()
                             },
                             onHint = {
-                                viewModel.useHint(
-                                    onTriggerAd = { onShowRewardedAd("HINT") }
-                                )
+                                viewModel.useHint()
                             }
                         )
 
@@ -371,6 +367,42 @@ fun EchoGameScreen(
                 SupportDialog(
                     isDarkTheme = state.isDarkTheme,
                     onDismiss = { viewModel.setSupportVisible(false) }
+                )
+            }
+
+            // 16. Hint Unlock Dialog (3 Reklam veya 5 Elmas)
+            if (state.isHintPurchaseDialogVisible) {
+                com.example.ui.dialogs.HintDialog(
+                    hintAdsWatched = state.hintAdsWatched,
+                    diamonds = state.diamonds,
+                    tokens = state.tokens,
+                    isDarkTheme = state.isDarkTheme,
+                    onWatchAd = {
+                        onShowRewardedAd("HINT_AD")
+                    },
+                    onUseDiamonds = {
+                        viewModel.unlockHintWithDiamonds()
+                    },
+                    onUseToken = {
+                        viewModel.unlockHintWithToken()
+                    },
+                    onDismiss = {
+                        viewModel.dismissHintPurchaseDialog()
+                    }
+                )
+            }
+
+            // 17. Zorunlu Yasal Bilgilendirme, KVKK, Epilepsi Uyarısı ve Sorumluluk Reddi (İntrodan Hemen Sonra Gösterilir)
+            if (!state.isKvkkConsentAccepted && state.screenState != ScreenState.INTRO) {
+                val context = LocalContext.current
+                com.example.ui.dialogs.LegalConsentDialog(
+                    onAccept = {
+                        viewModel.acceptKvkkConsent()
+                    },
+                    onDecline = {
+                        val activity = context as? Activity
+                        activity?.finishAffinity()
+                    }
                 )
             }
         }

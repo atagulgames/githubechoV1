@@ -55,6 +55,8 @@ object HarmonicAudioEngine {
     private var appContext: Context? = null
     private var bgmPlayer: MediaPlayer? = null
     private var activeSfxPlayer: MediaPlayer? = null
+    private var activeSfxJob: Job? = null
+    private var lastNodeToneTimeMs: Long = 0L
     private var savedBgmPosition: Int = 0
     private val audioScope = CoroutineScope(Dispatchers.Default)
     private val activeSfxCount = java.util.concurrent.atomic.AtomicInteger(0)
@@ -222,6 +224,31 @@ object HarmonicAudioEngine {
     }
 
     /**
+     * Instantly stops and clears any currently playing or scheduled sound effect,
+     * flushing the audio queue so sounds never overlap or play with a delay.
+     * Keeps background music (gamemusic) playing undisturbed.
+     */
+    @Synchronized
+    fun stopCurrentSfx() {
+        activeSfxJob?.cancel()
+        activeSfxJob = null
+        try {
+            activeSfxPlayer?.stop()
+            activeSfxPlayer?.release()
+        } catch (_: Exception) {}
+        activeSfxPlayer = null
+
+        try {
+            while (pcmChannel.tryReceive().isSuccess) {
+                // Drain any waiting PCM frames
+            }
+            streamAudioTrack?.pause()
+            streamAudioTrack?.flush()
+            streamAudioTrack?.play()
+        } catch (_: Exception) {}
+    }
+
+    /**
      * Plays an intervening SFX with intelligent audio ducking:
      * 1. Automatically ducks background music down.
      * 2. Plays the requested SFX from res/raw or assets/audio/.
@@ -235,6 +262,7 @@ object HarmonicAudioEngine {
         if (!isSoundEnabled) return
         val ctx = appContext ?: return
 
+        stopCurrentSfx()
         duckBgm(DUCKED_BGM_VOLUME, durationMs = 140L)
         activeSfxCount.incrementAndGet()
 
@@ -276,11 +304,6 @@ object HarmonicAudioEngine {
             }
 
             if (player != null) {
-                try {
-                    activeSfxPlayer?.stop()
-                    activeSfxPlayer?.release()
-                } catch (_: Exception) {}
-
                 activeSfxPlayer = player
                 player.setVolume(0.95f, 0.95f)
                 player.setOnCompletionListener { mp ->
@@ -310,7 +333,7 @@ object HarmonicAudioEngine {
 
         // Fallback procedural sound + scheduled restore
         fallbackTone()
-        audioScope.launch {
+        activeSfxJob = audioScope.launch {
             delay(sfxDurationMs)
             if (activeSfxCount.decrementAndGet() <= 0) {
                 activeSfxCount.set(0)
@@ -325,7 +348,7 @@ object HarmonicAudioEngine {
      */
     fun playNextLevel() {
         playInterveningSfx("nextlevel", sfxDurationMs = 1400L) {
-            audioScope.launch {
+            activeSfxJob = audioScope.launch {
                 playSynthTone(523.25f, 120, 0.60f)
                 delay(90)
                 playSynthTone(659.25f, 120, 0.65f)
@@ -341,8 +364,9 @@ object HarmonicAudioEngine {
      */
     fun playVictoryCascade() {
         if (!isSoundEnabled) return
+        stopCurrentSfx()
         duckBgm(DUCKED_BGM_VOLUME, durationMs = 150L)
-        audioScope.launch {
+        activeSfxJob = audioScope.launch {
             try {
                 playSynthTone(392.00f, 110, 0.55f)
                 delay(90)
@@ -375,7 +399,7 @@ object HarmonicAudioEngine {
      */
     fun playCollisionBuzz() {
         playInterveningSfx("hata", sfxDurationMs = 500L) {
-            audioScope.launch {
+            activeSfxJob = audioScope.launch {
                 playSynthTone(130.81f, 160, 0.55f)
             }
         }
@@ -393,7 +417,7 @@ object HarmonicAudioEngine {
      */
     fun playBrokenRedLine() {
         playInterveningSfx("brokenredline", sfxDurationMs = 600L) {
-            audioScope.launch {
+            activeSfxJob = audioScope.launch {
                 playSynthTone(349.23f, 90, 0.55f)
                 delay(70)
                 playSynthTone(174.61f, 130, 0.50f)
@@ -412,6 +436,7 @@ object HarmonicAudioEngine {
     fun playLoginEffect(context: Context) {
         if (!isSoundEnabled) return
         try {
+            stopCurrentSfx()
             if (com.example.media.GameMediaAssets.isAssetAvailable(context, com.example.media.GameMediaAssets.LOGIN_AUDIO_PATH)) {
                 val afd = context.assets.openFd(com.example.media.GameMediaAssets.LOGIN_AUDIO_PATH)
                 val mp = MediaPlayer()
@@ -449,8 +474,8 @@ object HarmonicAudioEngine {
      */
     fun playIntroJingle() {
         if (!isSoundEnabled) return
-        audioScope.launch {
-            // Elegant chord progression for intro video sequence
+        stopCurrentSfx()
+        activeSfxJob = audioScope.launch {
             playSynthTone(261.63f, 200, 0.50f) // C4
             delay(140)
             playSynthTone(329.63f, 220, 0.55f) // E4
@@ -467,8 +492,9 @@ object HarmonicAudioEngine {
      */
     fun playCandyPop(comboCount: Int) {
         if (!isSoundEnabled) return
+        stopCurrentSfx()
         val baseFreq = 520f + (comboCount * 65f).coerceAtMost(600f)
-        audioScope.launch {
+        activeSfxJob = audioScope.launch {
             playSynthTone(baseFreq, 65, 0.65f)
             delay(40)
             playSynthTone(baseFreq * 1.25f, 90, 0.50f)
@@ -480,7 +506,8 @@ object HarmonicAudioEngine {
      */
     fun playComboCrush(comboCount: Int) {
         if (!isSoundEnabled) return
-        audioScope.launch {
+        stopCurrentSfx()
+        activeSfxJob = audioScope.launch {
             playSynthTone(440f, 90, 0.70f)
             delay(50)
             playSynthTone(554.37f, 100, 0.75f)
@@ -496,7 +523,8 @@ object HarmonicAudioEngine {
      */
     fun playVictoryCallout() {
         if (!isSoundEnabled) return
-        audioScope.launch {
+        stopCurrentSfx()
+        activeSfxJob = audioScope.launch {
             playSynthTone(659.25f, 100, 0.70f)
             delay(70)
             playSynthTone(830.61f, 120, 0.75f)
@@ -509,12 +537,17 @@ object HarmonicAudioEngine {
 
     /**
      * Plays melodic harmonic tone when a node is connected during drawing.
+     * Throttled to prevent overlapping tones or delayed sound queues.
      */
     fun playNodeTone(sequenceIndex: Int) {
         if (!isSoundEnabled) return
+        val now = System.currentTimeMillis()
+        if (now - lastNodeToneTimeMs < 45L) return
+        lastNodeToneTimeMs = now
+        stopCurrentSfx()
         val freq = pentatonicScale[sequenceIndex % pentatonicScale.size]
-        audioScope.launch {
-            playSynthTone(freq, durationMs = 120, volume = 0.55f)
+        activeSfxJob = audioScope.launch {
+            playSynthTone(freq, durationMs = 90, volume = 0.55f)
         }
     }
 
@@ -533,38 +566,57 @@ object HarmonicAudioEngine {
         playPcm(buffer, sampleRate)
     }
 
-    private fun playPcm(buffer: ShortArray, sampleRate: Int) {
-        try {
-            val track = AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_GAME)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(sampleRate)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build()
-                )
-                .setBufferSizeInBytes(buffer.size * 2)
-                .setTransferMode(AudioTrack.MODE_STATIC)
-                .build()
+    private var streamAudioTrack: AudioTrack? = null
+    private val pcmChannel = kotlinx.coroutines.channels.Channel<ShortArray>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private var isPcmWorkerStarted = false
 
-            track.write(buffer, 0, buffer.size)
-            track.play()
-            track.setNotificationMarkerPosition(buffer.size)
-            track.setPlaybackPositionUpdateListener(object : AudioTrack.OnPlaybackPositionUpdateListener {
-                override fun onMarkerReached(t: AudioTrack?) {
-                    try {
-                        t?.stop()
-                        t?.release()
-                    } catch (_: Exception) {}
-                }
-                override fun onPeriodicNotification(t: AudioTrack?) {}
-            })
+    @Synchronized
+    private fun startPcmWorkerIfNeeded() {
+        if (!isPcmWorkerStarted) {
+            isPcmWorkerStarted = true
+            audioScope.launch {
+                try {
+                    val sampleRate = 22050
+                    val minBuf = AudioTrack.getMinBufferSize(
+                        sampleRate,
+                        AudioFormat.CHANNEL_OUT_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT
+                    )
+                    val track = AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_GAME)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setSampleRate(sampleRate)
+                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                .build()
+                        )
+                        .setBufferSizeInBytes(maxOf(minBuf * 2, 4096))
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .build()
+                    track.play()
+                    streamAudioTrack = track
+
+                    for (buffer in pcmChannel) {
+                        try {
+                            track.write(buffer, 0, buffer.size)
+                        } catch (_: Exception) {}
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun playPcm(buffer: ShortArray, sampleRate: Int) {
+        if (!isSoundEnabled) return
+        try {
+            startPcmWorkerIfNeeded()
+            pcmChannel.trySend(buffer)
         } catch (_: Exception) {}
     }
 }

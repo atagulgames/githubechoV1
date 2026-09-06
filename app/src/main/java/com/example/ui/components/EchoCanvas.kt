@@ -86,15 +86,31 @@ fun EchoCanvas(
             .offset(x = shakeX, y = shakeY)
             .testTag("echo_canvas_container")
     ) {
-        val canvasWidth = constraints.maxWidth.toFloat()
-        val canvasHeight = constraints.maxHeight.toFloat()
+        val canvasWidth = constraints.maxWidth.toFloat().coerceAtLeast(100f)
+        val canvasHeight = constraints.maxHeight.toFloat().coerceAtLeast(100f)
 
-        val virtualW = 360f
-        val virtualH = 480f
+        // Dynamic auto-scaling: compute actual bounds of level nodes so puzzle
+        // automatically scales up or down and centers perfectly on ANY device
+        val nodes = state.nodes
+        val minX = nodes.minOfOrNull { it.x } ?: 60f
+        val maxX = nodes.maxOfOrNull { it.x } ?: 300f
+        val minY = nodes.minOfOrNull { it.y } ?: 80f
+        val maxY = nodes.maxOfOrNull { it.y } ?: 340f
 
-        val scale = min(canvasWidth / virtualW, canvasHeight / virtualH) * 0.88f
-        val offsetX = (canvasWidth - virtualW * scale) / 2f
-        val offsetY = (canvasHeight - virtualH * scale) / 2f
+        // Generous margins so outer node rings, numbers, and "KARAKTER" label never clip
+        val padX = 42f
+        val padY = 56f
+
+        val contentW = (maxX - minX + padX * 2f).coerceAtLeast(160f)
+        val contentH = (maxY - minY + padY * 2f).coerceAtLeast(160f)
+
+        val scale = min(canvasWidth / contentW, canvasHeight / contentH).coerceIn(0.4f, 4.0f)
+
+        val contentCenterX = (minX + maxX) / 2f
+        val contentCenterY = (minY + maxY) / 2f
+
+        val offsetX = canvasWidth / 2f - contentCenterX * scale
+        val offsetY = canvasHeight / 2f - contentCenterY * scale
 
         fun toVirtual(screen: Offset): Point {
             val vx = (screen.x - offsetX) / scale
@@ -106,11 +122,35 @@ fun EchoCanvas(
             return Offset(vPoint.x * scale + offsetX, vPoint.y * scale + offsetY)
         }
 
+        // Cache background grid points to avoid thousands of draw calls per frame
+        val gridPoints = remember(canvasWidth, canvasHeight) {
+            val points = ArrayList<Offset>(600)
+            val step = 44f
+            var x = step / 2f
+            while (x < canvasWidth) {
+                var y = step / 2f
+                while (y < canvasHeight) {
+                    points.add(Offset(x, y))
+                    y += step
+                }
+                x += step
+            }
+            points
+        }
+
+        val nodeTextPaint = remember {
+            android.graphics.Paint().apply {
+                isAntiAlias = true
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+        }
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .testTag("echo_canvas")
-                .pointerInput(state.gameStatus) {
+                .pointerInput(state.gameStatus, scale, offsetX, offsetY) {
                     if (state.gameStatus == GameStatus.PLAYING) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
@@ -133,8 +173,8 @@ fun EchoCanvas(
                     }
                 }
         ) {
-            // 1. Grid Background
-            drawGridBackground(size.width, size.height, state.isDarkTheme)
+            // 1. Grid Background (Single GPU drawPoints instruction for buttery 60+ FPS)
+            drawGridBackground(size.width, size.height, state.isDarkTheme, gridPoints)
 
             // 2. Directed edge arrows (if level has one-way edges)
             drawDirectedEdgeArrows(
@@ -187,7 +227,8 @@ fun EchoCanvas(
                 isDrawing = state.isDrawing,
                 isDarkTheme = state.isDarkTheme,
                 toScreen = ::toScreen,
-                scale = scale
+                scale = scale,
+                textPaint = nodeTextPaint
             )
 
             // 7. Proximity Warning / Electric Glitch
@@ -275,16 +316,20 @@ fun EchoCanvas(
                     if (currentAlpha > 0.01f) {
                         val paint = android.graphics.Paint().apply {
                             isAntiAlias = true
-                            textSize = 24f * scale * callout.scale * animScale
+                            textSize = (22f * scale * callout.scale * animScale).coerceIn(16f, 44f)
                             textAlign = android.graphics.Paint.Align.CENTER
                             color = callout.color.copy(alpha = (callout.alpha * currentAlpha).coerceIn(0f, 1f)).toArgb()
                             typeface = android.graphics.Typeface.DEFAULT_BOLD
                             setShadowLayer(10f * scale, 0f, 3f * scale, android.graphics.Color.BLACK)
                         }
+                        val textWidth = paint.measureText(callout.text)
+                        val halfW = textWidth / 2f + 16f
+                        val clampedX = screenPos.x.coerceIn(halfW, size.width - halfW)
+                        val clampedY = adjustedY.coerceIn(paint.textSize + 24f, size.height - 24f)
                         drawContext.canvas.nativeCanvas.drawText(
                             callout.text,
-                            screenPos.x,
-                            adjustedY,
+                            clampedX,
+                            clampedY,
                             paint
                         )
                     }
@@ -294,24 +339,22 @@ fun EchoCanvas(
     }
 }
 
-private fun DrawScope.drawGridBackground(w: Float, h: Float, isDarkTheme: Boolean) {
+private fun DrawScope.drawGridBackground(
+    w: Float,
+    h: Float,
+    isDarkTheme: Boolean,
+    gridPoints: List<Offset>
+) {
     val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
     drawRect(color = bgColor)
     val dotColor = if (isDarkTheme) Color(0x33475569) else Color(0x3394A3B8)
-    val step = 42f
-    var x = step / 2f
-    while (x < w) {
-        var y = step / 2f
-        while (y < h) {
-            drawCircle(
-                color = dotColor,
-                radius = 1.3f,
-                center = Offset(x, y)
-            )
-            y += step
-        }
-        x += step
-    }
+    drawPoints(
+        points = gridPoints,
+        pointMode = PointMode.Points,
+        color = dotColor,
+        strokeWidth = 2.4f,
+        cap = StrokeCap.Round
+    )
 }
 
 private fun DrawScope.drawDirectedEdgeArrows(
@@ -516,7 +559,8 @@ private fun DrawScope.drawNodes(
     isDrawing: Boolean,
     isDarkTheme: Boolean,
     toScreen: (Point) -> Offset,
-    scale: Float
+    scale: Float,
+    textPaint: android.graphics.Paint
 ) {
     val baseRadius = 20f * (scale / 1.5f).coerceAtLeast(1f)
 
@@ -697,21 +741,16 @@ private fun DrawScope.drawNodes(
             node.id.toString()
         }
 
-        drawContext.canvas.nativeCanvas.apply {
-            val paint = android.graphics.Paint().apply {
-                color = when {
-                    isVisited -> android.graphics.Color.WHITE
-                    isCharacterStart -> android.graphics.Color.parseColor("#0284C7")
-                    node.type == NodeType.KEY -> android.graphics.Color.parseColor("#D97706")
-                    node.type == NodeType.GATE -> if (collectedKeyIds.contains(node.keyForGateId)) android.graphics.Color.parseColor("#059669") else android.graphics.Color.parseColor("#E11D48")
-                    else -> if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#0F172A")
-                }
-                textSize = baseRadius * 1.05f
-                isFakeBoldText = true
-                textAlign = android.graphics.Paint.Align.CENTER
-            }
-            val textY = pos.y - ((paint.descent() + paint.ascent()) / 2f)
-            drawText(displayText, pos.x, textY, paint)
+        val textColor = when {
+            isVisited -> android.graphics.Color.WHITE
+            isCharacterStart -> android.graphics.Color.parseColor("#0284C7")
+            node.type == NodeType.KEY -> android.graphics.Color.parseColor("#D97706")
+            node.type == NodeType.GATE -> if (collectedKeyIds.contains(node.keyForGateId)) android.graphics.Color.parseColor("#059669") else android.graphics.Color.parseColor("#E11D48")
+            else -> if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#0F172A")
         }
+        textPaint.color = textColor
+        textPaint.textSize = baseRadius * 1.05f
+        val textY = pos.y - ((textPaint.descent() + textPaint.ascent()) / 2f)
+        drawContext.canvas.nativeCanvas.drawText(displayText, pos.x, textY, textPaint)
     }
 }

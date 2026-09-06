@@ -146,7 +146,10 @@ data class EchoUiState(
     val isSupportDialogVisible: Boolean = false,
     val shrinkerAdsWatched: Int = 0,
     val userAvatarUri: String = "",
-    val userCustomTitle: String = ""
+    val userCustomTitle: String = "",
+    val hintAdsWatched: Int = 0,
+    val isHintPurchaseDialogVisible: Boolean = false,
+    val isKvkkConsentAccepted: Boolean = false
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -240,6 +243,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 infiniteBreakersExpiresAt = prefs.infiniteBreakersExpiresAt,
                 radiusShrinkerExpiresAt = prefs.radiusShrinkerExpiresAt,
                 shrinkerAdsWatched = prefs.shrinkerAdsWatched,
+                hintAdsWatched = prefs.hintAdsWatched,
+                isKvkkConsentAccepted = prefs.isKvkkConsentAccepted,
                 userAvatarUri = prefs.userAvatarUri,
                 userCustomTitle = prefs.userCustomTitle,
                 isAuthenticated = false // Opening flow requires explicit login authentication verification
@@ -521,8 +526,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val candidateSegment = Segment(lastNode.toPoint(), point, lastVisitedId, -1)
 
         // 1. Proximity detection to past echoes: vibrates & alerts when close (< 16px)
-        val allPastSegments = state.echoes.flatMap { it.segments }
-        val minDist = CollisionEngine.minDistanceToEchoes(point, allPastSegments)
+        val minDist = CollisionEngine.minDistanceToEchoStrokes(point, state.echoes)
         val isNear = minDist < 18f
         if (isNear != state.isProximityAlertActive) {
             _uiState.update { it.copy(isProximityAlertActive = isNear) }
@@ -538,9 +542,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         // 3. Collision with past Echo Colliders:
         val hitboxScale = if (state.isEchoShrinkerActive) 0.5f else 1.0f
-        val collidedEcho = CollisionEngine.checkCollisionWithEchoes(
+        val collidedEcho = CollisionEngine.checkCollisionWithEchoStrokes(
             candidate = candidateSegment,
-            echoes = allPastSegments,
+            echoStrokes = state.echoes,
             hitboxScale = hitboxScale
         )
         if (collidedEcho != null) {
@@ -587,9 +591,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
             // Check collision of this target connection with past Echo Colliders
             val connectionSegment = Segment(lastNode.toPoint(), hitNode.toPoint(), lastVisitedId, hitNode.id)
-            val echoHit = CollisionEngine.checkCollisionWithEchoes(
+            val echoHit = CollisionEngine.checkCollisionWithEchoStrokes(
                 candidate = connectionSegment,
-                echoes = allPastSegments,
+                echoStrokes = state.echoes,
                 endpointTolerance = 14f,
                 hitboxScale = if (state.isEchoShrinkerActive) 0.5f else 1.0f
             )
@@ -926,32 +930,18 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun activateEchoShrinker(onTriggerAd: () -> Unit = {}) {
         val state = _uiState.value
         if (state.isEchoShrinkerActive) {
-            showToast("Esnek Alan zaten bu bölümde aktif!")
+            showToast("🌟 Esnek Mod zaten bu bölüm için aktif!")
             return
         }
-        val adsWatched = prefs.shrinkerAdsWatched
-        if (adsWatched < 3) {
-            showToast("Esnek Alan için 3 reklam izlenmeli ve 5 Elmas gereklidir! ($adsWatched/3 izlendi). Reklam açılıyor...")
-            onTriggerAd()
-            return
-        }
-        if (prefs.diamonds < 5) {
-            showToast("3 reklam izlendi fakat 5 Elmas zorunludur! (Mevcut: ${prefs.diamonds} Elmas)")
-            setShopVisible(true)
-            return
-        }
-        // Both conditions met: 3 ads watched + 5 diamonds
-        prefs.useDiamond(5)
-        prefs.shrinkerAdsWatched = 0
         _uiState.update {
             it.copy(
                 isEchoShrinkerActive = true,
-                diamonds = prefs.diamonds,
-                shrinkerAdsWatched = 0,
                 gameStatus = GameStatus.PLAYING
             )
         }
-        showToast("🌟 Esnek Alan Aktif! 5 Elmas harcandı ve bariyerler inceltildi.")
+        HarmonicAudioEngine.playVictoryCascade()
+        triggerHapticClick()
+        showToast("🌟 Esnek Mod Aktif! Yankı bariyerleri %50 küçültüldü (Yalnızca bu bölüm için geçerli).")
     }
 
     fun grantRewardedReward(type: String) {
@@ -1019,24 +1009,40 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             }
-            "HINT" -> {
-                prefs.addTokens(1)
+            "HINT", "HINT_AD" -> {
+                val nextWatched = (prefs.hintAdsWatched + 1).coerceAtMost(3)
+                prefs.hintAdsWatched = nextWatched
                 _uiState.update {
                     it.copy(
                         isRewardedSimulating = false,
                         isAdLoading = false,
-                        isHintActive = true,
-                        tokens = prefs.tokens,
-                        gameStatus = GameStatus.PLAYING
+                        hintAdsWatched = nextWatched
                     )
                 }
-                showToast("İpucu Aktif! Reklam izlendiği için rota açıldı.")
-                RewardClaimedInfo(
-                    title = "İpucu Aktif!",
-                    subtitle = "Reklam başarıyla izlendi ve rota rehberi açıldı.",
-                    rewardType = type,
-                    tokensAdded = 1
-                )
+                if (nextWatched >= 3) {
+                    prefs.hintAdsWatched = 0
+                    _uiState.update {
+                        it.copy(
+                            isHintActive = true,
+                            hintAdsWatched = 0,
+                            isHintPurchaseDialogVisible = false,
+                            gameStatus = GameStatus.PLAYING
+                        )
+                    }
+                    showToast("💡 İpucu Açıldı! 3 reklam başarıyla izlendi.")
+                    RewardClaimedInfo(
+                        title = "💡 İpucu Rehberi Aktif!",
+                        subtitle = "3 reklam izlendi ve bu bölümün çözüm rotası açıldı.",
+                        rewardType = type
+                    )
+                } else {
+                    showToast("💡 İpucu için reklam ($nextWatched/3) izlendi! Kalan: ${3 - nextWatched}")
+                    RewardClaimedInfo(
+                        title = "İpucu Reklamı ($nextWatched/3)",
+                        subtitle = "İpucu için ${3 - nextWatched} reklam daha izleyin veya 5 elmas kullanın.",
+                        rewardType = type
+                    )
+                }
             }
             "FREE_BREAKER", "REWARD_DAILY" -> {
                 prefs.addBreakers(1)
@@ -1282,7 +1288,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isRewardedSimulating = false
             )
         }
-        showToast("Sorun oluştu! Reklama gönderilen istek reddedildi veya yüklenemedi.")
+        grantRewardedReward(type)
+        showToast("🎁 Reklam servisi yanıt vermediği için ödülünüz otomatik tanımlandı!")
     }
 
     fun shouldShowInterstitialOnNextLevel(): Boolean {
@@ -1341,19 +1348,77 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun useHint(onTriggerAd: () -> Unit = {}) {
         val state = _uiState.value
-        if (state.isHintActive) return
+        if (state.isHintActive) {
+            showToast("💡 İpucu zaten bu bölüm için aktif! Numaralandırılmış rotayı takip edin.")
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isHintPurchaseDialogVisible = true,
+                hintAdsWatched = prefs.hintAdsWatched
+            )
+        }
+    }
+
+    fun dismissHintPurchaseDialog() {
+        _uiState.update { it.copy(isHintPurchaseDialogVisible = false) }
+    }
+
+    fun unlockHintWithDiamonds() {
+        if (prefs.useDiamond(5)) {
+            _uiState.update {
+                it.copy(
+                    isHintActive = true,
+                    diamonds = prefs.diamonds,
+                    isHintPurchaseDialogVisible = false,
+                    gameStatus = GameStatus.PLAYING
+                )
+            }
+            HarmonicAudioEngine.playVictoryCascade()
+            triggerHapticClick()
+            val u = _uiState.value.authenticatedUser
+            if (u.isNotBlank()) {
+                viewModelScope.launch {
+                    authRepo.saveActiveUserProgress(
+                        username = u,
+                        currentLevelIndex = _uiState.value.currentLevelIndex,
+                        completedLevels = prefs.getCompletedLevels(),
+                        tokens = prefs.tokens,
+                        echoBreakers = prefs.echoBreakers,
+                        coins = prefs.coins,
+                        diamonds = prefs.diamonds,
+                        totalEchoes = prefs.totalEchoes,
+                        totalStars = _uiState.value.totalStars
+                    )
+                }
+            }
+            showToast("💡 İpucu Açıldı! 5 Elmas harcandı ve rehber rota açıldı.")
+        } else {
+            showToast("Yetersiz Elmas! (Mevcut: ${_uiState.value.diamonds} Elmas. 5 Elmas gereklidir)")
+        }
+    }
+
+    fun unlockHintWithToken() {
         if (prefs.useToken()) {
             _uiState.update {
                 it.copy(
                     isHintActive = true,
-                    tokens = prefs.tokens
+                    tokens = prefs.tokens,
+                    isHintPurchaseDialogVisible = false,
+                    gameStatus = GameStatus.PLAYING
                 )
             }
-            showToast("İdeal rota ve ipucu düğüm sırası gösteriliyor.")
+            HarmonicAudioEngine.playVictoryCascade()
+            triggerHapticClick()
+            showToast("💡 İpucu Açıldı! 1 İpucu Jetonu kullanıldı.")
         } else {
-            showToast("İpucu için reklam izleniyor...")
-            onTriggerAd()
+            showToast("Yetersiz Jeton! 3 reklam veya 5 elmas ile de açabilirsiniz.")
         }
+    }
+
+    fun acceptKvkkConsent() {
+        prefs.isKvkkConsentAccepted = true
+        _uiState.update { it.copy(isKvkkConsentAccepted = true) }
     }
 
     fun restartLevel(clearEchoes: Boolean = false) {

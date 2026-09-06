@@ -9,6 +9,7 @@ import java.security.MessageDigest
 
 class AuthRepository(context: Context) {
 
+    private val appContext = context.applicationContext
     private val db = EchoDatabase.getDatabase(context)
     private val userDao = db.userAccountDao()
     private val preferences = EchoPreferences(context)
@@ -28,20 +29,24 @@ class AuthRepository(context: Context) {
             return@withContext Result.failure(IllegalArgumentException("Şifre en az 4 karakter olmalıdır."))
         }
 
-        // Check if username is already taken (as username or email)
+        // Check if username is already taken in Room or in persistent vault
         val existingUserByName = userDao.getUserByUsername(username)
+            ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.username.equals(username, ignoreCase = true) }
         if (existingUserByName != null) {
             return@withContext Result.failure(IllegalStateException("Zaten bu kullanıcı adı kullanılıyor!"))
         }
 
         val existingUserByEmailAsName = userDao.getUserByEmail(username)
+            ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.email.isNotBlank() && it.email.equals(username, ignoreCase = true) }
         if (existingUserByEmailAsName != null) {
             return@withContext Result.failure(IllegalStateException("Zaten böyle bir hesap var veya zaten bu kullanıcı adı kullanılıyor!"))
         }
 
         // If email provided, check if email is already taken
         if (email.isNotBlank()) {
-            val existingEmail = userDao.getUserByEmail(email) ?: userDao.getUserByUsername(email)
+            val existingEmail = userDao.getUserByEmail(email)
+                ?: userDao.getUserByUsername(email)
+                ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.email.equals(email, ignoreCase = true) || it.username.equals(email, ignoreCase = true) }
             if (existingEmail != null) {
                 return@withContext Result.failure(IllegalStateException("Zaten böyle bir hesap var!"))
             }
@@ -66,6 +71,7 @@ class AuthRepository(context: Context) {
         )
 
         userDao.insertOrUpdate(newUser)
+        PersistentVaultManager.saveAccountToVault(appContext, newUser)
 
         // Set as active session
         preferences.setAuthenticatedUser(username, remember = true, passwordHash = passwordHash)
@@ -87,14 +93,26 @@ class AuthRepository(context: Context) {
             return@withContext Result.failure(IllegalArgumentException("Lütfen şifrenizi girin."))
         }
 
-        val user = userDao.getUserByUsername(query) ?: userDao.getUserByEmail(query)
+        var user = userDao.getUserByUsername(query) ?: userDao.getUserByEmail(query)
+        // If not found in Room (e.g. app was uninstalled and reinstalled), check persistent vault
+        if (user == null) {
+            val vaultAccounts = PersistentVaultManager.loadAccountsFromVault(appContext)
+            user = vaultAccounts.firstOrNull {
+                it.username.equals(query, ignoreCase = true) || (it.email.isNotBlank() && it.email.equals(query, ignoreCase = true))
+            }
+            if (user != null) {
+                // Restore into Room
+                userDao.insertOrUpdate(user)
+            }
+        }
+
         if (user == null) {
             return@withContext Result.failure(IllegalStateException("Böyle bir hesap bulunamadı! Lütfen kayıt olun."))
         }
 
         val computedHash = hashPassword(passwordInput)
         if (user.passwordHash != computedHash) {
-            return@withContext Result.failure(IllegalStateException("Hatalı şifre! Şifreniz doğruysa kaldığınız yerden devam edebilirsiniz."))
+            return@withContext Result.failure(IllegalStateException("Hatalı şifre! Şifre aynı olmak zorundadır."))
         }
 
         // Update active session
@@ -107,7 +125,16 @@ class AuthRepository(context: Context) {
     suspend fun getUserAccount(query: String): UserAccountEntity? = withContext(Dispatchers.IO) {
         val q = query.trim()
         if (q.isBlank()) return@withContext null
-        userDao.getUserByUsername(q) ?: userDao.getUserByEmail(q)
+        var user = userDao.getUserByUsername(q) ?: userDao.getUserByEmail(q)
+        if (user == null) {
+            user = PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull {
+                it.username.equals(q, ignoreCase = true) || (it.email.isNotBlank() && it.email.equals(q, ignoreCase = true))
+            }
+            if (user != null) {
+                userDao.insertOrUpdate(user)
+            }
+        }
+        user
     }
 
     suspend fun saveActiveUserProgress(
@@ -147,6 +174,11 @@ class AuthRepository(context: Context) {
                 maxCombo = maxCombo,
                 levelStatsCsv = levelStatsCsv
             )
+            // Also backup updated state to persistent vault so uninstall/reinstall preserves latest progress
+            val updatedAccount = userDao.getUserByUsername(actualUsername)
+            if (updatedAccount != null) {
+                PersistentVaultManager.saveAccountToVault(appContext, updatedAccount)
+            }
         }
     }
 

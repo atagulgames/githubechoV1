@@ -432,31 +432,13 @@ object StartIoManager {
             }
 
             override fun onFailedToReceiveAd(ad: Ad?) {
-                if (allowTestFallback && !isTestMode) {
-                    Log.w(TAG, "Live ads have no fill on this device. Switching to test ads to guarantee ad display on phone...")
-                    StartAppSDK.setTestAdsEnabled(true)
-                    loadDynamicRewardAd(
-                        activity = activity,
-                        grantReward = grantReward,
-                        onAdDisplayed = onAdDisplayed,
-                        onAdClosed = {
-                            StartAppSDK.setTestAdsEnabled(isTestMode)
-                            onAdClosed()
-                        },
-                        onAdUnavailable = { errMsg ->
-                            StartAppSDK.setTestAdsEnabled(isTestMode)
-                            activity.runOnUiThread { onAdUnavailable(errMsg) }
-                        },
-                        allowTestFallback = false
-                    )
-                } else {
-                    val errMsg = ad?.errorMessage ?: "Bağlantı hatası"
-                    Log.w(TAG, "Ad requests exhausted: $errMsg")
-                    activity.runOnUiThread {
-                        onAdUnavailable(errMsg)
-                    }
-                    preloadAds(activity)
+                val errMsg = ad?.errorMessage ?: "NO FILL"
+                Log.w(TAG, "Start.io live ad returned $errMsg. Granting reward fallback so gameplay is never blocked.")
+                activity.runOnUiThread {
+                    grantReward()
+                    onAdClosed()
                 }
+                preloadAds(activity)
             }
         })
     }
