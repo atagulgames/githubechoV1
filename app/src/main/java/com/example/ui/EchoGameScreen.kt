@@ -62,7 +62,7 @@ fun EchoGameScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("echo_game_scaffold"),
-        containerColor = Color(0xFFF8FAFC)
+        containerColor = if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -97,6 +97,7 @@ fun EchoGameScreen(
                         onOpenShop = { viewModel.setShopVisible(true) },
                         onOpenSkins = { viewModel.setSkinsVisible(true) },
                         onOpenSettings = { viewModel.setSettingsVisible(true) },
+                        onToggleDarkTheme = { viewModel.toggleDarkTheme() },
                         onOpenDailyQuests = { viewModel.setDailyQuestsVisible(true) },
                         onOpenDailyLogin = { viewModel.setDailyLoginVisible(true) },
                         onOpenChest = { viewModel.setChestVisible(true) },
@@ -195,6 +196,7 @@ fun EchoGameScreen(
                     levels = state.allLevels,
                     currentLevelIndex = state.currentLevelIndex,
                     completedLevels = state.completedLevels,
+                    isDarkTheme = state.isDarkTheme,
                     onSelectLevel = { idx ->
                         viewModel.setLevelSelectVisible(false)
                         viewModel.startPlayingLevel(idx)
@@ -209,8 +211,10 @@ fun EchoGameScreen(
                     soundEnabled = state.soundEnabled,
                     hapticsEnabled = state.hapticsEnabled,
                     testAdsEnabled = state.testAdsEnabled,
+                    isDarkTheme = state.isDarkTheme,
                     currentLanguage = state.language,
                     onSelectLanguage = { viewModel.setLanguage(it) },
+                    onToggleDarkTheme = { viewModel.setDarkTheme(it) },
                     onToggleSound = { viewModel.toggleSound(it) },
                     onToggleHaptics = { viewModel.toggleHaptics(it) },
                     onToggleTestAds = { viewModel.toggleTestAds(it) },
@@ -227,6 +231,8 @@ fun EchoGameScreen(
                     currentEcho = state.echoTheme,
                     unlockedThemes = state.unlockedThemes,
                     totalStars = state.totalStars,
+                    isDarkTheme = state.isDarkTheme,
+                    onToggleDarkTheme = { viewModel.setDarkTheme(it) },
                     onSelectStroke = { viewModel.setStrokeTheme(it) },
                     onSelectEcho = { viewModel.setEchoTheme(it) },
                     onDismiss = { viewModel.setSkinsVisible(false) }

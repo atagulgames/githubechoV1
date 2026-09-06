@@ -12,33 +12,53 @@ import kotlin.math.sin
 
 object LevelCatalog {
 
+    const val TOTAL_LEVELS = 100
+
     private val TIER_NAMES = listOf(
-        "Temel Yankı",          // Tier 1 (1..25)
-        "Yönlü Enerji",         // Tier 2 (26..50)
-        "Kilit & Anahtar",       // Tier 3 (51..75)
-        "Sönen Dalgalar",       // Tier 4 (76..100)
-        "Gölge Rezonansı",      // Tier 5 (101..125)
-        "Fraktal Labirent",     // Tier 6 (126..150)
-        "Kuantum Kapıları",     // Tier 7 (151..175)
-        "Zamansal Çözülme",     // Tier 8 (176..200)
-        "Usta Ağları",          // Tier 9 (201..225)
-        "Omega Zirvesi"         // Tier 10 (226..250)
+        "Harmonik Başlangıç", // Tier 1 (1..10)
+        "Yönlü Enerji",       // Tier 2 (11..20)
+        "Kilit & Anahtar",    // Tier 3 (21..30)
+        "Sönen Dalgalar",     // Tier 4 (31..40)
+        "Gölge Rezonansı",    // Tier 5 (41..50)
+        "Fraktal Matris",     // Tier 6 (51..60)
+        "Kuantum Kapıları",   // Tier 7 (61..70)
+        "Zamansal Akış",      // Tier 8 (71..80)
+        "Usta Ağları",        // Tier 9 (81..90)
+        "Omega Zirvesi"       // Tier 10 (91..100)
     )
 
-    private val SHAPE_PREFIXES = listOf(
-        "Üçgen", "Kare", "Beşgen", "Altıgen", "Yıldız", "Prizma", "Halka", "Lapis", "Kristal", "Matris",
-        "Sarmal", "Aura", "Nebula", "Apex", "Kubbe", "Vektör", "Kozmos", "Piramit", "Karasal", "Sonsuzluk"
+    private val UNIQUE_NAMES = listOf(
+        "Saf Üçgen", "Altın Kare", "Rezonans Beşgeni", "Kristal Altıgen", "Parlak Yıldız",
+        "Prizma Kubbesi", "Çifte Halka", "Lapis Çemberi", "Aura Kristali", "Geometrik Matris",
+        "Vektör Akışı", "Polar Yay", "Sarmal Yörünge", "Nebula Omurgası", "Kozmik İğne",
+        "İyon Ağı", "Girdap Vektörü", "Zirve Işını", "Piramit Hattı", "Sonsuzluk Yayı",
+        "Bakır Kilit", "Gümüş Geçit", "Safir Anahtar", "Yakut Bariyer", "Zümrüt Kapı",
+        "Gizemli Labirent", "Gizli Mahzen", "Kutsal Portal", "Kristal Mühür", "Açılan Kemer",
+        "Sönen Kıvılcım", "Buharlaşan Hat", "Kırılgan Rezonans", "Zamansal İz", "Kayıp Dalga",
+        "Sönük Titreşim", "Geçici Köprü", "Dağılan Foton", "Eriyen Ağ", "Son Yankı",
+        "Gölge İkizi", "Hayalet Yolu", "Görünmez Tel", "İllüzyon Ağı", "Karanlık Yansıma",
+        "Fantom Düğümü", "Yansıyan Sis", "Yıldız Tozu", "Gölge Koridoru", "Kırık Aynalar",
+        "Fraktal Ağacı", "Çift Sarmal", "İkili Çekirdek", "Altıgen Petek", "Kristal Kafes",
+        "İç İçe Halkalar", "Kozmik Çiçek", "Fraktal Yıldız", "Matris Örgüsü", "Karmaşık Düğüm",
+        "Kuantum Tüneli", "Dolanık Parçacık", "Süperpozisyon", "Fotonik Ağ", "Hiper Küp",
+        "Çoklu Geçit", "Boyut Kırılması", "Plazma Kapısı", "Çekim Dalgası", "Kuantum Çekirdeği",
+        "Zaman Döngüsü", "Görecelik Hattı", "Kronos Sarmalı", "Işık Konisi", "Zaman Kristali",
+        "Yavaşlayan Akış", "Geri Dönen Hat", "Zaman Aynası", "Kozmik Saat", "Boyutlararası Akış",
+        "Usta Labirenti", "Düğümler Şehri", "Büyük Dokuma", "Karmaşık Kafes", "Örümcek Ağı",
+        "Geometrik Kaos", "Harmonik Denge", "Yüce Ağ", "Kozmik Mimari", "Büyük Ağ Geçidi",
+        "Zirve Yükselişi", "Yıldızlararası", "Süpernova", "Hiperuzay", "Galaktik Çekirdek",
+        "Son Sınav", "Kozmos Nabzı", "Büyük Birleşme", "Usta İmtihanı", "ECHO OMEGA"
     )
 
     /**
-     * Generates a complete set of 250 unique, guaranteed solvable puzzle levels.
-     * Every level has distinct geometry, unique title, verified hint order starting at Node 1,
-     * and a smooth progressive difficulty curve from 1 to 250.
+     * Generates a complete set of 100 unique, non-repeating, guaranteed solvable puzzle levels.
+     * Every level has mathematically distinct geometry, unique title, verified hint order,
+     * and a smooth progressive difficulty curve from 1 to 100.
      */
-    fun create250Levels(): List<LevelEntity> {
-        val list = ArrayList<LevelEntity>(250)
+    fun create100Levels(): List<LevelEntity> {
+        val list = ArrayList<LevelEntity>(TOTAL_LEVELS)
 
-        for (id in 1..250) {
+        for (id in 1..TOTAL_LEVELS) {
             val levelData = buildLevelData(id)
             list.add(
                 LevelEntity(
@@ -63,6 +83,9 @@ object LevelCatalog {
 
         return list
     }
+
+    // Keep legacy name as alias to prevent compile issues anywhere
+    fun create250Levels(): List<LevelEntity> = create100Levels()
 
     private fun serializeNodes(nodes: List<LevelNode>): String {
         return nodes.joinToString(";") {
@@ -124,55 +147,60 @@ object LevelCatalog {
     }
 
     fun buildLevelData(id: Int): LevelData {
-        val tierIndex = ((id - 1) / 25).coerceIn(0, 9)
-        val levelInTier = ((id - 1) % 25) + 1
+        val clampedId = id.coerceIn(1, TOTAL_LEVELS)
+        val tierIndex = ((clampedId - 1) / 10).coerceIn(0, 9)
+        val levelInTier = ((clampedId - 1) % 10) + 1
 
-        val title = if (id == 250) {
-            "ECHO OMEGA"
-        } else if (id == 1) {
-            "Başlangıç Üçgeni"
-        } else if (id == 2) {
-            "Kare Alan"
+        val title = if (clampedId == 100) {
+            "ECHO OMEGA (100. Zirve Finali)"
         } else {
-            val shape = SHAPE_PREFIXES[(id * 7 + tierIndex) % SHAPE_PREFIXES.size]
-            val tierName = TIER_NAMES[tierIndex]
-            "$shape $levelInTier ($tierName)"
+            val name = UNIQUE_NAMES.getOrNull(clampedId - 1) ?: "Seviye $clampedId"
+            val tier = TIER_NAMES[tierIndex]
+            "$name ($tier)"
         }
 
-        // Progressive node count from 3 up to 12
+        // Progressive node count from 3 up to 10
         val nodeCount = when {
-            id <= 5 -> 3 + (id / 3) // 3 to 4
-            id <= 25 -> 4 + ((id - 5) / 5) // 4 to 8
-            id <= 50 -> 5 + ((id - 25) / 7) // 5 to 8
-            id <= 100 -> 6 + ((id - 50) / 13) // 6 to 9
-            id <= 150 -> 7 + ((id - 100) / 17) // 7 to 10
-            id <= 200 -> 8 + ((id - 150) / 17) // 8 to 11
-            else -> 9 + ((id - 200) / 17).coerceAtMost(3) // 9 to 12
+            clampedId <= 3 -> 3
+            clampedId <= 10 -> 4
+            clampedId <= 25 -> 5
+            clampedId <= 45 -> 6
+            clampedId <= 65 -> 7
+            clampedId <= 85 -> 8
+            clampedId <= 98 -> 9
+            else -> 10 // Level 99 and 100 (Grand Finale)
         }
 
         val centerX = 180f
         val centerY = 220f
-        val baseRadius = (115f - (nodeCount * 2f)).coerceIn(75f, 115f)
+        val baseRadius = (118f - (nodeCount * 2.2f)).coerceIn(72f, 115f)
 
-        // Generate geometry layout based on id
+        // Unique geometric layout based on id
         val nodes = ArrayList<LevelNode>(nodeCount)
-        val isStarPattern = (id % 3 == 0) && nodeCount >= 6
-        val isConcentric = (id % 4 == 0) && nodeCount >= 7
+        val isStarPattern = (clampedId % 3 == 0) && nodeCount >= 6
+        val isConcentric = (clampedId % 4 == 0) && nodeCount >= 6
+        val isElliptical = (clampedId % 5 == 0)
 
-        val hasKeyGate = (tierIndex == 2 || tierIndex == 6 || (tierIndex == 9 && id % 2 == 0)) && nodeCount >= 4
-        val keyIndex = if (hasKeyGate) 2 + ((id % (nodeCount - 3)).coerceAtLeast(0)) else -1
+        val hasKeyGate = (tierIndex == 2 || tierIndex == 6 || (tierIndex == 9 && clampedId % 2 == 0)) && nodeCount >= 4
+        val keyIndex = if (hasKeyGate) 2 + ((clampedId % (nodeCount - 3)).coerceAtLeast(0)) else -1
         val gateIndex = if (hasKeyGate) nodeCount else -1
 
+        // Angular rotation seed ensures every level has its own unique orientation
+        val rotationOffset = ((clampedId * 37) % 360) * (PI / 180.0)
+
         for (i in 1..nodeCount) {
-            val angle = (2 * PI * (i - 1) / nodeCount) - (PI / 2) // Start at top (Node 1)
+            val baseAngle = (2 * PI * (i - 1) / nodeCount) - (PI / 2) + rotationOffset
             val r = when {
-                isConcentric && (i > nodeCount / 2) -> baseRadius * 0.52f
-                isStarPattern && (i % 2 == 0) -> baseRadius * 0.58f
-                else -> baseRadius
+                isConcentric && (i > nodeCount / 2) -> baseRadius * 0.50f
+                isStarPattern && (i % 2 == 0) -> baseRadius * 0.56f
+                else -> baseRadius * (1.0f + ((i * clampedId) % 5 - 2) * 0.04f)
             }
 
-            val x = (centerX + (r * cos(angle)).toFloat()).coerceIn(45f, 315f)
-            val y = (centerY + (r * sin(angle)).toFloat()).coerceIn(95f, 345f)
+            val xFactor = if (isElliptical) 1.15f else 1.0f
+            val yFactor = if (isElliptical) 0.88f else 1.0f
+
+            val x = (centerX + (r * xFactor * cos(baseAngle)).toFloat()).coerceIn(40f, 320f)
+            val y = (centerY + (r * yFactor * sin(baseAngle)).toFloat()).coerceIn(90f, 350f)
 
             val type = when (i) {
                 keyIndex -> NodeType.KEY
@@ -184,28 +212,28 @@ object LevelCatalog {
             nodes.add(LevelNode(i, x, y, type, keyForGateId))
         }
 
-        // Mechanic classification
+        // Mechanic classification for the 10 tiers
         val mechanicType = when (tierIndex) {
             0 -> "STANDARD"
             1 -> "ONE_WAY"
             2 -> "KEY_GATE"
             3 -> "DECAYING_ECHO"
             4 -> "GHOST_ECHO"
-            5 -> "ADVANCED_MAZE"
+            5 -> "FRAKTAL_MATRIX"
             6 -> "KEY_GATE"
             7 -> "DECAYING_ECHO"
-            8 -> "MASTER_LABYRINTH"
-            9 -> if (id == 250) "OMEGA" else if (id % 2 == 0) "KEY_GATE" else "DECAYING_ECHO"
+            8 -> "MASTER_NETWORK"
+            9 -> if (clampedId == 100) "OMEGA" else if (clampedId % 2 == 0) "KEY_GATE" else "DECAYING_ECHO"
             else -> "STANDARD"
         }
 
         val decayLifetime = when (mechanicType) {
-            "DECAYING_ECHO" -> 5 + (id % 3)
+            "DECAYING_ECHO" -> 5 + (clampedId % 3)
             "OMEGA" -> 6
             else -> 0
         }
 
-        val isGhostEchoes = mechanicType == "GHOST_ECHO" || (tierIndex >= 7 && id % 3 == 0)
+        val isGhostEchoes = mechanicType == "GHOST_ECHO" || (tierIndex >= 7 && clampedId % 3 == 0)
 
         // Directed edges for ONE_WAY mechanics (guaranteed solvable along hint order)
         val directedEdges = if (mechanicType == "ONE_WAY" || tierIndex == 6) {
@@ -222,16 +250,16 @@ object LevelCatalog {
 
         // Hint order visiting 1 -> 2 -> ... -> nodeCount
         val hintOrder = (1..nodeCount).toList()
-        val parEchoes = (nodeCount / 3).coerceIn(1, 5)
+        val parEchoes = (nodeCount / 3).coerceIn(1, 4)
 
-        val description = if (id == 250) {
-            "BÜYÜK FİNAL GAUNTLET: Zirve geometrisinde hatasız hamlelerle 250. seviyeye ulaş!"
+        val description = if (clampedId == 100) {
+            "BÜYÜK FİNAL: ECHO Evreninin 100. ve son zirve bulmacasını çöz ve zaferi kazan!"
         } else {
-            "Seviye $id: $nodeCount düğümlü ${TIER_NAMES[tierIndex].lowercase()} bulmacasını tek çizgiyle tamamla!"
+            "Bölüm $clampedId: $nodeCount düğümlü ${TIER_NAMES[tierIndex]} geometrisini tek kesintisiz çizgiyle tamamla!"
         }
 
         return LevelData(
-            levelId = id,
+            levelId = clampedId,
             title = title,
             gridSize = 4,
             nodes = nodes,

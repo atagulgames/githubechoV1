@@ -55,8 +55,10 @@ fun SettingsDialog(
     soundEnabled: Boolean,
     hapticsEnabled: Boolean,
     testAdsEnabled: Boolean = true,
+    isDarkTheme: Boolean = true,
     currentLanguage: Language = Language.EN,
     onSelectLanguage: (Language) -> Unit = {},
+    onToggleDarkTheme: (Boolean) -> Unit = {},
     onToggleSound: (Boolean) -> Unit,
     onToggleHaptics: (Boolean) -> Unit,
     onToggleTestAds: (Boolean) -> Unit = {},
@@ -65,14 +67,20 @@ fun SettingsDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
+        val bgColor = if (isDarkTheme) Color(0xFF1E293B) else Color.White
+        val cardBg = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+        val textPrimary = if (isDarkTheme) Color.White else Color(0xFF0F172A)
+        val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+        val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(16.dp, RoundedCornerShape(24.dp))
                 .testTag("settings_dialog"),
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+            color = bgColor,
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
         ) {
             Column(
                 modifier = Modifier
@@ -91,7 +99,7 @@ fun SettingsDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFE0F2FE)),
+                                .background(if (isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -106,7 +114,7 @@ fun SettingsDialog(
                             text = EchoStrings.get("settings", currentLanguage),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A)
+                            color = textPrimary
                         )
                     }
 
@@ -117,7 +125,7 @@ fun SettingsDialog(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Kapat",
-                            tint = Color(0xFF64748B)
+                            tint = textSecondary
                         )
                     }
                 }
@@ -129,8 +137,8 @@ fun SettingsDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFFF8FAFC))
-                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                        .background(cardBg)
+                        .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -145,13 +153,13 @@ fun SettingsDialog(
                             text = EchoStrings.get("language", currentLanguage),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = Color(0xFF0F172A)
+                            color = textPrimary
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "(10 Dilde Tam Destek)",
                             fontSize = 11.sp,
-                            color = Color(0xFF64748B)
+                            color = textSecondary
                         )
                     }
 
@@ -169,11 +177,11 @@ fun SettingsDialog(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isSelected) Color(0xFF0284C7) else Color.White
+                                        if (isSelected) Color(0xFF0284C7) else (if (isDarkTheme) Color(0xFF1E293B) else Color.White)
                                     )
                                     .border(
                                         width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) Color(0xFF0369A1) else Color(0xFFE2E8F0),
+                                        color = if (isSelected) Color(0xFF0369A1) else borderColor,
                                         shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable { onSelectLanguage(lang) }
@@ -190,9 +198,120 @@ fun SettingsDialog(
                                         text = lang.displayName,
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else Color(0xFF1E293B)
+                                        color = if (isSelected) Color.White else textPrimary
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Dark / White Theme Selection (Only 2 Options)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(cardBg)
+                        .border(1.dp, borderColor, RoundedCornerShape(14.dp))
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = null,
+                            tint = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFFF59E0B),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = EchoStrings.get("theme", currentLanguage),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = textPrimary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "(Dark / White)",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Dark Theme Pill
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isDarkTheme) Color(0xFF0284C7) else (if (isDarkTheme) Color(0xFF1E293B) else Color.White)
+                                )
+                                .border(
+                                    width = if (isDarkTheme) 2.dp else 1.dp,
+                                    color = if (isDarkTheme) Color(0xFF38BDF8) else borderColor,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { onToggleDarkTheme(true) }
+                                .padding(vertical = 10.dp)
+                                .testTag("theme_dark_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.DarkMode,
+                                    contentDescription = null,
+                                    tint = if (isDarkTheme) Color.White else textSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = EchoStrings.get("dark_theme", currentLanguage),
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isDarkTheme) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isDarkTheme) Color.White else textSecondary
+                                )
+                            }
+                        }
+
+                        // White Theme Pill
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (!isDarkTheme) Color(0xFF0284C7) else Color(0xFF0F172A)
+                                )
+                                .border(
+                                    width = if (!isDarkTheme) 2.dp else 1.dp,
+                                    color = if (!isDarkTheme) Color(0xFF38BDF8) else borderColor,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { onToggleDarkTheme(false) }
+                                .padding(vertical = 10.dp)
+                                .testTag("theme_white_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.LightMode,
+                                    contentDescription = null,
+                                    tint = if (!isDarkTheme) Color.White else textSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = EchoStrings.get("white_theme", currentLanguage),
+                                    fontSize = 13.sp,
+                                    fontWeight = if (!isDarkTheme) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (!isDarkTheme) Color.White else textSecondary
+                                )
                             }
                         }
                     }
@@ -205,8 +324,8 @@ fun SettingsDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFFF8FAFC))
-                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                        .background(cardBg)
+                        .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -226,12 +345,12 @@ fun SettingsDialog(
                             Text(
                                 text = EchoStrings.get("sound", currentLanguage),
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF0F172A),
+                                color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = "Akıllı müzik kısma (ducking) aktif",
-                                color = Color(0xFF64748B),
+                                color = textSecondary,
                                 fontSize = 11.sp
                             )
                         }
@@ -244,7 +363,7 @@ fun SettingsDialog(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFF0284C7),
                             uncheckedThumbColor = Color(0xFF94A3B8),
-                            uncheckedTrackColor = Color(0xFFE2E8F0)
+                            uncheckedTrackColor = borderColor
                         ),
                         modifier = Modifier.testTag("sound_toggle")
                     )
@@ -257,8 +376,8 @@ fun SettingsDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFFF8FAFC))
-                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                        .background(cardBg)
+                        .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -278,12 +397,12 @@ fun SettingsDialog(
                             Text(
                                 text = EchoStrings.get("haptics", currentLanguage),
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF0F172A),
+                                color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = "Düğüm bağlantısı ve titreşim geri bildirimi",
-                                color = Color(0xFF64748B),
+                                color = textSecondary,
                                 fontSize = 11.sp
                             )
                         }
@@ -296,7 +415,7 @@ fun SettingsDialog(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFFE11D48),
                             uncheckedThumbColor = Color(0xFF94A3B8),
-                            uncheckedTrackColor = Color(0xFFE2E8F0)
+                            uncheckedTrackColor = borderColor
                         ),
                         modifier = Modifier.testTag("haptics_toggle")
                     )
@@ -309,8 +428,8 @@ fun SettingsDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFFF8FAFC))
-                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                        .background(cardBg)
+                        .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -330,12 +449,12 @@ fun SettingsDialog(
                             Text(
                                 text = "Canlı Reklam Modu",
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF0F172A),
+                                color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = if (!testAdsEnabled) "Aktif (Start.io Canlı Reklamlar)" else "Test Modu (Geliştirici Reklamları)",
-                                color = if (!testAdsEnabled) Color(0xFF16A34A) else Color(0xFF64748B),
+                                color = if (!testAdsEnabled) Color(0xFF16A34A) else textSecondary,
                                 fontSize = 11.sp
                             )
                         }
@@ -348,7 +467,7 @@ fun SettingsDialog(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFF16A34A),
                             uncheckedThumbColor = Color(0xFF94A3B8),
-                            uncheckedTrackColor = Color(0xFFE2E8F0)
+                            uncheckedTrackColor = borderColor
                         ),
                         modifier = Modifier.testTag("test_ads_toggle")
                     )

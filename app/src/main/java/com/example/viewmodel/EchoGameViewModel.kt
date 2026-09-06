@@ -56,7 +56,7 @@ data class RewardClaimedInfo(
 data class EchoUiState(
     val screenState: ScreenState = ScreenState.INTRO,
     val currentLevelIndex: Int = 0,
-    val level: LevelData = LevelCatalog.entityToLevelData(LevelCatalog.create250Levels()[0]),
+    val level: LevelData = LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[0]),
     val allLevels: List<LevelEntity> = emptyList(),
     val language: Language = Language.EN,
     val nodes: List<Node> = emptyList(),
@@ -118,13 +118,15 @@ data class EchoUiState(
     val isDoubleRewardClaimedThisLevel: Boolean = false,
     val isAuthenticated: Boolean = false,
     val authenticatedUser: String = "",
-    val rememberMe: Boolean = false
+    val rememberMe: Boolean = false,
+    val isDarkTheme: Boolean = true
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = EchoPreferences(application)
     private val repo = EchoRepository(application)
+    private val authRepo = com.example.data.AuthRepository(application)
 
     private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val vibratorManager = application.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -184,7 +186,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         _uiState.update {
             it.copy(
-                currentLevelIndex = prefs.currentLevelIndex.coerceIn(0, 249),
+                currentLevelIndex = prefs.currentLevelIndex.coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1),
                 language = Language.fromCode(prefs.languageCode),
                 tokens = prefs.tokens,
                 echoBreakers = prefs.echoBreakers,
@@ -195,6 +197,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 soundEnabled = prefs.soundEnabled,
                 hapticsEnabled = prefs.hapticsEnabled,
                 testAdsEnabled = prefs.isTestAdsEnabled,
+                isDarkTheme = prefs.isDarkTheme,
                 isDailyCompletedToday = isDailyDone,
                 authenticatedUser = prefs.authenticatedUsername,
                 rememberMe = prefs.rememberMe,
@@ -215,14 +218,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
             return
         }
-        val targetIdx = levelIndex ?: _uiState.value.currentLevelIndex
+        val targetIdx = (levelIndex ?: _uiState.value.currentLevelIndex).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
         viewModelScope.launch {
             loadAndStartLevel(targetIdx)
         }
     }
 
     private suspend fun loadAndStartLevel(targetIdx: Int) {
-        val levelData = repo.getLevelData(targetIdx + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create250Levels()[0])
+        val levelData = repo.getLevelData(targetIdx + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[0])
         _uiState.update {
             it.copy(
                 screenState = ScreenState.PLAYING_LEVEL,
@@ -296,32 +299,90 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
      * intro.mp4 -> Login Screen -> Authentication Verification -> Main Menu
      */
     fun finishIntro() {
+        HarmonicAudioEngine.startBgm()
         _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
     }
 
     /**
-     * Authenticates user session and unlocks access to Main Menu.
+     * Authenticates user session and restores their saved progress from database/server.
      */
     fun onLoginSuccess(username: String, rememberMe: Boolean) {
-        prefs.setAuthenticatedUser(username, rememberMe)
-        _uiState.update {
-            it.copy(
-                isAuthenticated = true,
-                authenticatedUser = username,
-                rememberMe = rememberMe,
-                screenState = ScreenState.MAIN_MENU
-            )
+        viewModelScope.launch {
+            HarmonicAudioEngine.startBgm()
+            val user = authRepo.getUserAccount(username)
+            val userLevel = (user?.currentLevelIndex ?: 0).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
+            val userTokens = user?.tokens ?: 5
+            val userBreakers = user?.echoBreakers ?: 2
+            val userDark = user?.isDarkTheme ?: prefs.isDarkTheme
+            val userCompleted = user?.completedLevelsCsv?.split(",")
+                ?.mapNotNull { it.trim().toIntOrNull() }
+                ?.toSet() ?: emptySet()
+
+            prefs.setAuthenticatedUser(username, rememberMe)
+            prefs.currentLevelIndex = userLevel
+            prefs.tokens = userTokens
+            prefs.echoBreakers = userBreakers
+            prefs.isDarkTheme = userDark
+            if (userCompleted.isNotEmpty()) {
+                prefs.setCompletedLevelsRaw(userCompleted.map { it.toString() }.toSet())
+            }
+
+            _uiState.update {
+                it.copy(
+                    isAuthenticated = true,
+                    authenticatedUser = username,
+                    rememberMe = rememberMe,
+                    currentLevelIndex = userLevel,
+                    tokens = userTokens,
+                    echoBreakers = userBreakers,
+                    isDarkTheme = userDark,
+                    completedLevels = userCompleted,
+                    screenState = ScreenState.MAIN_MENU
+                )
+            }
         }
+    }
+
+    fun setDarkTheme(isDark: Boolean) {
+        prefs.isDarkTheme = isDark
+        _uiState.update { it.copy(isDarkTheme = isDark) }
+        val username = _uiState.value.authenticatedUser
+        if (username.isNotBlank()) {
+            viewModelScope.launch {
+                authRepo.saveActiveUserTheme(username, isDark)
+            }
+        }
+    }
+
+    fun toggleDarkTheme() {
+        setDarkTheme(!_uiState.value.isDarkTheme)
     }
 
     /**
      * Terminate user session and return to Login Screen.
      */
     fun logout() {
+        val u = _uiState.value.authenticatedUser
+        if (u.isNotBlank()) {
+            val state = _uiState.value
+            viewModelScope.launch {
+                authRepo.saveActiveUserProgress(
+                    username = u,
+                    currentLevelIndex = state.currentLevelIndex,
+                    completedLevels = prefs.getCompletedLevels(),
+                    tokens = state.tokens,
+                    echoBreakers = state.echoBreakers,
+                    totalEchoes = state.totalEchoes,
+                    totalStars = state.totalStars
+                )
+                authRepo.saveActiveUserTheme(u, state.isDarkTheme)
+            }
+        }
         prefs.clearAuthentication()
         _uiState.update {
             it.copy(
                 isAuthenticated = false,
+                authenticatedUser = "",
                 screenState = ScreenState.LOGIN,
                 isSettingsDialogVisible = false
             )
@@ -510,10 +571,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun handleVictory(completedSegments: List<Segment>) {
-        HarmonicAudioEngine.playVictoryCascade()
+        val state = _uiState.value
+        if (state.level.levelId >= LevelCatalog.TOTAL_LEVELS) {
+            HarmonicAudioEngine.playWinAllLevels()
+        } else {
+            HarmonicAudioEngine.playVictoryCascade()
+        }
         triggerHapticVictory()
 
-        val state = _uiState.value
         val echoCount = state.echoCountForLevel
         val parEchoes = state.level.parEchoes
 
@@ -544,6 +609,23 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 repo.recordVictory(state.level.levelId, echoCount, parEchoes)
             }
             prefs.markLevelCompleted(state.currentLevelIndex)
+        }
+
+        val u = state.authenticatedUser
+        if (u.isNotBlank()) {
+            val updatedCompleted = prefs.getCompletedLevels()
+            val nextLvl = (state.currentLevelIndex + 1).coerceAtMost(LevelCatalog.TOTAL_LEVELS - 1)
+            viewModelScope.launch {
+                authRepo.saveActiveUserProgress(
+                    username = u,
+                    currentLevelIndex = nextLvl,
+                    completedLevels = updatedCompleted,
+                    tokens = prefs.tokens,
+                    echoBreakers = prefs.echoBreakers,
+                    totalEchoes = prefs.totalEchoes,
+                    totalStars = _uiState.value.totalStars + stars
+                )
+            }
         }
 
         refreshDailySystems()
@@ -577,7 +659,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun commitStrokeAsEcho(reason: String) {
-        HarmonicAudioEngine.playCollisionBuzz()
+        HarmonicAudioEngine.playHataSound()
         triggerCollisionFeedback()
 
         val state = _uiState.value
@@ -642,7 +724,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             return
         }
         if (prefs.useBreaker()) {
-            HarmonicAudioEngine.playDrillBeam()
+            HarmonicAudioEngine.playBrokenRedLine()
             triggerHapticClick()
             // Remove the most recent echo stroke
             val remainingEchoes = state.echoes.dropLast(1)
@@ -765,6 +847,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 )
             }
         }
+        HarmonicAudioEngine.playVictoryCascade()
+        val u = _uiState.value.authenticatedUser
+        if (u.isNotBlank()) {
+            viewModelScope.launch {
+                authRepo.saveActiveUserProgress(
+                    username = u,
+                    currentLevelIndex = _uiState.value.currentLevelIndex,
+                    completedLevels = prefs.getCompletedLevels(),
+                    tokens = prefs.tokens,
+                    echoBreakers = prefs.echoBreakers,
+                    totalEchoes = prefs.totalEchoes,
+                    totalStars = _uiState.value.totalStars
+                )
+            }
+        }
         _uiState.update {
             it.copy(
                 rewardClaimedData = rewardInfo,
@@ -881,10 +978,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun nextLevel() {
         HarmonicAudioEngine.playNextLevel()
         val nextIdx = _uiState.value.currentLevelIndex + 1
-        if (nextIdx < 250) {
+        if (nextIdx < LevelCatalog.TOTAL_LEVELS) {
             startPlayingLevel(nextIdx)
         } else {
-            showToast("Tebrikler! 250 bölümün tamamını fethettiniz!")
+            HarmonicAudioEngine.playWinAllLevels()
+            showToast("Tebrikler! 100 bölümün tamamını fethettiniz! Büyük Zirve Tamamlandı!")
             returnToMainMenu()
         }
     }

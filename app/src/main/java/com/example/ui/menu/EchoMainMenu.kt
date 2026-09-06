@@ -24,9 +24,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CrisisAlert
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Redeem
@@ -72,6 +74,7 @@ fun EchoMainMenu(
     onOpenShop: () -> Unit,
     onOpenSkins: () -> Unit,
     onOpenSettings: () -> Unit,
+    onToggleDarkTheme: () -> Unit = {},
     onOpenDailyQuests: () -> Unit = {},
     onOpenDailyLogin: () -> Unit = {},
     onOpenChest: () -> Unit = {},
@@ -91,11 +94,17 @@ fun EchoMainMenu(
         label = "PulseScale"
     )
 
+    val bgTheme = if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+    val cardBg = if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
+    val textPrimary = if (state.isDarkTheme) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (state.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val borderColor = if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+
     Surface(
         modifier = modifier
             .fillMaxSize()
             .testTag("main_menu_screen"),
-        color = Color(0xFFF8FAFC)
+        color = bgTheme
     ) {
         Column(
             modifier = Modifier
@@ -104,20 +113,20 @@ fun EchoMainMenu(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Bar: Stars, Tokens, Settings (Modern White Surface Cards)
+            // Top Bar: Stars, Tokens, Theme Toggle, Settings
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Stars & Progress Chip
+                // Stars & Progress Chip (100 Levels = 300 Stars Max)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .shadow(2.dp, RoundedCornerShape(20.dp))
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                        .background(cardBg)
+                        .border(1.dp, borderColor, RoundedCornerShape(20.dp))
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Icon(
@@ -128,22 +137,22 @@ fun EchoMainMenu(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "${state.totalStars} / 750",
-                        color = Color(0xFF0F172A),
+                        text = "${state.totalStars} / 300",
+                        color = textPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
                 }
 
-                // Tokens & Settings
+                // Tokens & Quick Theme Toggle & Settings
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .shadow(2.dp, RoundedCornerShape(20.dp))
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                            .background(cardBg)
+                            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
                             .clickable { onOpenShop() }
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                             .testTag("menu_token_chip")
@@ -157,13 +166,34 @@ fun EchoMainMenu(
                         Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = "${state.tokens}",
-                            color = Color(0xFF0F172A),
+                            color = textPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Dark / White Theme Quick Toggle Button
+                    IconButton(
+                        onClick = onToggleDarkTheme,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .shadow(2.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(cardBg)
+                            .border(1.dp, borderColor, CircleShape)
+                            .testTag("menu_theme_toggle_button")
+                    ) {
+                        Icon(
+                            imageVector = if (state.isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = "Tema Değiştir (Dark / White)",
+                            tint = if (state.isDarkTheme) Color(0xFF38BDF8) else Color(0xFFF59E0B),
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     IconButton(
                         onClick = onOpenSettings,
@@ -171,14 +201,14 @@ fun EchoMainMenu(
                             .size(38.dp)
                             .shadow(2.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE2E8F0), CircleShape)
+                            .background(cardBg)
+                            .border(1.dp, borderColor, CircleShape)
                             .testTag("settings_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Ayarlar",
-                            tint = Color(0xFF334155),
+                            tint = textSecondary,
                             modifier = Modifier.size(19.dp)
                         )
                     }
@@ -220,7 +250,7 @@ fun EchoMainMenu(
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 8.sp,
-                    color = Color(0xFF0F172A),
+                    color = textPrimary,
                     textAlign = TextAlign.Center
                 )
 
@@ -238,13 +268,13 @@ fun EchoMainMenu(
                 Text(
                     text = "Hataların kırmızı lazer bariyerlere dönüşür.\nZekanı kullan, yolu tek seferde çöz!",
                     fontSize = 12.sp,
-                    color = Color(0xFF64748B),
+                    color = textSecondary,
                     textAlign = TextAlign.Center,
                     lineHeight = 17.sp
                 )
             }
 
-            // Daily Challenge Card (Modern White Card)
+            // Daily Challenge Card (Dynamic Theme)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -252,7 +282,7 @@ fun EchoMainMenu(
                     .clickable { onDailyChallenge() }
                     .testTag("daily_challenge_card"),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = cardBg),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     if (state.isDailyCompletedToday) Color(0xFF86EFAC) else Color(0xFFFDE68A)
@@ -285,7 +315,7 @@ fun EchoMainMenu(
                             Text(
                                 text = "Günün Özel Bulmacası",
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A),
+                                color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
@@ -320,10 +350,10 @@ fun EchoMainMenu(
                         .clickable { onOpenDailyQuests() }
                         .testTag("menu_daily_quests_card"),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        if (state.unclaimedQuestsCount > 0) Color(0xFF0284C7) else Color(0xFFE2E8F0)
+                        if (state.unclaimedQuestsCount > 0) Color(0xFF0284C7) else borderColor
                     )
                 ) {
                     Column(
@@ -354,12 +384,12 @@ fun EchoMainMenu(
                             text = "Görevler",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A)
+                            color = textPrimary
                         )
                         Text(
                             text = if (state.unclaimedQuestsCount > 0) "${state.unclaimedQuestsCount} Hazır" else "Günlük",
                             fontSize = 10.sp,
-                            color = if (state.unclaimedQuestsCount > 0) Color(0xFF10B981) else Color(0xFF64748B),
+                            color = if (state.unclaimedQuestsCount > 0) Color(0xFF10B981) else textSecondary,
                             fontWeight = if (state.unclaimedQuestsCount > 0) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -374,10 +404,10 @@ fun EchoMainMenu(
                         .clickable { onOpenDailyLogin() }
                         .testTag("menu_daily_login_card"),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        if (state.isLoginRewardAvailableToday) Color(0xFFF59E0B) else Color(0xFFE2E8F0)
+                        if (state.isLoginRewardAvailableToday) Color(0xFFF59E0B) else borderColor
                     )
                 ) {
                     Column(
@@ -408,12 +438,12 @@ fun EchoMainMenu(
                             text = "${state.loginStreak}. Gün",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A)
+                            color = textPrimary
                         )
                         Text(
                             text = if (state.isLoginRewardAvailableToday) "Ödül Al!" else "Alındı ✓",
                             fontSize = 10.sp,
-                            color = if (state.isLoginRewardAvailableToday) Color(0xFFD97706) else Color(0xFF64748B),
+                            color = if (state.isLoginRewardAvailableToday) Color(0xFFD97706) else textSecondary,
                             fontWeight = if (state.isLoginRewardAvailableToday) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -428,10 +458,10 @@ fun EchoMainMenu(
                         .clickable { onOpenChest() }
                         .testTag("menu_mystery_chest_card"),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        if (state.isFreeChestAvailable) Color(0xFF9333EA) else Color(0xFFE2E8F0)
+                        if (state.isFreeChestAvailable) Color(0xFF9333EA) else borderColor
                     )
                 ) {
                     Column(
@@ -462,12 +492,12 @@ fun EchoMainMenu(
                             text = "Sandık",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A)
+                            color = textPrimary
                         )
                         Text(
                             text = if (state.isFreeChestAvailable) "ÜCRETSİZ" else "Aç (${state.adChestsRemainingToday})",
                             fontSize = 10.sp,
-                            color = if (state.isFreeChestAvailable) Color(0xFF9333EA) else Color(0xFF64748B),
+                            color = if (state.isFreeChestAvailable) Color(0xFF9333EA) else textSecondary,
                             fontWeight = if (state.isFreeChestAvailable) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -482,8 +512,8 @@ fun EchoMainMenu(
                     .clickable { onWatchRewardedAd() }
                     .testTag("startio_reward_card"),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBAE6FD))
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (state.isDarkTheme) Color(0xFF0369A1) else Color(0xFFBAE6FD))
             ) {
                 Row(
                     modifier = Modifier
@@ -497,7 +527,7 @@ fun EchoMainMenu(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFE0F2FE)),
+                                .background(if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -512,7 +542,7 @@ fun EchoMainMenu(
                             Text(
                                 text = "Ücretsiz Günlük Ödül",
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A),
+                                color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
@@ -573,7 +603,7 @@ fun EchoMainMenu(
                     )
                 }
 
-                // Row: Bölümler (250 Seviye), Temalar, Mağaza (Modern White Buttons)
+                // Row: Bölümler (100 Seviye), Temalar, Mağaza
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -585,12 +615,12 @@ fun EchoMainMenu(
                             .weight(1f)
                             .height(48.dp)
                             .shadow(2.dp, RoundedCornerShape(14.dp))
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                             .testTag("main_levels_button"),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color(0xFF0F172A)
+                            containerColor = cardBg,
+                            contentColor = textPrimary
                         )
                     ) {
                         Icon(
@@ -600,7 +630,7 @@ fun EchoMainMenu(
                             modifier = Modifier.size(17.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("250 ${EchoStrings.get("levels", state.language)}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("100 ${EchoStrings.get("levels", state.language)}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
                     // Themes / Skins
@@ -610,12 +640,12 @@ fun EchoMainMenu(
                             .weight(1f)
                             .height(48.dp)
                             .shadow(2.dp, RoundedCornerShape(14.dp))
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                             .testTag("main_skins_button"),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color(0xFF0F172A)
+                            containerColor = cardBg,
+                            contentColor = textPrimary
                         )
                     ) {
                         Icon(
@@ -635,12 +665,12 @@ fun EchoMainMenu(
                             .weight(1f)
                             .height(48.dp)
                             .shadow(2.dp, RoundedCornerShape(14.dp))
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                             .testTag("main_shop_button"),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color(0xFF0F172A)
+                            containerColor = cardBg,
+                            contentColor = textPrimary
                         )
                     ) {
                         Icon(

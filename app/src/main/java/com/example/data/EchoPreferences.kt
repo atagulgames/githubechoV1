@@ -22,6 +22,7 @@ class EchoPreferences(context: Context) {
         private const val KEY_LAST_DAILY = "echo_last_daily_date"
         private const val KEY_TEST_ADS = "echo_test_ads_enabled"
         private const val KEY_LANGUAGE = "echo_language_code"
+        private const val KEY_DARK_THEME = "echo_is_dark_theme"
 
         // Daily Quests
         private const val KEY_QUESTS_DATE = "echo_quests_date"
@@ -39,6 +40,17 @@ class EchoPreferences(context: Context) {
         private const val KEY_LAST_FREE_CHEST_DATE = "echo_last_free_chest_date"
         private const val KEY_AD_CHESTS_TODAY = "echo_ad_chests_today"
         private const val KEY_CHESTS_DATE = "echo_chests_date"
+
+        // Currency & Economy
+        private const val KEY_COINS = "echo_coins"
+        private const val KEY_DIAMONDS = "echo_diamonds"
+        private const val KEY_THEME_AD_WATCH_PREFIX = "echo_theme_ad_progress_"
+        private const val KEY_FREE_DIAMOND_ADS_DATE = "echo_free_diamond_ads_date"
+        private const val KEY_FREE_DIAMOND_ADS_COUNT = "echo_free_diamond_ads_count"
+        private const val KEY_LAST_DIAMOND_AD_TIME = "echo_last_diamond_ad_time"
+        private const val KEY_FREE_COIN_ADS_DATE = "echo_free_coin_ads_date"
+        private const val KEY_FREE_COIN_ADS_COUNT = "echo_free_coin_ads_count"
+        private const val KEY_LAST_COIN_AD_TIME = "echo_last_coin_ad_time"
 
         // Unlocked themes
         private const val KEY_UNLOCKED_THEMES = "echo_unlocked_themes"
@@ -100,6 +112,78 @@ class EchoPreferences(context: Context) {
         get() = prefs.getInt(KEY_ECHO_BREAKERS, 2) // Start with 2 free Echo Breakers
         set(value) = prefs.edit().putInt(KEY_ECHO_BREAKERS, value.coerceAtLeast(0)).apply()
 
+    var coins: Int
+        get() = prefs.getInt(KEY_COINS, 50) // Modest starting coin balance
+        set(value) = prefs.edit().putInt(KEY_COINS, value.coerceAtLeast(0)).apply()
+
+    var diamonds: Int
+        get() = prefs.getInt(KEY_DIAMONDS, 1) // Diamonds are very rare and hard to obtain
+        set(value) = prefs.edit().putInt(KEY_DIAMONDS, value.coerceAtLeast(0)).apply()
+
+    fun getThemeAdProgress(themeName: String): Int {
+        return prefs.getInt(KEY_THEME_AD_WATCH_PREFIX + themeName, 0)
+    }
+
+    fun incrementThemeAdProgress(themeName: String): Int {
+        val current = getThemeAdProgress(themeName) + 1
+        prefs.edit().putInt(KEY_THEME_AD_WATCH_PREFIX + themeName, current).apply()
+        return current
+    }
+
+    fun getFreeDiamondAdsRemaining(todayDate: String): Int {
+        val savedDate = prefs.getString(KEY_FREE_DIAMOND_ADS_DATE, "")
+        return if (savedDate == todayDate) {
+            val watched = prefs.getInt(KEY_FREE_DIAMOND_ADS_COUNT, 0)
+            (3 - watched).coerceAtLeast(0) // 3 diamond ads per day limit
+        } else {
+            3
+        }
+    }
+
+    fun recordFreeDiamondAdWatched(todayDate: String) {
+        val savedDate = prefs.getString(KEY_FREE_DIAMOND_ADS_DATE, "")
+        val currentCount = if (savedDate == todayDate) prefs.getInt(KEY_FREE_DIAMOND_ADS_COUNT, 0) else 0
+        prefs.edit()
+            .putString(KEY_FREE_DIAMOND_ADS_DATE, todayDate)
+            .putInt(KEY_FREE_DIAMOND_ADS_COUNT, currentCount + 1)
+            .putLong(KEY_LAST_DIAMOND_AD_TIME, System.currentTimeMillis())
+            .apply()
+    }
+
+    fun getDiamondAdCooldownSeconds(): Long {
+        val lastTime = prefs.getLong(KEY_LAST_DIAMOND_AD_TIME, 0L)
+        val elapsedSec = (System.currentTimeMillis() - lastTime) / 1000L
+        val cooldownSec = 180L // 3 minutes cooldown
+        return (cooldownSec - elapsedSec).coerceAtLeast(0L)
+    }
+
+    fun getFreeCoinAdsRemaining(todayDate: String): Int {
+        val savedDate = prefs.getString(KEY_FREE_COIN_ADS_DATE, "")
+        return if (savedDate == todayDate) {
+            val watched = prefs.getInt(KEY_FREE_COIN_ADS_COUNT, 0)
+            (5 - watched).coerceAtLeast(0) // 5 coin ads per day limit
+        } else {
+            5
+        }
+    }
+
+    fun recordFreeCoinAdWatched(todayDate: String) {
+        val savedDate = prefs.getString(KEY_FREE_COIN_ADS_DATE, "")
+        val currentCount = if (savedDate == todayDate) prefs.getInt(KEY_FREE_COIN_ADS_COUNT, 0) else 0
+        prefs.edit()
+            .putString(KEY_FREE_COIN_ADS_DATE, todayDate)
+            .putInt(KEY_FREE_COIN_ADS_COUNT, currentCount + 1)
+            .putLong(KEY_LAST_COIN_AD_TIME, System.currentTimeMillis())
+            .apply()
+    }
+
+    fun getCoinAdCooldownSeconds(): Long {
+        val lastTime = prefs.getLong(KEY_LAST_COIN_AD_TIME, 0L)
+        val elapsedSec = (System.currentTimeMillis() - lastTime) / 1000L
+        val cooldownSec = 120L // 2 minutes cooldown
+        return (cooldownSec - elapsedSec).coerceAtLeast(0L)
+    }
+
     var totalEchoes: Int
         get() = prefs.getInt(KEY_TOTAL_ECHOES, 0)
         set(value) = prefs.edit().putInt(KEY_TOTAL_ECHOES, value).apply()
@@ -132,9 +216,17 @@ class EchoPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_TEST_ADS, false)
         set(value) = prefs.edit().putBoolean(KEY_TEST_ADS, value).apply()
 
+    var isDarkTheme: Boolean
+        get() = prefs.getBoolean(KEY_DARK_THEME, true)
+        set(value) = prefs.edit().putBoolean(KEY_DARK_THEME, value).apply()
+
     fun getCompletedLevels(): Set<Int> {
         val stringSet = prefs.getStringSet(KEY_COMPLETED_LEVELS, emptySet()) ?: emptySet()
         return stringSet.mapNotNull { it.toIntOrNull() }.toSet()
+    }
+
+    fun setCompletedLevelsRaw(stringSet: Set<String>) {
+        prefs.edit().putStringSet(KEY_COMPLETED_LEVELS, stringSet).apply()
     }
 
     fun markLevelCompleted(levelIndex: Int) {

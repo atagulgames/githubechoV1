@@ -93,12 +93,15 @@ data class EchoStats(
 enum class ThemeRarity(
     val title: String,
     val color: Color,
-    val backgroundColor: Color
+    val backgroundColor: Color,
+    val requiredAds: Int = 1,
+    val coinCost: Int = 40,
+    val diamondCost: Int = 0
 ) {
-    COMMON("Yaygın", Color(0xFF64748B), Color(0xFFF1F5F9)),
-    RARE("Nadir", Color(0xFF0284C7), Color(0xFFE0F2FE)),
-    EPIC("Epik", Color(0xFF9333EA), Color(0xFFF3E8FF)),
-    LEGENDARY("Efsanevi", Color(0xFFD97706), Color(0xFFFEF3C7))
+    COMMON("Yaygın", Color(0xFF64748B), Color(0xFFF1F5F9), requiredAds = 1, coinCost = 40, diamondCost = 0),
+    RARE("Nadir", Color(0xFF0284C7), Color(0xFFE0F2FE), requiredAds = 3, coinCost = 120, diamondCost = 0),
+    EPIC("Epik", Color(0xFF9333EA), Color(0xFFF3E8FF), requiredAds = 6, coinCost = 300, diamondCost = 1),
+    LEGENDARY("Çok Nadir (Efsanevi)", Color(0xFFD97706), Color(0xFFFEF3C7), requiredAds = 10, coinCost = 600, diamondCost = 4)
 }
 
 enum class StrokeTheme(
@@ -138,7 +141,9 @@ data class DailyQuest(
     val target: Int,
     val rewardTokens: Int,
     val rewardBreakers: Int,
-    val isClaimed: Boolean
+    val isClaimed: Boolean,
+    val rewardCoins: Int = 15,
+    val rewardDiamonds: Int = 0
 ) {
     val isCompleted: Boolean get() = current >= target
 }
@@ -148,6 +153,8 @@ data class DailyLoginDay(
     val title: String,
     val tokens: Int,
     val breakers: Int,
+    val coins: Int = 20,
+    val diamonds: Int = 0,
     val isLegendary: Boolean = false,
     val isClaimed: Boolean = false,
     val isToday: Boolean = false,
@@ -160,6 +167,8 @@ data class ChestReward(
     val subtitle: String,
     val tokens: Int,
     val breakers: Int,
+    val coins: Int = 25,
+    val diamonds: Int = 0,
     val unlockedThemeName: String? = null
 )
 

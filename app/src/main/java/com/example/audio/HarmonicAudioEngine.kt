@@ -51,36 +51,65 @@ object HarmonicAudioEngine {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        startBgm()
     }
 
     /**
      * Starts continuous ambient background music in an infinite loop.
+     * Keeps steady 1.0x playback speed and never restarts from beginning when navigating.
+     * Sourced from assets/audio/gamemusıc.mp3 or res/raw/gamemusic.mp3.
      */
+    @Synchronized
     fun startBgm() {
         if (!isSoundEnabled) return
         val ctx = appContext ?: return
         try {
+            if (bgmPlayer != null) {
+                if (bgmPlayer?.isPlaying == false) {
+                    applyBgmVolume(NORMAL_BGM_VOLUME)
+                    bgmPlayer?.start()
+                }
+                return
+            }
+
             var resId = ctx.resources.getIdentifier("gamemusic", "raw", ctx.packageName)
             if (resId == 0) {
                 resId = ctx.resources.getIdentifier("bgm_game_music", "raw", ctx.packageName)
             }
-            if (resId != 0) {
-                if (bgmPlayer == null) {
-                    bgmPlayer = MediaPlayer.create(ctx, resId)?.apply {
-                        isLooping = true
-                        currentBgmVolume = NORMAL_BGM_VOLUME
-                        setVolume(currentBgmVolume, currentBgmVolume)
-                        if (savedBgmPosition > 0) {
-                            seekTo(savedBgmPosition)
+
+            val player = if (resId != 0) {
+                MediaPlayer.create(ctx, resId)
+            } else {
+                // Try asset loading fallback
+                try {
+                    val assetNames = listOf("audio/gamemusıc.mp3", "audio/gamemusic.mp3")
+                    var afd: android.content.res.AssetFileDescriptor? = null
+                    for (name in assetNames) {
+                        try {
+                            afd = ctx.assets.openFd(name)
+                            break
+                        } catch (_: Exception) {}
+                    }
+                    if (afd != null) {
+                        MediaPlayer().apply {
+                            setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                            afd.close()
+                            prepare()
                         }
-                        start()
-                    }
-                } else if (bgmPlayer?.isPlaying == false) {
-                    if (savedBgmPosition > 0) {
-                        try { bgmPlayer?.seekTo(savedBgmPosition) } catch (_: Exception) {}
-                    }
-                    bgmPlayer?.start()
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+            }
+
+            if (player != null) {
+                bgmPlayer = player.apply {
+                    isLooping = true
+                    try {
+                        playbackParams = playbackParams.setSpeed(1.0f).setPitch(1.0f)
+                    } catch (_: Exception) {}
+                    currentBgmVolume = NORMAL_BGM_VOLUME
+                    setVolume(currentBgmVolume, currentBgmVolume)
+                    start()
                 }
             }
         } catch (_: Exception) {
@@ -88,6 +117,7 @@ object HarmonicAudioEngine {
         }
     }
 
+    @Synchronized
     fun pauseBgm() {
         try {
             if (bgmPlayer?.isPlaying == true) {
@@ -97,6 +127,7 @@ object HarmonicAudioEngine {
         } catch (_: Exception) {}
     }
 
+    @Synchronized
     fun resumeBgm() {
         if (!isSoundEnabled) return
         try {
@@ -224,11 +255,13 @@ object HarmonicAudioEngine {
 
     /**
      * Plays Win / Victory audio fanfare.
-     * Background music volume is ducked, fanfare plays, then BGM smoothly returns.
+     * Background music volume is ducked, harmonic victory chime plays, then BGM smoothly returns.
      */
     fun playVictoryCascade() {
-        playInterveningSfx("nextlevel", sfxDurationMs = 1800L) {
-            audioScope.launch {
+        if (!isSoundEnabled) return
+        duckBgm(DUCKED_BGM_VOLUME, durationMs = 150L)
+        audioScope.launch {
+            try {
                 playSynthTone(392.00f, 110, 0.55f)
                 delay(90)
                 playSynthTone(523.25f, 110, 0.60f)
@@ -238,7 +271,20 @@ object HarmonicAudioEngine {
                 playSynthTone(783.99f, 180, 0.70f)
                 delay(120)
                 playSynthTone(1046.50f, 400, 0.75f)
+                delay(450)
+            } finally {
+                restoreBgm(NORMAL_BGM_VOLUME, durationMs = 300L)
             }
+        }
+    }
+
+    /**
+     * Plays win.mp3 audio fanfare when all 100 levels are completed.
+     * Background music volume is ducked, win fanfare plays, then BGM smoothly returns.
+     */
+    fun playWinAllLevels() {
+        playInterveningSfx("win", sfxDurationMs = 3000L) {
+            playVictoryCascade()
         }
     }
 

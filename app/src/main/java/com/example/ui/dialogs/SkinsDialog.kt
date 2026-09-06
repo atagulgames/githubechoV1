@@ -48,10 +48,18 @@ fun SkinsDialog(
     currentEcho: EchoTheme,
     unlockedThemes: Set<String> = emptySet(),
     totalStars: Int = 0,
+    isDarkTheme: Boolean = false,
+    onToggleDarkTheme: (Boolean) -> Unit = {},
     onSelectStroke: (StrokeTheme) -> Unit,
     onSelectEcho: (EchoTheme) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val dialogBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
+    val textPrimary = if (isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+    val sectionCardBg = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
@@ -59,8 +67,8 @@ fun SkinsDialog(
                 .shadow(16.dp, RoundedCornerShape(24.dp))
                 .testTag("skins_dialog"),
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+            color = dialogBg,
+            border = BorderStroke(1.dp, borderColor)
         ) {
             Column(
                 modifier = Modifier
@@ -79,23 +87,23 @@ fun SkinsDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFEDE9FE)),
+                                .background(if (isDarkTheme) Color(0xFF3B0764) else Color(0xFFEDE9FE)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Palette,
                                 contentDescription = null,
-                                tint = Color(0xFF7C3AED),
+                                tint = Color(0xFF9333EA),
                                 modifier = Modifier.size(22.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Temalar & Nadirlik",
+                                text = "Temalar & Renkler",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A)
+                                color = textPrimary
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -108,7 +116,7 @@ fun SkinsDialog(
                                 Text(
                                     text = "$totalStars Yıldız Toplandı",
                                     fontSize = 12.sp,
-                                    color = Color(0xFF64748B)
+                                    color = textSecondary
                                 )
                             }
                         }
@@ -121,8 +129,81 @@ fun SkinsDialog(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Kapat",
-                            tint = Color(0xFF64748B)
+                            tint = textSecondary
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // User Requirement: "tema dark/white sadece iki tane seçenek olacak"
+                Text(
+                    text = "Arayüz Teması (Dark / White)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // White Theme Choice
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (!isDarkTheme) Color(0xFFE0F2FE) else sectionCardBg)
+                            .border(
+                                2.dp,
+                                if (!isDarkTheme) Color(0xFF0284C7) else borderColor,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onToggleDarkTheme(false) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Açık (White)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (!isDarkTheme) Color(0xFF0284C7) else textSecondary
+                            )
+                            if (!isDarkTheme) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Seçildi ✓", fontSize = 11.sp, color = Color(0xFF0284C7), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    // Dark Theme Choice
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isDarkTheme) Color(0xFF0C4A6E) else sectionCardBg)
+                            .border(
+                                2.dp,
+                                if (isDarkTheme) Color(0xFF0284C7) else borderColor,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onToggleDarkTheme(true) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Koyu (Dark)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (isDarkTheme) Color(0xFF38BDF8) else textSecondary
+                            )
+                            if (isDarkTheme) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Seçildi ✓", fontSize = 11.sp, color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
 
@@ -133,7 +214,7 @@ fun SkinsDialog(
                     text = "Çizgi Rengi",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF334155)
+                    color = textPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 

@@ -26,8 +26,8 @@ class EchoRepository(context: Context) {
 
     suspend fun ensureLevelsPopulated() = withContext(Dispatchers.IO) {
         val count = levelDao.getLevelCount()
-        val levels = LevelCatalog.create250Levels()
-        if (count < 250) {
+        val levels = LevelCatalog.create100Levels()
+        if (count < LevelCatalog.TOTAL_LEVELS) {
             levelDao.insertAll(levels)
         }
         // Sync level definitions (titles, nodes, mechanics) while preserving completion and stars
@@ -63,8 +63,8 @@ class EchoRepository(context: Context) {
         val maxStars = if (current != null) maxOf(current.stars, stars) else stars
 
         levelDao.updateProgress(levelId, maxStars, true, bestEchoes)
-        // Unlock next level up to 250
-        if (levelId < 250) {
+        // Unlock next level up to 100
+        if (levelId < LevelCatalog.TOTAL_LEVELS) {
             levelDao.unlockLevel(levelId + 1)
         }
     }

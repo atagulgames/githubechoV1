@@ -16,6 +16,9 @@ object EchoStrings {
         "hint" -> hint(lang)
         "breaker" -> breaker(lang)
         "clear" -> clearEchoes(lang)
+        "theme" -> theme(lang)
+        "dark_theme" -> darkTheme(lang)
+        "white_theme" -> whiteTheme(lang)
         else -> key
     }
 
@@ -342,5 +345,44 @@ object EchoStrings {
         Language.JA -> "進行状況をリセット"
         Language.KO -> "진행 상황 초기화"
         Language.EN -> "Reset All Progress"
+    }
+
+    fun theme(lang: Language): String = when (lang) {
+        Language.TR -> "Tema (Karanlık / Aydınlık)"
+        Language.ES -> "Tema (Oscuro / Blanco)"
+        Language.DE -> "Design (Dunkel / Weiß)"
+        Language.FR -> "Thème (Sombre / Blanc)"
+        Language.IT -> "Tema (Scuro / Bianco)"
+        Language.PT -> "Tema (Escuro / Branco)"
+        Language.RU -> "Тема (Тёмная / Светлая)"
+        Language.JA -> "テーマ（ダーク／ホワイト）"
+        Language.KO -> "테마 (다크 / 화이트)"
+        Language.EN -> "Theme (Dark / White)"
+    }
+
+    fun darkTheme(lang: Language): String = when (lang) {
+        Language.TR -> "Karanlık"
+        Language.ES -> "Oscuro"
+        Language.DE -> "Dunkel"
+        Language.FR -> "Sombre"
+        Language.IT -> "Scuro"
+        Language.PT -> "Escuro"
+        Language.RU -> "Тёмная"
+        Language.JA -> "ダーク"
+        Language.KO -> "다크"
+        Language.EN -> "Dark"
+    }
+
+    fun whiteTheme(lang: Language): String = when (lang) {
+        Language.TR -> "Aydınlık"
+        Language.ES -> "Blanco"
+        Language.DE -> "Weiß"
+        Language.FR -> "Blanc"
+        Language.IT -> "Bianco"
+        Language.PT -> "Branco"
+        Language.RU -> "Светлая"
+        Language.JA -> "ホワイト"
+        Language.KO -> "화이트"
+        Language.EN -> "White"
     }
 }

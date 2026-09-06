@@ -51,28 +51,35 @@ fun LevelSelectDialog(
     levels: List<LevelEntity>,
     currentLevelIndex: Int,
     completedLevels: Set<Int>,
+    isDarkTheme: Boolean = false,
     onSelectLevel: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedTier by remember { mutableIntStateOf((currentLevelIndex / 25).coerceIn(0, 9)) }
+    var selectedTier by remember { mutableIntStateOf((currentLevelIndex / 10).coerceIn(0, 9)) }
     val tierRanges = listOf(
-        "1-25 Başlangıç",
-        "26-50 Kilit & Anahtar",
-        "51-75 Zaman & Hız",
-        "76-100 Usta Ağı",
-        "101-125 Çift Yörünge",
-        "126-150 İkiz Geçit",
-        "151-175 Takımyıldız",
-        "176-200 Kristal Kafes",
-        "201-225 Kuantum Matris",
-        "226-250 ECHO OMEGA"
+        "1-10 Harmonik",
+        "11-20 Yönlü",
+        "21-30 Kilit",
+        "31-40 Sönen",
+        "41-50 Gölge",
+        "51-60 Fraktal",
+        "61-70 Kuantum",
+        "71-80 Zaman",
+        "81-90 Usta",
+        "91-100 OMEGA"
     )
 
     val currentTierLevels = remember(levels, selectedTier) {
-        val startId = selectedTier * 25 + 1
-        val endId = (selectedTier + 1) * 25
+        val startId = selectedTier * 10 + 1
+        val endId = (selectedTier + 1) * 10
         levels.filter { it.id in startId..endId }
     }
+
+    val dialogBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
+    val textPrimary = if (isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+    val tabContainerBg = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9)
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -81,8 +88,8 @@ fun LevelSelectDialog(
                 .shadow(16.dp, RoundedCornerShape(24.dp))
                 .testTag("level_select_dialog"),
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+            color = dialogBg,
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
         ) {
             Column(
                 modifier = Modifier
@@ -100,7 +107,7 @@ fun LevelSelectDialog(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFE0F2FE)),
+                                .background(if (isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -113,15 +120,15 @@ fun LevelSelectDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "250 Seviye",
+                                text = "100 Seviye",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A)
+                                color = textPrimary
                             )
                             Text(
-                                text = "Tamamlanan: ${completedLevels.size}/250",
+                                text = "Tamamlanan: ${completedLevels.size}/100",
                                 fontSize = 12.sp,
-                                color = Color(0xFF64748B)
+                                color = textSecondary
                             )
                         }
                     }
@@ -133,7 +140,7 @@ fun LevelSelectDialog(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Kapat",
-                            tint = Color(0xFF64748B)
+                            tint = textSecondary
                         )
                     }
                 }
@@ -143,7 +150,7 @@ fun LevelSelectDialog(
                 // Tier tabs
                 ScrollableTabRow(
                     selectedTabIndex = selectedTier,
-                    containerColor = Color(0xFFF1F5F9),
+                    containerColor = tabContainerBg,
                     contentColor = Color(0xFF0284C7),
                     edgePadding = 8.dp,
                     modifier = Modifier.clip(RoundedCornerShape(12.dp))
@@ -157,7 +164,7 @@ fun LevelSelectDialog(
                                     text = label,
                                     fontSize = 12.sp,
                                     fontWeight = if (selectedTier == idx) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selectedTier == idx) Color(0xFF0284C7) else Color(0xFF64748B)
+                                    color = if (selectedTier == idx) Color(0xFF0284C7) else textSecondary
                                 )
                             }
                         )
@@ -166,12 +173,12 @@ fun LevelSelectDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Grid of 25 levels for selected tier
+                // Grid of 10 levels for selected tier
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(5),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.height(300.dp)
+                    modifier = Modifier.height(160.dp)
                 ) {
                     items(currentTierLevels) { levelEntity ->
                         val index = levelEntity.id - 1
@@ -181,23 +188,23 @@ fun LevelSelectDialog(
 
                         val bgColor = when {
                             isCurrent -> Color(0xFF0284C7)
-                            isCompleted -> Color(0xFFF0FDF4)
-                            isUnlocked -> Color.White
-                            else -> Color(0xFFF8FAFC)
+                            isCompleted -> if (isDarkTheme) Color(0xFF064E3B) else Color(0xFFF0FDF4)
+                            isUnlocked -> if (isDarkTheme) Color(0xFF334155) else Color.White
+                            else -> if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
                         }
 
-                        val contentColor = when {
+                        val itemContentColor = when {
                             isCurrent -> Color.White
-                            isCompleted -> Color(0xFF15803D)
-                            isUnlocked -> Color(0xFF0F172A)
-                            else -> Color(0xFF94A3B8)
+                            isCompleted -> if (isDarkTheme) Color(0xFF4ADE80) else Color(0xFF15803D)
+                            isUnlocked -> textPrimary
+                            else -> textSecondary
                         }
 
-                        val borderColor = when {
+                        val itemBorderColor = when {
                             isCurrent -> Color(0xFF0284C7)
-                            isCompleted -> Color(0xFFBBF7D0)
-                            isUnlocked -> Color(0xFFCBD5E1)
-                            else -> Color(0xFFE2E8F0)
+                            isCompleted -> if (isDarkTheme) Color(0xFF059669) else Color(0xFFBBF7D0)
+                            isUnlocked -> borderColor
+                            else -> borderColor
                         }
 
                         Box(
@@ -205,7 +212,7 @@ fun LevelSelectDialog(
                                 .size(50.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(bgColor)
-                                .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+                                .border(1.dp, itemBorderColor, RoundedCornerShape(12.dp))
                                 .clickable(enabled = isUnlocked) {
                                     onSelectLevel(index)
                                 }
@@ -216,7 +223,7 @@ fun LevelSelectDialog(
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = "Kilitli",
-                                    tint = contentColor,
+                                    tint = itemContentColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                             } else {
@@ -228,7 +235,7 @@ fun LevelSelectDialog(
                                         text = "${levelEntity.id}",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = contentColor
+                                        color = itemContentColor
                                     )
                                     if (isCompleted) {
                                         Row(

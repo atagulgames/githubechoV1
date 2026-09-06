@@ -131,7 +131,7 @@ fun EchoCanvas(
                 }
         ) {
             // 1. Grid Background
-            drawGridBackground(size.width, size.height)
+            drawGridBackground(size.width, size.height, state.isDarkTheme)
 
             // 2. Directed edge arrows (if level has one-way edges)
             drawDirectedEdgeArrows(
@@ -182,6 +182,7 @@ fun EchoCanvas(
                 hintOrder = state.level.hintOrder,
                 pulseAlpha = pulseAlpha,
                 isDrawing = state.isDrawing,
+                isDarkTheme = state.isDarkTheme,
                 toScreen = ::toScreen,
                 scale = scale
             )
@@ -211,7 +212,10 @@ fun EchoCanvas(
     }
 }
 
-private fun DrawScope.drawGridBackground(w: Float, h: Float) {
+private fun DrawScope.drawGridBackground(w: Float, h: Float, isDarkTheme: Boolean) {
+    val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+    drawRect(color = bgColor)
+    val dotColor = if (isDarkTheme) Color(0x33475569) else Color(0x3394A3B8)
     val step = 40f
     val points = mutableListOf<Offset>()
     var x = step / 2f
@@ -226,7 +230,7 @@ private fun DrawScope.drawGridBackground(w: Float, h: Float) {
     drawPoints(
         points = points,
         pointMode = PointMode.Points,
-        color = ColorGridDot,
+        color = dotColor,
         strokeWidth = 2.5f,
         cap = StrokeCap.Round
     )
@@ -432,6 +436,7 @@ private fun DrawScope.drawNodes(
     hintOrder: List<Int>,
     pulseAlpha: Float,
     isDrawing: Boolean,
+    isDarkTheme: Boolean,
     toScreen: (Point) -> Offset,
     scale: Float
 ) {
@@ -581,13 +586,15 @@ private fun DrawScope.drawNodes(
                         style = Stroke(width = 3.5f)
                     )
                 } else {
+                    val unvisitedNodeBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
+                    val unvisitedNodeBorder = if (isDarkTheme) Color(0xFF475569) else Color(0xFFCBD5E1)
                     drawCircle(
-                        color = Color.White,
+                        color = unvisitedNodeBg,
                         radius = baseRadius,
                         center = pos
                     )
                     drawCircle(
-                        color = Color(0xFFCBD5E1),
+                        color = unvisitedNodeBorder,
                         radius = baseRadius,
                         center = pos,
                         style = Stroke(width = 2.5f)
@@ -611,7 +618,7 @@ private fun DrawScope.drawNodes(
                     isCharacterStart -> android.graphics.Color.parseColor("#0284C7")
                     node.type == NodeType.KEY -> android.graphics.Color.parseColor("#D97706")
                     node.type == NodeType.GATE -> if (collectedKeyIds.contains(node.keyForGateId)) android.graphics.Color.parseColor("#059669") else android.graphics.Color.parseColor("#E11D48")
-                    else -> android.graphics.Color.parseColor("#0F172A")
+                    else -> if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#0F172A")
                 }
                 textSize = baseRadius * 1.05f
                 isFakeBoldText = true

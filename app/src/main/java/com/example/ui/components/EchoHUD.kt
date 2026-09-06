@@ -57,6 +57,11 @@ fun EchoTopHUD(
     onOpenShop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val hudCardBg = if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
+    val textPrimary = if (state.isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (state.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val hudBorder = if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -81,14 +86,14 @@ fun EchoTopHUD(
                             .size(40.dp)
                             .shadow(2.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE2E8F0), CircleShape)
+                            .background(hudCardBg)
+                            .border(1.dp, hudBorder, CircleShape)
                             .testTag("back_to_menu_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Menüye Dön",
-                            tint = Color(0xFF0F172A),
+                            tint = textPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -100,8 +105,8 @@ fun EchoTopHUD(
                         modifier = Modifier
                             .shadow(2.dp, RoundedCornerShape(20.dp))
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                            .background(hudCardBg)
+                            .border(1.dp, hudBorder, RoundedCornerShape(20.dp))
                             .clickable { onOpenLevelSelect() }
                             .padding(horizontal = 14.dp, vertical = 7.dp)
                             .testTag("level_select_button")
@@ -116,7 +121,7 @@ fun EchoTopHUD(
                         Text(
                             text = if (state.isDailyChallenge) "Günün Bulmacası" else "Bölüm ${state.level.levelId}/100",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A),
+                            color = textPrimary,
                             fontSize = 14.sp
                         )
                     }
@@ -130,8 +135,8 @@ fun EchoTopHUD(
                         modifier = Modifier
                             .shadow(2.dp, RoundedCornerShape(20.dp))
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                            .background(hudCardBg)
+                            .border(1.dp, hudBorder, RoundedCornerShape(20.dp))
                             .clickable { onOpenShop() }
                             .padding(horizontal = 10.dp, vertical = 7.dp)
                             .testTag("shop_token_chip")
@@ -146,14 +151,14 @@ fun EchoTopHUD(
                         Text(
                             text = "${state.tokens}",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A),
+                            color = textPrimary,
                             fontSize = 13.sp
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Icon(
                             imageVector = Icons.Default.ShoppingCart,
                             contentDescription = "Mağaza",
-                            tint = Color(0xFF64748B),
+                            tint = textSecondary,
                             modifier = Modifier.size(13.dp)
                         )
                     }
@@ -166,10 +171,10 @@ fun EchoTopHUD(
                         modifier = Modifier
                             .shadow(2.dp, RoundedCornerShape(20.dp))
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (state.echoCountForLevel > 0) Color(0xFFFFF1F2) else Color.White)
+                            .background(if (state.echoCountForLevel > 0) (if (state.isDarkTheme) Color(0xFF4C0519) else Color(0xFFFFF1F2)) else hudCardBg)
                             .border(
                                 1.dp,
-                                if (state.echoCountForLevel > 0) Color(0xFFFECDD3) else Color(0xFFE2E8F0),
+                                if (state.echoCountForLevel > 0) Color(0xFFE11D48) else hudBorder,
                                 RoundedCornerShape(20.dp)
                             )
                             .padding(horizontal = 12.dp, vertical = 7.dp)
@@ -185,7 +190,7 @@ fun EchoTopHUD(
                         Text(
                             text = "Yankı: ${state.echoCountForLevel}",
                             fontWeight = FontWeight.Bold,
-                            color = if (state.echoCountForLevel > 0) Color(0xFFE11D48) else Color(0xFF0F172A),
+                            color = if (state.echoCountForLevel > 0) Color(0xFFE11D48) else textPrimary,
                             fontSize = 13.sp
                         )
                     }
@@ -202,7 +207,7 @@ fun EchoTopHUD(
             ) {
                 Text(
                     text = state.level.title,
-                    color = Color(0xFF475569),
+                    color = textSecondary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -218,12 +223,12 @@ fun EchoTopHUD(
                         }
                         Text(
                             text = badgeText,
-                            color = Color(0xFF0369A1),
+                            color = Color(0xFF0284C7),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFE0F2FE))
+                                .background(if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -238,7 +243,7 @@ fun EchoTopHUD(
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = "Hedef: ${state.level.parEchoes}",
-                        color = Color(0xFF64748B),
+                        color = textSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -258,12 +263,17 @@ fun EchoBottomHUD(
     onHint: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bottomBg = if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
+    val textPrimary = if (state.isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (state.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val borderColor = if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .shadow(12.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
             .testTag("bottom_hud_bar"),
-        color = Color.White,
+        color = bottomBg,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
@@ -282,12 +292,12 @@ fun EchoBottomHUD(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp)
-                        .border(1.dp, Color(0xFFFED7AA), RoundedCornerShape(12.dp))
+                        .border(1.dp, if (state.echoBreakers > 0) Color(0xFFFED7AA) else borderColor, RoundedCornerShape(12.dp))
                         .testTag("echo_breaker_button"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = if (state.echoBreakers > 0) Color(0xFFFFF7ED) else Color(0xFFF8FAFC),
-                        contentColor = Color(0xFFC2410C)
+                        containerColor = if (state.echoBreakers > 0) (if (state.isDarkTheme) Color(0xFF431407) else Color(0xFFFFF7ED)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
+                        contentColor = Color(0xFFF97316)
                     )
                 ) {
                     Icon(
@@ -311,14 +321,14 @@ fun EchoBottomHUD(
                         .height(44.dp)
                         .border(
                             1.dp,
-                            if (state.isEchoShrinkerActive) Color(0xFF86EFAC) else Color(0xFFE2E8F0),
+                            if (state.isEchoShrinkerActive) Color(0xFF86EFAC) else borderColor,
                             RoundedCornerShape(12.dp)
                         )
                         .testTag("echo_shrinker_button"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = if (state.isEchoShrinkerActive) Color(0xFFDCFCE7) else Color(0xFFF8FAFC),
-                        contentColor = if (state.isEchoShrinkerActive) Color(0xFF15803D) else Color(0xFF334155)
+                        containerColor = if (state.isEchoShrinkerActive) (if (state.isDarkTheme) Color(0xFF064E3B) else Color(0xFFDCFCE7)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
+                        contentColor = if (state.isEchoShrinkerActive) Color(0xFF4ADE80) else textSecondary
                     )
                 ) {
                     Icon(
@@ -352,9 +362,9 @@ fun EchoBottomHUD(
                         .testTag("reset_button"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF334155)
+                        contentColor = textPrimary
                     ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
@@ -377,14 +387,14 @@ fun EchoBottomHUD(
                         .height(46.dp)
                         .border(
                             1.dp,
-                            if (state.echoes.isNotEmpty()) Color(0xFFFECDD3) else Color(0xFFE2E8F0),
+                            if (state.echoes.isNotEmpty()) Color(0xFFE11D48) else borderColor,
                             RoundedCornerShape(12.dp)
                         )
                         .testTag("clear_echoes_button"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = if (state.echoes.isNotEmpty()) Color(0xFFFFF1F2) else Color(0xFFF8FAFC),
-                        contentColor = if (state.echoes.isNotEmpty()) Color(0xFFE11D48) else Color(0xFF94A3B8)
+                        containerColor = if (state.echoes.isNotEmpty()) (if (state.isDarkTheme) Color(0xFF4C0519) else Color(0xFFFFF1F2)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
+                        contentColor = if (state.echoes.isNotEmpty()) Color(0xFFE11D48) else textSecondary
                     )
                 ) {
                     Icon(

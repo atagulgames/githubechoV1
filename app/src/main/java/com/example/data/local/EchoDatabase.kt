@@ -6,13 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [LevelEntity::class],
-    version = 1,
+    entities = [LevelEntity::class, UserAccountEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class EchoDatabase : RoomDatabase() {
 
     abstract fun levelDao(): LevelDao
+    abstract fun userAccountDao(): UserAccountDao
 
     companion object {
         @Volatile
@@ -24,7 +25,7 @@ abstract class EchoDatabase : RoomDatabase() {
                     context.applicationContext,
                     EchoDatabase::class.java,
                     "echo_game_database.db"
-                ).build()
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }
