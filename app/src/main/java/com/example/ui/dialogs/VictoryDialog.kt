@@ -46,6 +46,7 @@ fun VictoryDialog(
     levelId: Int,
     echoCount: Int,
     parEchoes: Int,
+    trophyBreakdown: com.example.model.TrophyRewardBreakdown? = null,
     isDoubleClaimed: Boolean = false,
     onClaimDoubleReward: () -> Unit = {},
     onNextLevel: () -> Unit,
@@ -70,13 +71,13 @@ fun VictoryDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Trophy icon badge
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(56.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFEF3C7)),
                     contentAlignment = Alignment.Center
@@ -85,27 +86,25 @@ fun VictoryDialog(
                         imageVector = Icons.Default.EmojiEvents,
                         contentDescription = "Zafer",
                         tint = Color(0xFFD97706),
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
                     text = "Bölüm $levelId Tamamlandı!",
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF0F172A),
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // Stars display
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 4.dp)
                 ) {
                     for (i in 1..3) {
                         val isEarned = i <= stars
@@ -114,15 +113,15 @@ fun VictoryDialog(
                             contentDescription = if (isEarned) "Yıldız $i" else null,
                             tint = if (isEarned) Color(0xFFF59E0B) else Color(0xFFE2E8F0),
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(28.dp)
                                 .padding(horizontal = 2.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Echo stats badge
+                // Stats badge: Yankı, Süre, Par
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFF8FAFC),
@@ -132,42 +131,152 @@ fun VictoryDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
+                            .padding(10.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "Kullanılan Yankı",
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 color = Color(0xFF64748B)
                             )
                             Text(
-                                text = "$echoCount",
-                                fontSize = 18.sp,
+                                text = if (echoCount == 0) "0 (Kusursuz!)" else "$echoCount",
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0284C7)
+                                color = if (echoCount == 0) Color(0xFF10B981) else Color(0xFF0284C7)
                             )
                         }
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Süre",
+                                fontSize = 11.sp,
+                                color = Color(0xFF64748B)
+                            )
+                            Text(
+                                text = "${trophyBreakdown?.timeTakenSec ?: 6.5f} sn",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF8B5CF6)
+                            )
+                        }
+
                         if (parEchoes > 0) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = "Hedef Par",
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     color = Color(0xFF64748B)
                                 )
                                 Text(
                                     text = "$parEchoes",
-                                    fontSize = 18.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF10B981)
+                                    color = Color(0xFF64748B)
                                 )
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Trophies Earned Card with Combo / 0-Echo Bonuses
+                if (trophyBreakdown != null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFFFFBEB),
+                        border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = "🏆", fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Kazanılan Toplam Kupa",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF92400E)
+                                    )
+                                }
+                                Text(
+                                    text = "+${trophyBreakdown.totalTrophies} 🏆",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFD97706)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Bonus chips breakdown
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (trophyBreakdown.zeroEchoBonus > 0) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = Color(0xFFDCFCE7),
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "0 Yankı +${trophyBreakdown.zeroEchoBonus}🏆",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF16A34A),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                if (trophyBreakdown.comboBonus > 0) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = Color(0xFFE0E7FF),
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "${trophyBreakdown.currentCombo}x Kombo +${trophyBreakdown.comboBonus}🏆",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF4338CA),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                if (trophyBreakdown.speedBonus > 0) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = Color(0xFFF3E8FF),
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "Hız +${trophyBreakdown.speedBonus}🏆",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF7E22CE),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
 
                 // Base Level Reward Banner
                 Surface(

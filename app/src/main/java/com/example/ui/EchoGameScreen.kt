@@ -28,7 +28,9 @@ import com.example.ui.dialogs.ChestDialog
 import com.example.ui.dialogs.DailyLoginDialog
 import com.example.ui.dialogs.DailyQuestsDialog
 import com.example.ui.dialogs.DeadlockDialog
+import com.example.ui.dialogs.LeaderboardDialog
 import com.example.ui.dialogs.LevelSelectDialog
+import com.example.ui.dialogs.PlayerProfileDialog
 import com.example.ui.dialogs.RewardClaimedDialog
 import com.example.ui.dialogs.SettingsDialog
 import com.example.ui.dialogs.ShopDialog
@@ -97,6 +99,8 @@ fun EchoGameScreen(
                         onOpenShop = { viewModel.setShopVisible(true) },
                         onOpenSkins = { viewModel.setSkinsVisible(true) },
                         onOpenSettings = { viewModel.setSettingsVisible(true) },
+                        onOpenLeaderboard = { viewModel.openLeaderboard() },
+                        onOpenMyProfile = { viewModel.openMyProfile() },
                         onToggleDarkTheme = { viewModel.toggleDarkTheme() },
                         onOpenDailyQuests = { viewModel.setDailyQuestsVisible(true) },
                         onOpenDailyLogin = { viewModel.setDailyLoginVisible(true) },
@@ -155,6 +159,7 @@ fun EchoGameScreen(
                     levelId = state.level.levelId,
                     echoCount = state.echoCountForLevel,
                     parEchoes = state.level.parEchoes,
+                    trophyBreakdown = state.lastTrophyRewardBreakdown,
                     isDoubleClaimed = state.isDoubleRewardClaimedThisLevel,
                     onClaimDoubleReward = { viewModel.claimVictoryDoubleReward() },
                     onNextLevel = {
@@ -178,14 +183,20 @@ fun EchoGameScreen(
                 )
             }
 
-            // 3. Shop Dialog (IAP Simulation & Start.io Video Rewards)
+            // 3. Shop Dialog (Rewarded Ad Hub & Diamond/Coin Exchange)
             if (state.isShopDialogVisible) {
                 ShopDialog(
                     currentTokens = state.tokens,
+                    currentDiamonds = state.diamonds,
                     currentBreakers = state.echoBreakers,
-                    onPurchaseTokens = { count -> viewModel.purchaseTokens(count) },
-                    onPurchaseBreakers = { count -> viewModel.purchaseBreakers(count) },
-                    onWatchRewardedAd = { onShowRewardedAd("HINT_TOKEN") },
+                    isDarkTheme = state.isDarkTheme,
+                    onWatchRewardedAd = { rewardType -> onShowRewardedAd(rewardType) },
+                    onExchangeDiamondsForTokens = { diamonds, tokens ->
+                        viewModel.exchangeDiamondsForTokens(diamonds, tokens)
+                    },
+                    onExchangeDiamondsForBreakers = { diamonds, breakers ->
+                        viewModel.exchangeDiamondsForBreakers(diamonds, breakers)
+                    },
                     onDismiss = { viewModel.setShopVisible(false) }
                 )
             }
@@ -292,6 +303,26 @@ fun EchoGameScreen(
                     currentTokens = state.tokens,
                     currentBreakers = state.echoBreakers,
                     onDismiss = { viewModel.dismissRewardClaimedDialog() }
+                )
+            }
+
+            // 13. Global Leaderboard Dialog
+            if (state.isLeaderboardDialogVisible) {
+                LeaderboardDialog(
+                    players = state.leaderboardPlayers,
+                    isDarkTheme = state.isDarkTheme,
+                    onSelectPlayer = { player -> viewModel.openPlayerProfile(player) },
+                    onViewMyProfile = { viewModel.openMyProfile() },
+                    onDismiss = { viewModel.closeLeaderboard() }
+                )
+            }
+
+            // 14. Player Profile Dialog (Kaç yankı ve süreyle tamamladığı detayları)
+            if (state.isProfileDialogVisible && state.selectedPlayerProfile != null) {
+                PlayerProfileDialog(
+                    player = state.selectedPlayerProfile!!,
+                    isDarkTheme = state.isDarkTheme,
+                    onDismiss = { viewModel.closePlayerProfile() }
                 )
             }
         }

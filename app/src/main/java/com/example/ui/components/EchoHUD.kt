@@ -163,7 +163,26 @@ fun EchoTopHUD(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    // Trophies chip
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .shadow(2.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(hudCardBg)
+                            .border(1.dp, hudBorder, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 8.dp, vertical = 7.dp)
+                            .testTag("top_hud_trophies_chip")
+                    ) {
+                        Text(
+                            text = "${state.trophies} 🏆",
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFD97706),
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     // Echo count chip
                     Row(
@@ -205,12 +224,31 @@ fun EchoTopHUD(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = state.level.title,
-                    color = textSecondary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = state.level.title,
+                        color = textSecondary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (state.currentCombo > 0) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFEF4444).copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "⚡ ${state.currentCombo}x Kombo",
+                                color = Color(0xFFEF4444),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (state.level.mechanicType != "STANDARD") {

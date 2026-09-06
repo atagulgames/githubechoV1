@@ -60,6 +60,107 @@ class EchoPreferences(context: Context) {
         private const val KEY_AUTH_USERNAME = "echo_auth_username"
         private const val KEY_REMEMBER_ME = "echo_remember_me"
         private const val KEY_AUTH_PASSWORD_HASH = "echo_auth_password_hash"
+
+        // Leaderboard, Trophies & Gameplay Records
+        private const val KEY_TROPHIES = "echo_trophies"
+        private const val KEY_TOTAL_PLAY_TIME = "echo_total_play_time_sec"
+        private const val KEY_MAX_COMBO = "echo_max_combo"
+        private const val KEY_CURRENT_COMBO = "echo_current_combo"
+        private const val KEY_LEVEL_STATS_CSV = "echo_level_stats_csv"
+    }
+
+    var trophies: Int
+        get() = prefs.getInt(KEY_TROPHIES, 0)
+        set(value) = prefs.edit().putInt(KEY_TROPHIES, value.coerceAtLeast(0)).apply()
+
+    var totalPlayTimeSec: Long
+        get() = prefs.getLong(KEY_TOTAL_PLAY_TIME, 0L)
+        set(value) = prefs.edit().putLong(KEY_TOTAL_PLAY_TIME, value.coerceAtLeast(0L)).apply()
+
+    var maxCombo: Int
+        get() = prefs.getInt(KEY_MAX_COMBO, 0)
+        set(value) = prefs.edit().putInt(KEY_MAX_COMBO, value.coerceAtLeast(0)).apply()
+
+    var currentCombo: Int
+        get() = prefs.getInt(KEY_CURRENT_COMBO, 0)
+        set(value) = prefs.edit().putInt(KEY_CURRENT_COMBO, value.coerceAtLeast(0)).apply()
+
+    var levelStatsCsv: String
+        get() = prefs.getString(KEY_LEVEL_STATS_CSV, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_LEVEL_STATS_CSV, value).apply()
+
+    fun addPlayTime(seconds: Long) {
+        if (seconds > 0) {
+            totalPlayTimeSec += seconds
+        }
+    }
+
+    fun addTrophies(amount: Int) {
+        if (amount > 0) {
+            trophies += amount
+        }
+    }
+
+    fun recordCombo(combo: Int) {
+        currentCombo = combo
+        if (combo > maxCombo) {
+            maxCombo = combo
+        }
+    }
+
+    fun getLevelRecords(): List<com.example.model.LevelRecord> {
+        val raw = levelStatsCsv
+        if (raw.isBlank()) return emptyList()
+        val results = ArrayList<com.example.model.LevelRecord>()
+        raw.split(";").forEach { item ->
+            val parts = item.split(":")
+            if (parts.size >= 4) {
+                val lvlId = parts[0].toIntOrNull() ?: 1
+                val echoes = parts[1].toIntOrNull() ?: 0
+                val time = parts[2].toFloatOrNull() ?: 0f
+                val stars = parts[3].toIntOrNull() ?: 3
+                val trEarned = if (parts.size >= 5) parts[4].toIntOrNull() ?: 50 else 50
+                val title = "Bölüm $lvlId"
+                results.add(
+                    com.example.model.LevelRecord(
+                        levelId = lvlId,
+                        levelTitle = title,
+                        echoesUsed = echoes,
+                        timeTakenSec = time,
+                        stars = stars,
+                        trophiesEarned = trEarned
+                    )
+                )
+            }
+        }
+        return results.sortedBy { it.levelId }
+    }
+
+    fun recordLevelResult(levelId: Int, title: String, echoes: Int, timeTakenSec: Float, stars: Int, trophiesEarned: Int) {
+        val currentRecords = getLevelRecords().toMutableList()
+        val existingIndex = currentRecords.indexOfFirst { it.levelId == levelId }
+        val newRecord = com.example.model.LevelRecord(
+            levelId = levelId,
+            levelTitle = title,
+            echoesUsed = echoes,
+            timeTakenSec = timeTakenSec,
+            stars = stars,
+            trophiesEarned = trophiesEarned
+        )
+        if (existingIndex >= 0) {
+            // Keep best or replace if better
+            val old = currentRecords[existingIndex]
+            if (echoes <= old.echoesUsed) {
+                currentRecords[existingIndex] = newRecord
+            }
+        } else {
+            currentRecords.add(newRecord)
+        }
+        // Serialize back
+        val csv = currentRecords.joinToString(";") {
+            "${it.levelId}:${it.echoesUsed}:${(it.timeTakenSec * 10).toInt() / 10f}:${it.stars}:${it.trophiesEarned}"
+        }
+        levelStatsCsv = csv
     }
 
     var isAuthenticated: Boolean
@@ -248,6 +349,28 @@ class EchoPreferences(context: Context) {
 
     fun addBreakers(count: Int) {
         echoBreakers += count
+    }
+
+    fun addDiamonds(count: Int) {
+        diamonds += count
+    }
+
+    fun useDiamond(count: Int = 1): Boolean {
+        return if (diamonds >= count) {
+            diamonds -= count
+            true
+        } else false
+    }
+
+    fun addCoins(count: Int) {
+        coins += count
+    }
+
+    fun useCoins(count: Int): Boolean {
+        return if (coins >= count) {
+            coins -= count
+            true
+        } else false
     }
 
     fun useToken(): Boolean {

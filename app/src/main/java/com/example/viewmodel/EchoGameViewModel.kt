@@ -28,6 +28,7 @@ import com.example.model.LevelData
 import com.example.model.LevelNode
 import com.example.model.Node
 import com.example.model.NodeType
+import kotlin.math.roundToInt
 import com.example.model.Point
 import com.example.model.ScreenState
 import com.example.model.Segment
@@ -50,7 +51,9 @@ data class RewardClaimedInfo(
     val subtitle: String,
     val rewardType: String,
     val tokensAdded: Int = 0,
-    val breakersAdded: Int = 0
+    val breakersAdded: Int = 0,
+    val diamondsAdded: Int = 0,
+    val coinsAdded: Int = 0
 )
 
 data class EchoUiState(
@@ -70,6 +73,8 @@ data class EchoUiState(
     val gameStatus: GameStatus = GameStatus.PLAYING,
     val tokens: Int = 5,
     val echoBreakers: Int = 2,
+    val diamonds: Int = 1,
+    val coins: Int = 50,
     val isEchoShrinkerActive: Boolean = false,
     val isAdFree: Boolean = false,
     val totalEchoes: Int = 0,
@@ -119,7 +124,18 @@ data class EchoUiState(
     val isAuthenticated: Boolean = false,
     val authenticatedUser: String = "",
     val rememberMe: Boolean = false,
-    val isDarkTheme: Boolean = true
+    val isDarkTheme: Boolean = true,
+    // Leaderboard & Trophy System
+    val trophies: Int = 0,
+    val totalPlayTimeSec: Long = 0L,
+    val currentCombo: Int = 0,
+    val maxCombo: Int = 0,
+    val levelStartTimeMs: Long = 0L,
+    val isLeaderboardDialogVisible: Boolean = false,
+    val isProfileDialogVisible: Boolean = false,
+    val selectedPlayerProfile: com.example.model.LeaderboardPlayer? = null,
+    val leaderboardPlayers: List<com.example.model.LeaderboardPlayer> = emptyList(),
+    val lastTrophyRewardBreakdown: com.example.model.TrophyRewardBreakdown? = null
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -190,6 +206,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 language = Language.fromCode(prefs.languageCode),
                 tokens = prefs.tokens,
                 echoBreakers = prefs.echoBreakers,
+                diamonds = prefs.diamonds,
+                coins = prefs.coins,
                 isAdFree = prefs.isAdFree,
                 totalEchoes = prefs.totalEchoes,
                 strokeTheme = stroke,
@@ -201,6 +219,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isDailyCompletedToday = isDailyDone,
                 authenticatedUser = prefs.authenticatedUsername,
                 rememberMe = prefs.rememberMe,
+                trophies = prefs.trophies,
+                totalPlayTimeSec = prefs.totalPlayTimeSec,
+                maxCombo = prefs.maxCombo,
+                currentCombo = prefs.currentCombo,
                 isAuthenticated = false // Opening flow requires explicit login authentication verification
             )
         }
@@ -252,6 +274,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 gameStatus = GameStatus.PLAYING,
                 isHintActive = false,
                 isDailyChallenge = false,
+                levelStartTimeMs = System.currentTimeMillis(),
                 isDoubleRewardClaimedThisLevel = false
             )
         }
@@ -289,6 +312,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 gameStatus = GameStatus.PLAYING,
                 isHintActive = false,
                 isDailyChallenge = true,
+                levelStartTimeMs = System.currentTimeMillis(),
                 isDoubleRewardClaimedThisLevel = false
             )
         }
@@ -299,7 +323,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
      * intro.mp4 -> Login Screen -> Authentication Verification -> Main Menu
      */
     fun finishIntro() {
-        HarmonicAudioEngine.startBgm()
+        HarmonicAudioEngine.onIntroFinished()
         _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
     }
 
@@ -310,31 +334,52 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             HarmonicAudioEngine.startBgm()
             val user = authRepo.getUserAccount(username)
+            val actualUsername = user?.username ?: username
             val userLevel = (user?.currentLevelIndex ?: 0).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
-            val userTokens = user?.tokens ?: 5
-            val userBreakers = user?.echoBreakers ?: 2
+            val userTokens = user?.tokens ?: 10
+            val userBreakers = user?.echoBreakers ?: 3
+            val userDiamonds = user?.diamonds ?: 1
+            val userCoins = user?.coins ?: 50
+            val userEchoes = user?.totalEchoes ?: 0
+            val userStars = user?.totalStars ?: 0
             val userDark = user?.isDarkTheme ?: prefs.isDarkTheme
             val userCompleted = user?.completedLevelsCsv?.split(",")
                 ?.mapNotNull { it.trim().toIntOrNull() }
                 ?.toSet() ?: emptySet()
 
-            prefs.setAuthenticatedUser(username, rememberMe)
+            prefs.setAuthenticatedUser(actualUsername, rememberMe)
             prefs.currentLevelIndex = userLevel
             prefs.tokens = userTokens
             prefs.echoBreakers = userBreakers
+            prefs.diamonds = userDiamonds
+            prefs.coins = userCoins
+            prefs.totalEchoes = userEchoes
+            prefs.trophies = user?.trophies ?: 0
+            prefs.totalPlayTimeSec = user?.totalPlayTimeSec ?: 0L
+            prefs.maxCombo = user?.maxCombo ?: 0
+            prefs.levelStatsCsv = user?.levelStatsCsv ?: ""
             prefs.isDarkTheme = userDark
-            if (userCompleted.isNotEmpty()) {
-                prefs.setCompletedLevelsRaw(userCompleted.map { it.toString() }.toSet())
-            }
+            prefs.setCompletedLevelsRaw(userCompleted.map { it.toString() }.toSet())
+
+            val levelData = repo.getLevelData(userLevel + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[userLevel.coerceIn(0, 99)])
 
             _uiState.update {
                 it.copy(
                     isAuthenticated = true,
-                    authenticatedUser = username,
+                    authenticatedUser = actualUsername,
                     rememberMe = rememberMe,
                     currentLevelIndex = userLevel,
+                    level = levelData,
                     tokens = userTokens,
                     echoBreakers = userBreakers,
+                    diamonds = userDiamonds,
+                    coins = userCoins,
+                    totalEchoes = userEchoes,
+                    totalStars = userStars,
+                    trophies = prefs.trophies,
+                    totalPlayTimeSec = prefs.totalPlayTimeSec,
+                    maxCombo = prefs.maxCombo,
+                    currentCombo = prefs.currentCombo,
                     isDarkTheme = userDark,
                     completedLevels = userCompleted,
                     screenState = ScreenState.MAIN_MENU
@@ -372,6 +417,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     completedLevels = prefs.getCompletedLevels(),
                     tokens = state.tokens,
                     echoBreakers = state.echoBreakers,
+                    coins = state.coins,
+                    diamonds = state.diamonds,
                     totalEchoes = state.totalEchoes,
                     totalStars = state.totalStars
                 )
@@ -588,6 +635,41 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             else -> 1
         }
 
+        val startTime = if (state.levelStartTimeMs > 0) state.levelStartTimeMs else (System.currentTimeMillis() - 7500L)
+        val durationSeconds = ((System.currentTimeMillis() - startTime) / 1000f).coerceIn(1.0f, 300.0f)
+        val roundedDurationSec = (durationSeconds * 10).roundToInt() / 10f
+
+        // Combo & Trophy calculations
+        val newCombo = if (echoCount == 0) state.currentCombo + 1 else 0
+        prefs.recordCombo(newCombo)
+
+        val baseTrophies = 30 + (stars * 10)
+        val zeroEchoBonus = if (echoCount == 0) 50 else 0
+        val comboBonus = if (newCombo > 1) newCombo * 10 else 0
+        val speedBonus = if (durationSeconds <= 12f) 15 else 0
+        val totalLevelTrophies = baseTrophies + zeroEchoBonus + comboBonus + speedBonus
+
+        prefs.addTrophies(totalLevelTrophies)
+        prefs.addPlayTime(durationSeconds.toLong())
+        prefs.recordLevelResult(
+            levelId = state.level.levelId,
+            title = state.level.title,
+            echoes = echoCount,
+            timeTakenSec = roundedDurationSec,
+            stars = stars,
+            trophiesEarned = totalLevelTrophies
+        )
+
+        val trophyBreakdown = com.example.model.TrophyRewardBreakdown(
+            baseTrophies = baseTrophies,
+            zeroEchoBonus = zeroEchoBonus,
+            comboBonus = comboBonus,
+            speedBonus = speedBonus,
+            totalTrophies = totalLevelTrophies,
+            currentCombo = newCombo,
+            timeTakenSec = roundedDurationSec
+        )
+
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         prefs.checkAndResetDailyQuests(todayStr)
         prefs.levelsCompletedToday = prefs.levelsCompletedToday + 1
@@ -622,6 +704,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     completedLevels = updatedCompleted,
                     tokens = prefs.tokens,
                     echoBreakers = prefs.echoBreakers,
+                    coins = prefs.coins,
+                    diamonds = prefs.diamonds,
                     totalEchoes = prefs.totalEchoes,
                     totalStars = _uiState.value.totalStars + stars
                 )
@@ -637,6 +721,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 currentStrokeSegments = completedSegments,
                 gameStatus = GameStatus.VICTORY,
                 tokens = prefs.tokens,
+                trophies = prefs.trophies,
+                totalPlayTimeSec = prefs.totalPlayTimeSec,
+                maxCombo = prefs.maxCombo,
+                currentCombo = newCombo,
+                lastTrophyRewardBreakdown = trophyBreakdown,
                 isDailyCompletedToday = if (state.isDailyChallenge) true else it.isDailyCompletedToday,
                 isDoubleRewardClaimedThisLevel = false
             )
@@ -692,6 +781,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val newEchoCount = state.echoCountForLevel + (if (newEchoSegments.isNotEmpty()) 1 else 0)
         val isDeadlocked = newEchoCount >= deadlockThreshold
 
+        prefs.recordCombo(0)
+
         _uiState.update {
             it.copy(
                 isDrawing = false,
@@ -702,6 +793,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 echoes = finalEchoes,
                 echoCountForLevel = newEchoCount,
                 totalEchoes = prefs.totalEchoes,
+                currentCombo = 0,
                 isCollisionAlertActive = true,
                 nodes = it.nodes.map { n -> n.copy(connected = false) },
                 gameStatus = if (isDeadlocked) GameStatus.DEADLOCK else GameStatus.PLAYING
@@ -805,6 +897,43 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     breakersAdded = 1
                 )
             }
+            "FREE_DIAMOND" -> {
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                prefs.recordFreeDiamondAdWatched(todayStr)
+                prefs.addDiamonds(1)
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false,
+                        diamonds = prefs.diamonds
+                    )
+                }
+                RewardClaimedInfo(
+                    title = "Nadir Elmas Kazanıldı!",
+                    subtitle = "+1 Nadir Elmas hesabınıza başarıyla eklendi.",
+                    rewardType = type,
+                    diamondsAdded = 1
+                )
+            }
+            "FREE_COINS" -> {
+                prefs.addTokens(3)
+                prefs.addCoins(30)
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false,
+                        tokens = prefs.tokens,
+                        coins = prefs.coins
+                    )
+                }
+                RewardClaimedInfo(
+                    title = "Jeton & Altın Paketi!",
+                    subtitle = "+3 İpucu Jetonu ve +30 Altın hesabınıza eklendi.",
+                    rewardType = type,
+                    tokensAdded = 3,
+                    coinsAdded = 30
+                )
+            }
             "HINT_TOKEN" -> {
                 prefs.addTokens(2)
                 _uiState.update {
@@ -857,6 +986,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     completedLevels = prefs.getCompletedLevels(),
                     tokens = prefs.tokens,
                     echoBreakers = prefs.echoBreakers,
+                    coins = prefs.coins,
+                    diamonds = prefs.diamonds,
                     totalEchoes = prefs.totalEchoes,
                     totalStars = _uiState.value.totalStars
                 )
@@ -957,6 +1088,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 echoes = if (clearEchoes) emptyList() else it.echoes,
                 echoCountForLevel = if (clearEchoes) 0 else it.echoCountForLevel,
                 gameStatus = GameStatus.PLAYING,
+                levelStartTimeMs = System.currentTimeMillis(),
                 nodes = it.nodes.map { n -> n.copy(connected = false) }
             )
         }
@@ -1021,16 +1153,86 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(hapticsEnabled = enabled) }
     }
 
+    fun exchangeDiamondsForTokens(diamonds: Int, tokens: Int) {
+        if (prefs.useDiamond(diamonds)) {
+            prefs.addTokens(tokens)
+            _uiState.update {
+                it.copy(
+                    diamonds = prefs.diamonds,
+                    tokens = prefs.tokens
+                )
+            }
+            saveCurrentUserProgress()
+            HarmonicAudioEngine.playVictoryCascade()
+            showToast("$tokens adet İpucu Jetonu takas edildi!")
+        } else {
+            showToast("Yetersiz Elmas! Reklam izleyerek elmas kazanabilirsiniz.")
+        }
+    }
+
+    fun exchangeDiamondsForBreakers(diamonds: Int, breakers: Int) {
+        if (prefs.useDiamond(diamonds)) {
+            prefs.addBreakers(breakers)
+            _uiState.update {
+                it.copy(
+                    diamonds = prefs.diamonds,
+                    echoBreakers = prefs.echoBreakers
+                )
+            }
+            saveCurrentUserProgress()
+            HarmonicAudioEngine.playVictoryCascade()
+            showToast("$breakers adet Matkap Lazeri takas edildi!")
+        } else {
+            showToast("Yetersiz Elmas! Reklam izleyerek elmas kazanabilirsiniz.")
+        }
+    }
+
+    fun exchangeCoinsForBreakers(coinsCost: Int, breakers: Int) {
+        if (prefs.useCoins(coinsCost)) {
+            prefs.addBreakers(breakers)
+            _uiState.update {
+                it.copy(
+                    coins = prefs.coins,
+                    echoBreakers = prefs.echoBreakers
+                )
+            }
+            saveCurrentUserProgress()
+            HarmonicAudioEngine.playVictoryCascade()
+            showToast("$breakers adet Matkap Lazeri alındı!")
+        } else {
+            showToast("Yetersiz Altın! Reklam izleyerek altın kazanabilirsiniz.")
+        }
+    }
+
     fun purchaseTokens(amount: Int) {
         prefs.addTokens(amount)
         _uiState.update { it.copy(tokens = prefs.tokens) }
+        saveCurrentUserProgress()
         showToast("$amount adet İpucu Jetonu eklendi!")
     }
 
     fun purchaseBreakers(amount: Int) {
         prefs.addBreakers(amount)
         _uiState.update { it.copy(echoBreakers = prefs.echoBreakers) }
+        saveCurrentUserProgress()
         showToast("$amount adet Matkap Lazeri eklendi!")
+    }
+
+    fun saveCurrentUserProgress() {
+        val u = _uiState.value.authenticatedUser
+        if (u.isNotBlank()) {
+            viewModelScope.launch {
+                authRepo.saveActiveUserProgress(
+                    username = u,
+                    currentLevelIndex = _uiState.value.currentLevelIndex,
+                    completedLevels = prefs.getCompletedLevels(),
+                    tokens = prefs.tokens,
+                    echoBreakers = prefs.echoBreakers,
+                    totalEchoes = prefs.totalEchoes,
+                    totalStars = _uiState.value.totalStars
+                )
+            }
+        }
     }
 
     // Modal Visibilities
@@ -1398,5 +1600,67 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 vibrator?.vibrate(200)
             }
         } catch (_: Exception) {}
+    }
+
+    // --- Leaderboard & Player Profile Systems ---
+
+    fun openLeaderboard() {
+        viewModelScope.launch {
+            val list = authRepo.getLeaderboardPlayers()
+            _uiState.update {
+                it.copy(
+                    leaderboardPlayers = list,
+                    isLeaderboardDialogVisible = true
+                )
+            }
+        }
+    }
+
+    fun closeLeaderboard() {
+        _uiState.update { it.copy(isLeaderboardDialogVisible = false) }
+    }
+
+    fun openPlayerProfile(player: com.example.model.LeaderboardPlayer) {
+        _uiState.update {
+            it.copy(
+                selectedPlayerProfile = player,
+                isProfileDialogVisible = true
+            )
+        }
+    }
+
+    fun closePlayerProfile() {
+        _uiState.update {
+            it.copy(
+                isProfileDialogVisible = false,
+                selectedPlayerProfile = null
+            )
+        }
+    }
+
+    fun openMyProfile() {
+        viewModelScope.launch {
+            val list = authRepo.getLeaderboardPlayers()
+            val me = list.find { it.isCurrentUser } ?: com.example.model.LeaderboardPlayer(
+                id = "current_user",
+                rank = 1,
+                username = _uiState.value.authenticatedUser.ifBlank { "Oyuncu" },
+                avatarEmoji = "⚡",
+                title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
+                trophies = prefs.trophies,
+                totalEchoes = prefs.totalEchoes,
+                totalPlayTimeSec = prefs.totalPlayTimeSec,
+                maxCombo = prefs.maxCombo,
+                completedLevelsCount = prefs.getCompletedLevels().size,
+                isCurrentUser = true,
+                levelRecords = prefs.getLevelRecords()
+            )
+            _uiState.update {
+                it.copy(
+                    selectedPlayerProfile = me,
+                    isProfileDialogVisible = true
+                )
+            }
+        }
     }
 }

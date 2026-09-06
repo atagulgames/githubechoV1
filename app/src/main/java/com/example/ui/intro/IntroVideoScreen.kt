@@ -4,23 +4,29 @@ import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.VideoView
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -39,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.audio.HarmonicAudioEngine
 import com.example.media.GameMediaAssets
 import java.io.File
 
@@ -60,6 +67,12 @@ fun IntroVideoScreen(
     var isVideoFound by remember { mutableStateOf(false) }
     var videoUriToPlay by remember { mutableStateOf<Uri?>(null) }
     var checkingComplete by remember { mutableStateOf(false) }
+
+    // Strictly ensure background music does not play during intro
+    DisposableEffect(Unit) {
+        HarmonicAudioEngine.setIntroActive(true)
+        onDispose { }
+    }
 
     // Locate the user's intro.mp4 file
     LaunchedEffect(Unit) {
@@ -150,6 +163,41 @@ fun IntroVideoScreen(
                         }
                     }
                 )
+
+                // Skip intro button overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 44.dp, end = 20.dp),
+                    contentAlignment = Alignment.TopEnd
+                ) {
+                    Surface(
+                        onClick = onIntroFinished,
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.Black.copy(alpha = 0.65f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
+                        modifier = Modifier.testTag("intro_video_skip_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Geç",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.SkipNext,
+                                contentDescription = "İntroyu Geç",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             } else {
                 // Media file not yet found on disk: Report exact required path as mandated by Rule 5
                 Card(

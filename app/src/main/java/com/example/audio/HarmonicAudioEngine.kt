@@ -21,15 +21,43 @@ object HarmonicAudioEngine {
             if (!value) {
                 pauseBgm()
             } else {
-                resumeBgm()
+                if (!isIntroActive) {
+                    resumeBgm()
+                }
             }
         }
+
+    /**
+     * Tracks whether the intro sequence or intro video is actively playing.
+     * When true, background music (fon müziği) is strictly inhibited.
+     */
+    var isIntroActive: Boolean = true
+        private set
+
+    @Synchronized
+    fun setIntroActive(active: Boolean) {
+        isIntroActive = active
+        if (active) {
+            pauseBgm()
+        }
+    }
+
+    /**
+     * Called strictly after the intro finishes or is skipped.
+     * Starts the background music smoothly.
+     */
+    @Synchronized
+    fun onIntroFinished() {
+        isIntroActive = false
+        startBgm()
+    }
 
     private var appContext: Context? = null
     private var bgmPlayer: MediaPlayer? = null
     private var activeSfxPlayer: MediaPlayer? = null
     private var savedBgmPosition: Int = 0
     private val audioScope = CoroutineScope(Dispatchers.Default)
+    private val activeSfxCount = java.util.concurrent.atomic.AtomicInteger(0)
 
     private var currentBgmVolume = 0.70f
     private const val NORMAL_BGM_VOLUME = 0.70f
@@ -55,12 +83,12 @@ object HarmonicAudioEngine {
 
     /**
      * Starts continuous ambient background music in an infinite loop.
-     * Keeps steady 1.0x playback speed and never restarts from beginning when navigating.
+     * Keeps steady natural playback speed and never restarts from beginning when navigating.
      * Sourced from assets/audio/gamemusıc.mp3 or res/raw/gamemusic.mp3.
      */
     @Synchronized
     fun startBgm() {
-        if (!isSoundEnabled) return
+        if (!isSoundEnabled || isIntroActive) return
         val ctx = appContext ?: return
         try {
             if (bgmPlayer != null) {
@@ -79,9 +107,13 @@ object HarmonicAudioEngine {
             val player = if (resId != 0) {
                 MediaPlayer.create(ctx, resId)
             } else {
-                // Try asset loading fallback
+                // Asset loading fallback
                 try {
-                    val assetNames = listOf("audio/gamemusıc.mp3", "audio/gamemusic.mp3")
+                    val assetNames = listOf(
+                        "audio/gamemusıc.mp3",
+                        "audio/gamemusic.mp3",
+                        "audio/gamemusic.ogg"
+                    )
                     var afd: android.content.res.AssetFileDescriptor? = null
                     for (name in assetNames) {
                         try {
@@ -91,6 +123,12 @@ object HarmonicAudioEngine {
                     }
                     if (afd != null) {
                         MediaPlayer().apply {
+                            setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_GAME)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                    .build()
+                            )
                             setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
                             afd.close()
                             prepare()
@@ -104,9 +142,6 @@ object HarmonicAudioEngine {
             if (player != null) {
                 bgmPlayer = player.apply {
                     isLooping = true
-                    try {
-                        playbackParams = playbackParams.setSpeed(1.0f).setPitch(1.0f)
-                    } catch (_: Exception) {}
                     currentBgmVolume = NORMAL_BGM_VOLUME
                     setVolume(currentBgmVolume, currentBgmVolume)
                     start()
@@ -129,7 +164,7 @@ object HarmonicAudioEngine {
 
     @Synchronized
     fun resumeBgm() {
-        if (!isSoundEnabled) return
+        if (!isSoundEnabled || isIntroActive) return
         try {
             if (bgmPlayer == null) {
                 startBgm()
@@ -142,9 +177,9 @@ object HarmonicAudioEngine {
 
     /**
      * Smoothly ducks the background music volume (e.g. from 0.70f to 0.15f)
-     * so that foreground sound effects (win fanfare, next level voice) stand out with crystal clarity.
+     * so that foreground sound effects stand out with crystal clarity.
      */
-    fun duckBgm(targetVolume: Float = DUCKED_BGM_VOLUME, durationMs: Long = 200L) {
+    fun duckBgm(targetVolume: Float = DUCKED_BGM_VOLUME, durationMs: Long = 180L) {
         if (!isSoundEnabled || bgmPlayer?.isPlaying != true) return
         duckJob?.cancel()
         duckJob = audioScope.launch {
@@ -163,11 +198,11 @@ object HarmonicAudioEngine {
     /**
      * Smoothly restores the background music volume back to normal.
      */
-    fun restoreBgm(targetVolume: Float = NORMAL_BGM_VOLUME, durationMs: Long = 350L) {
+    fun restoreBgm(targetVolume: Float = NORMAL_BGM_VOLUME, durationMs: Long = 300L) {
         if (!isSoundEnabled || bgmPlayer?.isPlaying != true) return
         duckJob?.cancel()
         duckJob = audioScope.launch {
-            val steps = 15
+            val steps = 12
             val startVol = currentBgmVolume
             val stepDelay = (durationMs / steps).coerceAtLeast(10L)
             for (i in 1..steps) {
@@ -189,7 +224,7 @@ object HarmonicAudioEngine {
     /**
      * Plays an intervening SFX with intelligent audio ducking:
      * 1. Automatically ducks background music down.
-     * 2. Plays the requested SFX.
+     * 2. Plays the requested SFX from res/raw or assets/audio/.
      * 3. When SFX finishes, smoothly restores background music to full volume.
      */
     private fun playInterveningSfx(
@@ -200,32 +235,76 @@ object HarmonicAudioEngine {
         if (!isSoundEnabled) return
         val ctx = appContext ?: return
 
-        // Duck background music for user requested ducking behavior
-        duckBgm(DUCKED_BGM_VOLUME, durationMs = 150L)
+        duckBgm(DUCKED_BGM_VOLUME, durationMs = 140L)
+        activeSfxCount.incrementAndGet()
 
         try {
-            val resId = ctx.resources.getIdentifier(resName, "raw", ctx.packageName)
-            if (resId != 0) {
+            var resId = ctx.resources.getIdentifier(resName, "raw", ctx.packageName)
+            if (resId == 0 && resName == "brokenredline") {
+                resId = ctx.resources.getIdentifier("broken_red_line", "raw", ctx.packageName)
+            }
+            if (resId == 0 && resName == "nextlevel") {
+                resId = ctx.resources.getIdentifier("next_level", "raw", ctx.packageName)
+            }
+
+            var player: MediaPlayer? = if (resId != 0) {
+                MediaPlayer.create(ctx, resId)
+            } else null
+
+            if (player == null) {
+                val assetCandidates = listOf(
+                    "audio/$resName.mp3",
+                    "audio/${resName.lowercase()}.mp3"
+                )
+                for (path in assetCandidates) {
+                    try {
+                        val afd = ctx.assets.openFd(path)
+                        player = MediaPlayer().apply {
+                            setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_GAME)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                    .build()
+                            )
+                            setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                            afd.close()
+                            prepare()
+                        }
+                        break
+                    } catch (_: Exception) {}
+                }
+            }
+
+            if (player != null) {
                 try {
                     activeSfxPlayer?.stop()
                     activeSfxPlayer?.release()
                 } catch (_: Exception) {}
 
-                val player = MediaPlayer.create(ctx, resId)
-                if (player != null) {
-                    activeSfxPlayer = player
-                    player.setVolume(0.95f, 0.95f)
-                    player.setOnCompletionListener { mp ->
-                        try {
-                            mp.release()
-                        } catch (_: Exception) {}
+                activeSfxPlayer = player
+                player.setVolume(0.95f, 0.95f)
+                player.setOnCompletionListener { mp ->
+                    try {
+                        mp.release()
+                    } catch (_: Exception) {}
+                    if (activeSfxPlayer == mp) {
                         activeSfxPlayer = null
-                        // SFX finished: Restore background music volume back to normal
+                    }
+                    if (activeSfxCount.decrementAndGet() <= 0) {
+                        activeSfxCount.set(0)
                         restoreBgm(NORMAL_BGM_VOLUME)
                     }
-                    player.start()
-                    return
                 }
+                player.setOnErrorListener { mp, _, _ ->
+                    try { mp.release() } catch (_: Exception) {}
+                    if (activeSfxCount.decrementAndGet() <= 0) {
+                        activeSfxCount.set(0)
+                        restoreBgm(NORMAL_BGM_VOLUME)
+                    }
+                    true
+                }
+                player.start()
+                return
             }
         } catch (_: Exception) {}
 
@@ -233,7 +312,10 @@ object HarmonicAudioEngine {
         fallbackTone()
         audioScope.launch {
             delay(sfxDurationMs)
-            restoreBgm(NORMAL_BGM_VOLUME)
+            if (activeSfxCount.decrementAndGet() <= 0) {
+                activeSfxCount.set(0)
+                restoreBgm(NORMAL_BGM_VOLUME)
+            }
         }
     }
 

@@ -172,3 +172,37 @@ data class ChestReward(
     val unlockedThemeName: String? = null
 )
 
+data class LevelRecord(
+    val levelId: Int,
+    val levelTitle: String,
+    val echoesUsed: Int,
+    val timeTakenSec: Float,
+    val stars: Int,
+    val trophiesEarned: Int
+)
+
+data class TrophyRewardBreakdown(
+    val baseTrophies: Int,
+    val zeroEchoBonus: Int,
+    val comboBonus: Int,
+    val speedBonus: Int,
+    val totalTrophies: Int,
+    val currentCombo: Int,
+    val timeTakenSec: Float
+)
+
+data class LeaderboardPlayer(
+    val id: String,
+    val rank: Int,
+    val username: String,
+    val avatarEmoji: String,
+    val title: String,
+    val trophies: Int,
+    val totalEchoes: Int,
+    val totalPlayTimeSec: Long,
+    val maxCombo: Int,
+    val completedLevelsCount: Int,
+    val isCurrentUser: Boolean = false,
+    val levelRecords: List<LevelRecord> = emptyList()
+)
+

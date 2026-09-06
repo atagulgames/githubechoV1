@@ -20,7 +20,7 @@ interface UserAccountDao {
     @Query("SELECT * FROM user_accounts")
     suspend fun getAllUsers(): List<UserAccountEntity>
 
-    @Query("UPDATE user_accounts SET currentLevelIndex = :levelIdx, completedLevelsCsv = :completedCsv, tokens = :tokens, echoBreakers = :breakers, coins = :coins, diamonds = :diamonds, totalStars = :stars, totalEchoes = :totalEchoes WHERE LOWER(username) = LOWER(:username)")
+    @Query("UPDATE user_accounts SET currentLevelIndex = :levelIdx, completedLevelsCsv = :completedCsv, tokens = :tokens, echoBreakers = :breakers, coins = :coins, diamonds = :diamonds, totalStars = :stars, totalEchoes = :totalEchoes, trophies = :trophies, totalPlayTimeSec = :playTimeSec, maxCombo = :maxCombo, levelStatsCsv = :levelStatsCsv WHERE LOWER(username) = LOWER(:username)")
     suspend fun updateProgress(
         username: String,
         levelIdx: Int,
@@ -30,7 +30,11 @@ interface UserAccountDao {
         coins: Int,
         diamonds: Int,
         stars: Int,
-        totalEchoes: Int
+        totalEchoes: Int,
+        trophies: Int,
+        playTimeSec: Long,
+        maxCombo: Int,
+        levelStatsCsv: String
     )
 
     @Query("UPDATE user_accounts SET isDarkTheme = :isDark WHERE LOWER(username) = LOWER(:username)")

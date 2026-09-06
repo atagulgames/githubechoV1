@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,9 +28,12 @@ import androidx.compose.material.icons.filled.CrisisAlert
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Settings
@@ -74,6 +78,8 @@ fun EchoMainMenu(
     onOpenShop: () -> Unit,
     onOpenSkins: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenLeaderboard: () -> Unit = {},
+    onOpenMyProfile: () -> Unit = {},
     onToggleDarkTheme: () -> Unit = {},
     onOpenDailyQuests: () -> Unit = {},
     onOpenDailyLogin: () -> Unit = {},
@@ -113,39 +119,75 @@ fun EchoMainMenu(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Bar: Stars, Tokens, Theme Toggle, Settings
+            // Top Bar: Stars, Trophies, Tokens, Leaderboard, Profile, Theme Toggle, Settings
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Stars & Progress Chip (100 Levels = 300 Stars Max)
+                // Stars & Trophies Progress Chips
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .shadow(2.dp, RoundedCornerShape(20.dp))
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(cardBg)
-                        .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Yıldızlar",
-                        tint = Color(0xFFF59E0B),
-                        modifier = Modifier.size(17.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "${state.totalStars} / 300",
-                        color = textPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
+                    // Stars Chip
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .shadow(2.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(cardBg)
+                            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Yıldızlar",
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${state.totalStars}/300",
+                            color = textPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    // Trophies Chip (Click to open profile)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .shadow(2.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(cardBg)
+                            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+                            .clickable { onOpenMyProfile() }
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                            .testTag("menu_trophies_chip")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EmojiEvents,
+                            contentDescription = "Kupalar",
+                            tint = Color(0xFFD97706),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${state.trophies} 🏆",
+                            color = textPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
 
-                // Tokens & Quick Theme Toggle & Settings
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Tokens, Leaderboard, Profile, Theme Toggle & Settings
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -154,31 +196,67 @@ fun EchoMainMenu(
                             .background(cardBg)
                             .border(1.dp, borderColor, RoundedCornerShape(20.dp))
                             .clickable { onOpenShop() }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
                             .testTag("menu_token_chip")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Diamond,
                             contentDescription = "Jetonlar",
                             tint = Color(0xFFD97706),
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(5.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${state.tokens}",
                             color = textPrimary,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = 12.sp
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    // Leaderboard icon button
+                    IconButton(
+                        onClick = onOpenLeaderboard,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .shadow(2.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(cardBg)
+                            .border(1.dp, borderColor, CircleShape)
+                            .testTag("leaderboard_icon_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Leaderboard,
+                            contentDescription = "Liderlik Tablosu",
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Profile icon button
+                    IconButton(
+                        onClick = onOpenMyProfile,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .shadow(2.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(cardBg)
+                            .border(1.dp, borderColor, CircleShape)
+                            .testTag("profile_icon_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profilim",
+                            tint = Color(0xFF3B82F6),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
                     // Dark / White Theme Quick Toggle Button
                     IconButton(
                         onClick = onToggleDarkTheme,
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .shadow(2.dp, CircleShape)
                             .clip(CircleShape)
                             .background(cardBg)
@@ -189,16 +267,14 @@ fun EchoMainMenu(
                             imageVector = if (state.isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
                             contentDescription = "Tema Değiştir (Dark / White)",
                             tint = if (state.isDarkTheme) Color(0xFF38BDF8) else Color(0xFFF59E0B),
-                            modifier = Modifier.size(19.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
 
                     IconButton(
                         onClick = onOpenSettings,
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .shadow(2.dp, CircleShape)
                             .clip(CircleShape)
                             .background(cardBg)
@@ -209,7 +285,7 @@ fun EchoMainMenu(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Ayarlar",
                             tint = textSecondary,
-                            modifier = Modifier.size(19.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -566,6 +642,108 @@ fun EchoMainMenu(
                             color = Color.White,
                             fontSize = 11.sp
                         )
+                    }
+                }
+            }
+
+            // Leaderboard & Player Profile Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(58.dp)
+                        .shadow(2.dp, RoundedCornerShape(14.dp))
+                        .clickable { onOpenLeaderboard() }
+                        .testTag("menu_leaderboard_card"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
+                    border = BorderStroke(1.dp, if (state.isDarkTheme) Color(0xFFD97706).copy(alpha = 0.5f) else Color(0xFFFDE68A))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFEF3C7)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = Color(0xFFD97706),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Liderlik",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary
+                            )
+                            Text(
+                                text = "Global Sıralama",
+                                fontSize = 10.sp,
+                                color = textSecondary
+                            )
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(58.dp)
+                        .shadow(2.dp, RoundedCornerShape(14.dp))
+                        .clickable { onOpenMyProfile() }
+                        .testTag("menu_profile_card"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
+                    border = BorderStroke(1.dp, if (state.isDarkTheme) Color(0xFF3B82F6).copy(alpha = 0.5f) else Color(0xFFBFDBFE))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (state.isDarkTheme) Color(0xFF1E3A8A) else Color(0xFFDBEAFE)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color(0xFF3B82F6),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Profilim",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary
+                            )
+                            Text(
+                                text = "Süre & Kayıtlar",
+                                fontSize = 10.sp,
+                                color = textSecondary
+                            )
+                        }
                     }
                 }
             }
