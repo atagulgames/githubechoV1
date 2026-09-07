@@ -352,14 +352,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             return
         }
-        val todaySeed = (SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date()).hashCode() and 0x7FFFFFFF) % 250
+        val todaySeed = (SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date()).hashCode() and 0x7FFFFFFF) % LevelCatalog.TOTAL_LEVELS
         viewModelScope.launch {
             loadAndStartDailyChallenge(todaySeed)
         }
     }
 
     private suspend fun loadAndStartDailyChallenge(todaySeed: Int) {
-        val levelData = repo.getLevelData(todaySeed + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create250Levels()[todaySeed])
+        val levelData = repo.getLevelData(todaySeed + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[todaySeed])
         _uiState.update {
             it.copy(
                 screenState = ScreenState.DAILY_CHALLENGE,
@@ -626,7 +626,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
 
         // Check if reaching a new node, prioritizing expectedNextId
-        val hitNode = findTargetNodeForDrag(point, state.nodes, state.visitedNodeIds, expectedNextId)
+        val hitNode = findTargetNodeForDrag(point, lastNode, state.nodes, state.visitedNodeIds, expectedNextId)
         if (hitNode != null && hitNode.id != lastVisitedId) {
             // Already visited node?
             if (state.visitedNodeIds.contains(hitNode.id)) {
@@ -2025,24 +2025,41 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     private fun findTargetNodeForDrag(
         point: Point,
+        lastNode: Node,
         nodes: List<Node>,
         visitedNodeIds: List<Int>,
         expectedNextId: Int
     ): Node? {
-        val candidates = nodes.filter { it.toPoint().distanceTo(point) <= nodeHitRadius }
-        if (candidates.isEmpty()) return null
+        val expectedNode = nodes.firstOrNull { it.id == expectedNextId }
+        if (expectedNode != null) {
+            val distToExpected = point.distanceTo(expectedNode.toPoint())
+            val distToLast = point.distanceTo(lastNode.toPoint())
+            val segLen = lastNode.toPoint().distanceTo(expectedNode.toPoint())
+            val captureRadius = (segLen * 0.48f).coerceIn(8f, 28f)
+            if (distToExpected <= captureRadius && distToExpected < distToLast) {
+                return expectedNode
+            }
+        }
 
-        // 1. Priority: Expected target node in solution path (e.g. Node 20 in Level 51)
-        val expected = candidates.firstOrNull { it.id == expectedNextId }
-        if (expected != null) return expected
-
-        // 2. Unvisited closest node
-        val unvisited = candidates.filter { !visitedNodeIds.contains(it.id) }
-            .minByOrNull { it.toPoint().distanceTo(point) }
-        if (unvisited != null) return unvisited
-
-        // 3. Closest visited node (for detecting genuine backtracking)
-        return candidates.minByOrNull { it.toPoint().distanceTo(point) }
+        // Check genuine collision with other nodes
+        val otherRadius = if (nodes.size >= 25) 8f else if (nodes.size >= 15) 10f else 14f
+        for (node in nodes) {
+            if (node.id == lastNode.id) continue
+            val d = point.distanceTo(node.toPoint())
+            if (!visitedNodeIds.contains(node.id)) {
+                // Wrong unvisited node only if player moved closer to it than lastNode
+                val distToLast = point.distanceTo(lastNode.toPoint())
+                if (d <= otherRadius && d < distToLast) {
+                    return node
+                }
+            } else {
+                // Backtracking into an already visited node only if finger directly penetrates it
+                if (d <= (otherRadius * 0.85f)) {
+                    return node
+                }
+            }
+        }
+        return null
     }
 
     private fun showToast(msg: String) {

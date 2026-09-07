@@ -20,9 +20,10 @@ class MainActivity : ComponentActivity() {
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     enableEdgeToEdge()
 
-    // Initialize Start.io Ads SDK with App ID: 208838202 (Test Ads Mode)
+    // Initialize Start.io Ads SDK with App ID: 208838202 (Test Ads Mode in debug/preview)
     val echoPrefs = com.example.data.EchoPreferences(this)
-    StartIoManager.initialize(this, testMode = echoPrefs.isTestAdsEnabled)
+    val testMode = echoPrefs.isTestAdsEnabled || BuildConfig.DEBUG
+    StartIoManager.initialize(this, testMode = testMode)
     com.example.audio.HarmonicAudioEngine.init(this)
 
     // Schedule 4 daily game motivation notifications (Sabah 09:00, Öğle 13:00, İkindi 17:00, Akşam 21:00)

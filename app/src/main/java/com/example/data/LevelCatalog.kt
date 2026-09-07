@@ -218,6 +218,42 @@ object LevelCatalog {
         )
     }
 
+    /**
+     * Precomputed sequence of 100 level node counts spanning from 3 to 36 (average ~19.5).
+     * Guaranteed:
+     * - Level 1 has 3 nodes
+     * - Level 100 has 36 nodes
+     * - Every adjacent level has a DIFFERENT node count: arr[i] != arr[i - 1]
+     * - Average is between 19 and 20 ("ortalama 3-36")
+     */
+    val LEVEL_NODE_COUNTS: IntArray = run {
+        val arr = IntArray(TOTAL_LEVELS)
+        arr[0] = 3
+        for (i in 1 until TOTAL_LEVELS - 1) {
+            val id = i + 1
+            val t = (id - 1) / 99.0
+            val base = 3.0 + t * 33.0
+            val wave = when (id % 6) {
+                0 -> 2.2
+                1 -> -1.8
+                2 -> 1.7
+                3 -> -2.1
+                4 -> 1.9
+                else -> -1.4
+            }
+            var count = (base + wave).roundToInt().coerceIn(3, 36)
+            if (count == arr[i - 1]) {
+                count = if (count < 36 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(3)
+            }
+            arr[i] = count
+        }
+        arr[TOTAL_LEVELS - 1] = 36
+        if (arr[TOTAL_LEVELS - 2] == 36) {
+            arr[TOTAL_LEVELS - 2] = 35
+        }
+        arr
+    }
+
     fun buildLevelData(id: Int): LevelData {
         val clampedId = id.coerceIn(1, TOTAL_LEVELS)
         val tierIndex = ((clampedId - 1) / 10).coerceIn(0, 9)
@@ -225,106 +261,106 @@ object LevelCatalog {
         // Default title in English (as requested: "Herşey başlangıçta ingilizce olacak")
         val title = getLevelTitle(clampedId, Language.EN)
 
-        // Dynamic node count from 3 to 36 with smooth difficulty progression
-        val nodeCount = (3 + ((clampedId - 1) * 33.0 / 99.0).roundToInt()).coerceIn(3, 36)
+        // Distinct node count from 3 to 36 for every level
+        val nodeCount = LEVEL_NODE_COUNTS[clampedId - 1]
 
-        val centerX = 180f
-        val centerY = 230f
+        // Center and scale parameters for comfortable virtual canvas coordinate space
+        val cx = 220f + (((clampedId * 7) % 9) - 4) * 2.5f
+        val cy = 280f + (((clampedId * 13) % 9) - 4) * 2.5f
 
-        // Key & Gate mechanics: Key appears along the first half/third, Gate is at the final node
+        // Key & Gate mechanics: Key appears along first half/third, Gate is at the final node
         val hasKeyGate = (tierIndex == 2 || tierIndex == 6 || (tierIndex == 9 && clampedId % 2 == 0)) && nodeCount >= 4
         val keyIndex = if (hasKeyGate) (nodeCount / 3).coerceIn(2, nodeCount - 1) else -1
         val gateIndex = if (hasKeyGate) nodeCount else -1
 
-        // 12 distinct open, non-self-intersecting geometric archetypes.
-        // Every archetype forms an open curve where Node 1 and the final node (nodeCount)
-        // are widely separated (80-140px), eliminating false collisions when reaching the goal!
-        val shapeArchetype = (clampedId - 1) % 12
+        // Golden-ratio angle rotation ensures NO TWO LEVELS have identical spatial orientation
+        val rot = ((clampedId * 137.508) % 360.0) * (PI / 180.0)
+        val scaleX = 1.0f + (((clampedId * 11) % 9) - 4) * 0.022f
+        val scaleY = 1.0f + (((clampedId * 17) % 9) - 4) * 0.022f
+
+        // 25 distinct geometric archetypes. Level 100 receives the Grand Omega Arch
+        val shapeArchetype = if (clampedId == 100) 24 else (clampedId - 1) % 25
 
         fun clampPt(x: Float, y: Float): Pair<Float, Float> =
-            Pair(x.coerceIn(48f, 312f), y.coerceIn(88f, 372f))
+            Pair(x.coerceIn(38f, 402f), y.coerceIn(58f, 502f))
+
+        fun transform(u: Float, v: Float): Pair<Float, Float> {
+            val rx = (u * cos(rot) - v * sin(rot)).toFloat() * scaleX
+            val ry = (u * sin(rot) + v * cos(rot)).toFloat() * scaleY
+            return clampPt(cx + rx, cy + ry)
+        }
 
         val curveFn: (Float) -> Pair<Float, Float> = when (shapeArchetype) {
             0 -> {
-                // Archetype 0: Open Celestial Arc (sweeps ~280 degrees, leaving wide ~80 deg opening)
-                val rx = 115f + (clampedId * 5 % 15)
-                val ry = 125f + (clampedId * 7 % 15)
-                val baseAngle = ((clampedId * 37) % 360) * (PI / 180.0)
-                val sweep = 1.55 * PI
+                // Archetype 0: Open Celestial Arc (sweeps ~280 degrees, wide open gap between ends)
+                val rx = 155f + (clampedId % 4) * 4f
+                val ry = 165f + (clampedId % 3) * 4f
+                val sweep = 1.56 * PI
                 { t ->
-                    val angle = baseAngle + sweep * t
-                    clampPt(centerX + rx * cos(angle).toFloat(), centerY + ry * sin(angle).toFloat())
+                    val angle = sweep * t
+                    transform(rx * cos(angle).toFloat(), ry * sin(angle).toFloat())
                 }
             }
             1 -> {
-                // Archetype 1: Inward Archimedean Spiral (Monotonically decreasing radius)
-                val startR = 130f
-                val endR = 56f
-                val baseAngle = ((clampedId * 53) % 360) * (PI / 180.0)
-                val turns = 1.35 * PI
+                // Archetype 1: Inward Archimedean Spiral
+                val startR = 175f
+                val endR = 55f
+                val sweep = 1.42 * PI
                 { t ->
                     val r = startR + (endR - startR) * t
-                    val angle = baseAngle + turns * t
-                    clampPt(centerX + r * cos(angle).toFloat(), centerY + r * sin(angle).toFloat())
+                    val angle = sweep * t
+                    transform(r * cos(angle).toFloat(), r * sin(angle).toFloat())
                 }
             }
             2 -> {
-                // Archetype 2: Open Diamond / Rhombus Horseshoe (Level 51 Archetype)
-                // Sweeps 279 degrees around 3 of the 4 diamond quadrants, leaving a wide 120px gap
-                // between Node 1 and Node 20. Reaching Node 20 is completely unobstructed!
-                val w = 118f + (clampedId % 4) * 4f
-                val h = 130f + (clampedId % 3) * 5f
-                val rot = ((clampedId * 29) % 360) * (PI / 180.0)
-                val sweep = 1.55 * PI
+                // Archetype 2: Outward Nebula Spiral
+                val startR = 55f
+                val endR = 175f
+                val sweep = 1.42 * PI
                 { t ->
-                    val angle = rot + sweep * t
-                    val ca = cos(angle).toFloat()
-                    val sa = sin(angle).toFloat()
-                    val denom = (abs(ca) + abs(sa)).coerceAtLeast(0.001f)
-                    clampPt(centerX + (w * ca / denom), centerY + (h * sa / denom))
+                    val r = startR + (endR - startR) * t
+                    val angle = sweep * t
+                    transform(r * cos(angle).toFloat(), r * sin(angle).toFloat())
                 }
             }
             3 -> {
-                // Archetype 3: Harmonic Sine Wave Meander
-                val w = 122f
-                val h = 118f
-                val waves = 1.5
-                val rot = ((clampedId * 17) % 360) * (PI / 180.0)
+                // Archetype 3: Open Rhombus / Diamond Horseshoe
+                val w = 158f + (clampedId % 4) * 3f
+                val h = 168f + (clampedId % 3) * 3f
+                val sweep = 1.55 * PI
                 { t ->
-                    val u = -w + t * 2f * w
-                    val v = (sin(t * waves * PI) * (h * 0.6)).toFloat()
-                    val rx = (u * cos(rot) - v * sin(rot)).toFloat()
-                    val ry = (u * sin(rot) + v * cos(rot)).toFloat()
-                    clampPt(centerX + rx, centerY + ry)
+                    val angle = sweep * t
+                    val ca = cos(angle).toFloat()
+                    val sa = sin(angle).toFloat()
+                    val denom = (abs(ca) + abs(sa)).coerceAtLeast(0.001f)
+                    transform(w * ca / denom, h * sa / denom)
                 }
             }
             4 -> {
-                // Archetype 4: S-Serpentine Track
-                val w = 118f
-                val h = 125f
+                // Archetype 4: Harmonic Sine Wave Meander
+                val w = 155f
+                val h = 125f + (clampedId % 3) * 10f
+                val waves = 2.5
                 { t ->
-                    val u = (sin(t * 3.0 * PI) * w).toFloat()
-                    val v = -h + t * 2f * h
-                    clampPt(centerX + u, centerY + v)
+                    val u = -w + t * 2f * w
+                    val v = (sin(t * waves * PI) * h).toFloat()
+                    transform(u, v)
                 }
             }
             5 -> {
-                // Archetype 5: Spiral Outward (Nebula Spire)
-                val startR = 56f
-                val endR = 130f
-                val baseAngle = ((clampedId * 31) % 360) * (PI / 180.0)
-                val turns = 1.35 * PI
+                // Archetype 5: S-Serpentine Vertical Track
+                val w = 145f + (clampedId % 3) * 8f
+                val h = 165f
                 { t ->
-                    val r = startR + (endR - startR) * t
-                    val angle = baseAngle + turns * t
-                    clampPt(centerX + r * cos(angle).toFloat(), centerY + r * sin(angle).toFloat())
+                    val u = (sin(t * 2.0 * PI) * w).toFloat()
+                    val v = -h + t * 2f * h
+                    transform(u, v)
                 }
             }
             6 -> {
-                // Archetype 6: U-Shaped Canyon (Hairpin Track)
-                val w = 108f
-                val h = 128f
-                val rot = ((clampedId * 23) % 360) * (PI / 180.0)
+                // Archetype 6: U-Canyon Hairpin Track
+                val w = 135f
+                val h = 160f
                 { t ->
                     val (u, v) = when {
                         t <= 0.4f -> Pair(-w, -h + (t / 0.4f) * (1.5f * h))
@@ -334,69 +370,199 @@ object LevelCatalog {
                         }
                         else -> Pair(w, 0.5f * h - ((t - 0.6f) / 0.4f) * (1.5f * h))
                     }
-                    val rx = (u * cos(rot) - v * sin(rot)).toFloat()
-                    val ry = (u * sin(rot) + v * cos(rot)).toFloat()
-                    clampPt(centerX + rx, centerY + ry)
+                    transform(u, v)
                 }
             }
             7 -> {
-                // Archetype 7: Diagonal Ascending Ribbon
-                val w = 120f
-                val h = 125f
-                { t ->
-                    val u = -w + t * 2f * w
-                    val v = -h + t * 2f * h + (sin(t * 2.0 * PI) * 35.0).toFloat()
-                    clampPt(centerX + u, centerY + v)
-                }
-            }
-            8 -> {
-                // Archetype 8: Open Hexagonal Crown (5 sides, 6th side open)
-                val rad = 125f
-                val rot = ((clampedId * 23) % 360) * (PI / 180.0)
-                val sweep = 1.60 * PI
+                // Archetype 7: Open Hexagonal Crown (5 sides open)
+                val rad = 165f
+                val sweep = 1.58 * PI
                 val secAngle = PI / 6.0
                 { t ->
-                    val angle = rot + sweep * t
+                    val angle = sweep * t
                     val ca = cos(angle).toFloat()
                     val sa = sin(angle).toFloat()
                     val phi = (angle % (2.0 * secAngle)) - secAngle
                     val r = (rad * cos(secAngle) / cos(phi).coerceAtLeast(0.001)).toFloat()
-                    clampPt(centerX + r * ca, centerY + r * sa)
+                    transform(r * ca, r * sa)
+                }
+            }
+            8 -> {
+                // Archetype 8: Smooth Superellipse Arc (distinct diamond-oval silhouette without velocity cusps)
+                val r = 165f
+                val sweep = 1.54 * PI
+                { t ->
+                    val angle = sweep * t
+                    val ca = cos(angle).toFloat()
+                    val sa = sin(angle).toFloat()
+                    val u = r * ca * (0.85f + 0.15f * (ca * ca))
+                    val v = r * sa * (0.85f + 0.15f * (sa * sa))
+                    transform(u, v)
                 }
             }
             9 -> {
-                // Archetype 9: Horseshoe Arch (Open U loop)
-                val rx = 118f
-                val ry = 128f
-                val baseAngle = PI * 0.15
-                val sweep = PI * 1.7
+                // Archetype 9: Parabolic Valley & Crest
+                val w = 155f
+                val h = 135f
                 { t ->
-                    val angle = baseAngle + sweep * t
-                    clampPt(centerX + rx * cos(angle).toFloat(), centerY + ry * sin(angle).toFloat())
+                    val u = -w + t * 2f * w
+                    val v = (h * (4f * (t - 0.5f) * (t - 0.5f) - 0.5f))
+                    transform(u, v)
                 }
             }
             10 -> {
                 // Archetype 10: Smooth S-Curve Wave
-                val w = 120f
-                val h = 125f
-                val rot = ((clampedId * 37) % 360) * (PI / 180.0)
+                val w = 155f
+                val h = 120f
                 { t ->
                     val u = -w + t * 2f * w
-                    val v = (sin(t * PI * 2.0 - PI / 2.0) * (h * 0.55)).toFloat()
-                    val rx = (u * cos(rot) - v * sin(rot)).toFloat()
-                    val ry = (u * sin(rot) + v * cos(rot)).toFloat()
-                    clampPt(centerX + rx, centerY + ry)
+                    val v = (sin(t * 2.0 * PI - PI / 2.0) * h).toFloat()
+                    transform(u, v)
+                }
+            }
+            11 -> {
+                // Archetype 11: Crescent Moon Ribbon
+                val r = 165f
+                val sweep = 1.48 * PI
+                { t ->
+                    val curR = r - (40.0 * sin(t * PI)).toFloat()
+                    val angle = sweep * t
+                    transform(curR * cos(angle).toFloat(), curR * sin(angle).toFloat())
+                }
+            }
+            12 -> {
+                // Archetype 12: Elliptical Open Horseshoe
+                val rx = 165f
+                val ry = 125f
+                val sweep = 1.56 * PI
+                { t ->
+                    val angle = sweep * t
+                    transform(rx * cos(angle).toFloat(), ry * sin(angle).toFloat())
+                }
+            }
+            13 -> {
+                // Archetype 13: DNA Wave Strand
+                val w = 130f
+                val h = 165f
+                { t ->
+                    val u = (sin(t * 2.5 * PI) * w).toFloat()
+                    val v = -h + t * 2f * h
+                    transform(u, v)
+                }
+            }
+            14 -> {
+                // Archetype 14: Nautilus Concha Spire (generous outward expansion)
+                val sweep = 1.45 * PI
+                val startR = 95f
+                val endR = 180f
+                { t ->
+                    val curR = startR + (endR - startR) * t
+                    val angle = sweep * t
+                    transform(curR * cos(angle).toFloat(), curR * sin(angle).toFloat())
+                }
+            }
+            15 -> {
+                // Archetype 15: Double Harmonic Wave
+                val w = 155f
+                { t ->
+                    val u = -w + t * 2f * w
+                    val v = (75.0 * sin(t * 3.0 * PI) + 35.0 * cos(t * 1.5 * PI)).toFloat()
+                    transform(u, v)
+                }
+            }
+            16 -> {
+                // Archetype 16: Stepped Meander Ribbon
+                val w = 155f
+                { t ->
+                    val u = -w + t * 2f * w
+                    val v = (110.0 * sin(t * 3.5 * PI) * (0.7 + 0.3 * t)).toFloat()
+                    transform(u, v)
+                }
+            }
+            17 -> {
+                // Archetype 17: Diagonal Ribbon Wave
+                val w = 145f
+                { t ->
+                    val u = -w + t * 2f * w
+                    val v = -w + t * 2f * w + (sin(t * 2.5 * PI) * 45.0).toFloat()
+                    transform(u, v)
+                }
+            }
+            18 -> {
+                // Archetype 18: Octagonal Crown Horseshoe
+                val rad = 165f
+                val sweep = 1.52 * PI
+                val secAngle = PI / 8.0
+                { t ->
+                    val angle = sweep * t
+                    val ca = cos(angle).toFloat()
+                    val sa = sin(angle).toFloat()
+                    val phi = (angle % (2.0 * secAngle)) - secAngle
+                    val r = (rad * cos(secAngle) / cos(phi).coerceAtLeast(0.001)).toFloat()
+                    transform(r * ca, r * sa)
+                }
+            }
+            19 -> {
+                // Archetype 19: Teardrop Open Loop
+                val r = 160f
+                val sweep = 1.54 * PI
+                { t ->
+                    val angle = 0.23 * PI + sweep * t
+                    val u = r * cos(angle).toFloat()
+                    val v = (r * sin(angle) * (0.75 + 0.25 * sin(angle))).toFloat()
+                    transform(u, v)
+                }
+            }
+            20 -> {
+                // Archetype 20: Trefoil Open Petal
+                val sweep = 1.45 * PI
+                { t ->
+                    val curR = (115.0 + 45.0 * cos(t * 2.4 * PI)).toFloat()
+                    val angle = sweep * t
+                    transform(curR * cos(angle).toFloat(), curR * sin(angle).toFloat())
+                }
+            }
+            21 -> {
+                // Archetype 21: Ripple Meander Track (smooth sinusoidal velocity)
+                val w = 155f
+                val h = 115f
+                { t ->
+                    val u = -w + t * 2f * w
+                    val v = (sin(t * 3.0 * PI) * h).toFloat()
+                    transform(u, v)
+                }
+            }
+            22 -> {
+                // Archetype 22: Archimedes Double-Arc Ribbon
+                val sweep = 1.52 * PI
+                { t ->
+                    val curR = (75.0 + 90.0 * sin(t * PI / 2.0)).toFloat()
+                    val angle = sweep * t
+                    transform(curR * cos(angle).toFloat(), curR * sin(angle).toFloat())
+                }
+            }
+            23 -> {
+                // Archetype 23: Cardioid Open Heart Arc
+                val sweep = 1.42 * PI
+                { t ->
+                    val angle = 0.29 * PI + sweep * t
+                    val curR = (120.0 * (1.0 - 0.45 * cos(angle))).toFloat()
+                    transform(curR * cos(angle).toFloat(), curR * sin(angle).toFloat())
                 }
             }
             else -> {
-                // Archetype 11: Crescent Ribbon
-                val r = 125f
-                val baseAngle = ((clampedId * 43) % 360) * (PI / 180.0)
-                val span = 1.45 * PI
+                // Archetype 24: Grand Omega Arch (Level 100 Finale)
                 { t ->
-                    val angle = baseAngle + span * t
-                    val curR = r - (20.0 * sin(t * PI)).toFloat()
-                    clampPt(centerX + curR * cos(angle).toFloat(), centerY + curR * sin(angle).toFloat())
+                    val (u, v) = when {
+                        t <= 0.2f -> Pair(-160f + (t / 0.2f) * 60f, 130f)
+                        t <= 0.8f -> {
+                            val subT = (t - 0.2f) / 0.6f
+                            val angle = PI * 1.15 - subT * (PI * 1.30)
+                            Pair(120f * cos(angle).toFloat(), 15f - 120f * sin(angle).toFloat())
+                        }
+                        else -> Pair(100f + ((t - 0.8f) / 0.2f) * 60f, 130f)
+                    }
+                    transform(u, v)
                 }
             }
         }
@@ -451,10 +617,10 @@ object LevelCatalog {
         }
 
         val hintOrder = (1..nodeCount).toList()
-        val parEchoes = (nodeCount / 3).coerceIn(1, 4)
+        val parEchoes = (nodeCount / 4).coerceIn(1, 8)
 
         val description = if (clampedId == 100) {
-            "GRAND FINALE: Complete the 100th and final puzzle of the ECHO universe to claim total mastery!"
+            "GRAND FINALE: Connect all 36 nodes across the Omega Arch to conquer the ECHO universe!"
         } else {
             "Level $clampedId: Connect all $nodeCount nodes with a single continuous stroke without colliding with echoes!"
         }

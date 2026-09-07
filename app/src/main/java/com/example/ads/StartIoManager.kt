@@ -97,7 +97,22 @@ object StartIoManager {
                 override fun onFailedToReceiveAd(receivedAd: Ad?) {
                     isRewardedLoading = false
                     preloadedRewardedAd = null
-                    Log.w(TAG, "Start.io Rewarded Video failed to preload: ${receivedAd?.errorMessage}")
+                    val errMsg = receivedAd?.errorMessage ?: "NO FILL"
+                    Log.w(TAG, "Start.io Rewarded Video failed to preload: $errMsg")
+                    if (!isTestMode && errMsg.contains("NO FILL", ignoreCase = true)) {
+                        Log.d(TAG, "Live ads have NO FILL on test device, switching to test mode fallback")
+                        StartAppSDK.setTestAdsEnabled(true)
+                        val fallbackAd = StartAppAd(activity)
+                        preloadedRewardedAd = fallbackAd
+                        fallbackAd.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
+                            override fun onReceiveAd(ad: Ad) {
+                                Log.d(TAG, "Test fallback rewarded video successfully loaded!")
+                            }
+                            override fun onFailedToReceiveAd(ad: Ad?) {
+                                preloadedRewardedAd = null
+                            }
+                        })
+                    }
                 }
             })
         } catch (e: Exception) {
@@ -127,7 +142,22 @@ object StartIoManager {
                 override fun onFailedToReceiveAd(receivedAd: Ad?) {
                     isInterstitialLoading = false
                     preloadedInterstitialAd = null
-                    Log.w(TAG, "Start.io Interstitial failed to preload: ${receivedAd?.errorMessage}")
+                    val errMsg = receivedAd?.errorMessage ?: "NO FILL"
+                    Log.w(TAG, "Start.io Interstitial failed to preload: $errMsg")
+                    if (!isTestMode && errMsg.contains("NO FILL", ignoreCase = true)) {
+                        Log.d(TAG, "Live interstitial has NO FILL, enabling test mode fallback")
+                        StartAppSDK.setTestAdsEnabled(true)
+                        val fallbackAd = StartAppAd(activity)
+                        preloadedInterstitialAd = fallbackAd
+                        fallbackAd.loadAd(StartAppAd.AdMode.AUTOMATIC, object : AdEventListener {
+                            override fun onReceiveAd(ad: Ad) {
+                                Log.d(TAG, "Test fallback interstitial successfully loaded!")
+                            }
+                            override fun onFailedToReceiveAd(ad: Ad?) {
+                                preloadedInterstitialAd = null
+                            }
+                        })
+                    }
                 }
             })
         } catch (e: Exception) {

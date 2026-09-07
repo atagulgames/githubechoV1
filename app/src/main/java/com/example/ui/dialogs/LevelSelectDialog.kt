@@ -240,7 +240,7 @@ fun LevelSelectDialog(
                 ) {
                     items(displayedLevels, key = { it.id }) { levelEntity ->
                         val index = levelEntity.id - 1
-                        val isCompleted = levelEntity.isCompleted || completedLevels.contains(levelEntity.id)
+                        val isCompleted = levelEntity.isCompleted || completedLevels.contains(levelEntity.id) || completedLevels.contains(index)
                         val isCurrent = index == currentLevelIndex
                         val isUnlocked = levelEntity.isUnlocked || index <= currentLevelIndex || isCompleted
 

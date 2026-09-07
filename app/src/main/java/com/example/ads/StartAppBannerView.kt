@@ -1,5 +1,8 @@
 package com.example.ads
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,7 +24,16 @@ fun StartAppBannerView(
             .fillMaxWidth()
             .height(50.dp),
         factory = { context ->
-            Banner(context, object : BannerListener {
+            var act: Activity? = context as? Activity
+            if (act == null && context is ContextWrapper) {
+                var cur: Context? = context
+                while (cur is ContextWrapper && cur !is Activity) {
+                    cur = cur.baseContext
+                }
+                act = cur as? Activity
+            }
+            val targetContext = act ?: context
+            Banner(targetContext, object : BannerListener {
                 override fun onReceiveAd(view: View) {
                     onAdLoaded?.invoke()
                 }
@@ -35,7 +47,15 @@ fun StartAppBannerView(
                 }
 
                 override fun onClick(view: View) {}
-            })
+            }).apply {
+                id = View.generateViewId()
+            }
+        },
+        onRelease = { banner ->
+            try {
+                banner.hideBanner()
+            } catch (_: Exception) {
+            }
         }
     )
 }

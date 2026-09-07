@@ -394,7 +394,7 @@ class EchoPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_LAST_DAILY, value).apply()
 
     var isTestAdsEnabled: Boolean
-        get() = prefs.getBoolean(KEY_TEST_ADS, false)
+        get() = prefs.getBoolean(KEY_TEST_ADS, com.example.BuildConfig.DEBUG)
         set(value) = prefs.edit().putBoolean(KEY_TEST_ADS, value).apply()
 
     var isDarkTheme: Boolean

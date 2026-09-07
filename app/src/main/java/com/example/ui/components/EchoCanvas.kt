@@ -562,7 +562,8 @@ private fun DrawScope.drawNodes(
     scale: Float,
     textPaint: android.graphics.Paint
 ) {
-    val baseRadius = 20f * (scale / 1.5f).coerceAtLeast(1f)
+    val nodeDensityFactor = if (nodes.size >= 28) 0.65f else if (nodes.size >= 16) 0.82f else 1.0f
+    val baseRadius = 20f * (scale / 1.5f).coerceAtLeast(1f) * nodeDensityFactor
 
     for (node in nodes) {
         val pos = toScreen(node.toPoint())
