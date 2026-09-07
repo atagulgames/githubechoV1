@@ -54,10 +54,11 @@ fun EchoGameScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Handle system back button to return to Main Menu from game (disabled during Intro and Login)
+    // Handle system back button to return to Main Menu from game (disabled during Intro, Legal Consent and Login)
     BackHandler(
         enabled = state.screenState != ScreenState.MAIN_MENU &&
                 state.screenState != ScreenState.INTRO &&
+                state.screenState != ScreenState.LEGAL_CONSENT &&
                 state.screenState != ScreenState.LOGIN
     ) {
         viewModel.returnToMainMenu()
@@ -79,6 +80,19 @@ fun EchoGameScreen(
                     // Direct intro.mp4 video playback as specified by user
                     IntroVideoScreen(
                         onIntroFinished = { viewModel.finishIntro() }
+                    )
+                }
+
+                ScreenState.LEGAL_CONSENT -> {
+                    // First intro -> then user agreement acceptance
+                    val activity = context as? Activity
+                    com.example.ui.dialogs.LegalConsentScreen(
+                        onAccept = {
+                            viewModel.acceptKvkkConsent()
+                        },
+                        onDecline = {
+                            activity?.finishAffinity()
+                        }
                     )
                 }
 
@@ -392,14 +406,16 @@ fun EchoGameScreen(
                 )
             }
 
-            // 17. Zorunlu Yasal Bilgilendirme, KVKK, Epilepsi Uyarısı ve Sorumluluk Reddi (İntrodan Hemen Sonra Gösterilir)
-            if (!state.isKvkkConsentAccepted && state.screenState != ScreenState.INTRO) {
+            // 17. Internet & Ad Blocker Gatekeeper Overlay
+            if (state.isAdBlockerDetected) {
                 val context = LocalContext.current
-                com.example.ui.dialogs.LegalConsentDialog(
-                    onAccept = {
-                        viewModel.acceptKvkkConsent()
-                    },
-                    onDecline = {
+                com.example.ui.dialogs.AdBlockerWarningOverlay(
+                    title = if (state.adBlockerTitle.isNotBlank()) state.adBlockerTitle else "Reklamlar ve İnternet Gerekli",
+                    subtitle = if (state.adBlockerSubtitle.isNotBlank()) state.adBlockerSubtitle else "Uygulama çalıştırılamıyor",
+                    details = state.adBlockerDetails,
+                    isChecking = state.isCheckingAdBlocker,
+                    onRecheck = { viewModel.checkInternetAndAdHealth() },
+                    onExitApp = {
                         val activity = context as? Activity
                         activity?.finishAffinity()
                     }

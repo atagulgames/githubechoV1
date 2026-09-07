@@ -228,82 +228,101 @@ fun EchoTopHUD(
                                 text = if (isCompact) "${state.echoCountForLevel}" else "Yankı: ${state.echoCountForLevel}",
                                 fontWeight = FontWeight.Bold,
                                 color = if (state.echoCountForLevel > 0) Color(0xFFE11D48) else textPrimary,
-                                fontSize = if (isCompact) 11.sp else 13.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Subtitle & Mechanic Info Pill
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp, start = 4.dp, end = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = state.level.title,
-                        color = textSecondary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    if (state.currentCombo > 0) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFEF4444).copy(alpha = 0.15f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "⚡ ${state.currentCombo}x Kombo",
-                                color = Color(0xFFEF4444),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = if (isCompact) 11.sp else 13.sp,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (state.level.mechanicType != "STANDARD") {
-                        val badgeText = when (state.level.mechanicType) {
-                            "DECAYING" -> "⏱ Zaman Ayarlı"
-                            "LOCK_KEY" -> "🔑 Kilit & Anahtar"
-                            "GHOST" -> "👻 Hayalet Yankı"
-                            "ONE_WAY" -> "➔ Yönlü Kenar"
-                            else -> state.level.mechanicType
-                        }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Subtitle & Mechanic Info Pill - INSIDE Column to prevent any overlap
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
                         Text(
-                            text = badgeText,
-                            color = Color(0xFF0284C7),
-                            fontSize = 11.sp,
+                            text = state.level.title,
+                            color = textSecondary,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        if (state.currentCombo > 0) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFEF4444).copy(alpha = 0.15f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "⚡ ${state.currentCombo}x Kombo",
+                                    color = Color(0xFFEF4444),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFF59E0B),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = "Hedef: ${state.level.parEchoes}",
-                        color = textSecondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 6.dp)
+                    ) {
+                        if (state.level.mechanicType != "STANDARD") {
+                            val badgeText = when (state.level.mechanicType) {
+                                "DECAYING" -> "⏱ Zaman Ayarlı"
+                                "LOCK_KEY" -> "🔑 Kilit & Anahtar"
+                                "GHOST" -> "👻 Hayalet Yankı"
+                                "ONE_WAY" -> "➔ Yönlü Kenar"
+                                else -> state.level.mechanicType
+                            }
+                            Text(
+                                text = badgeText,
+                                color = Color(0xFF0284C7),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = "Hedef: ${state.level.parEchoes}",
+                            color = textSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
             }
         }
@@ -361,6 +380,7 @@ fun EchoBottomHUD(
                             .border(1.dp, if (state.echoBreakers > 0) Color(0xFFFED7AA) else borderColor, RoundedCornerShape(12.dp))
                             .testTag("echo_breaker_button"),
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = if (state.echoBreakers > 0) (if (state.isDarkTheme) Color(0xFF431407) else Color(0xFFFFF7ED)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
                             contentColor = Color(0xFFF97316)
@@ -371,12 +391,13 @@ fun EchoBottomHUD(
                             contentDescription = "Matkap Lazeri",
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = "Matkap (${state.echoBreakers})",
                             fontSize = if (isCompact) 11.sp else 12.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -394,6 +415,7 @@ fun EchoBottomHUD(
                             )
                             .testTag("echo_shrinker_button"),
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = if (state.isEchoShrinkerActive) (if (state.isDarkTheme) Color(0xFF064E3B) else Color(0xFFDCFCE7)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
                             contentColor = if (state.isEchoShrinkerActive) Color(0xFF22C55E) else textSecondary
@@ -404,12 +426,13 @@ fun EchoBottomHUD(
                             contentDescription = "Esnek Mod",
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = if (state.isEchoShrinkerActive) "🌟 Esnek Aktif" else "🌟 Esnek",
                             fontSize = if (isCompact) 10.sp else 11.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -431,6 +454,7 @@ fun EchoBottomHUD(
                             .height(btnHeight)
                             .testTag("reset_button"),
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = textPrimary
                         ),
@@ -447,6 +471,7 @@ fun EchoBottomHUD(
                             fontSize = if (isCompact) 11.sp else 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -464,6 +489,7 @@ fun EchoBottomHUD(
                             )
                             .testTag("clear_echoes_button"),
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = if (state.echoes.isNotEmpty()) (if (state.isDarkTheme) Color(0xFF4C0519) else Color(0xFFFFF1F2)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
                             contentColor = if (state.echoes.isNotEmpty()) Color(0xFFE11D48) else textSecondary
@@ -480,6 +506,7 @@ fun EchoBottomHUD(
                             fontSize = if (isCompact) 11.sp else 12.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -492,6 +519,7 @@ fun EchoBottomHUD(
                             .height(btnHeight)
                             .testTag("hint_button"),
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (state.isHintActive) Color(0xFFF59E0B) else Color(0xFF0284C7),
                             contentColor = Color.White
@@ -508,6 +536,7 @@ fun EchoBottomHUD(
                             fontSize = if (isCompact) 10.sp else 11.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }

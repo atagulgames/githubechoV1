@@ -75,6 +75,17 @@ object AdBlockDetector {
         "com.vrem.adblock"
     )
 
+    fun hasNetworkCapability(context: Context): Boolean {
+        return try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+            val network = cm.activeNetwork ?: return false
+            val caps = cm.getNetworkCapabilities(network) ?: return false
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /**
      * Fast, comprehensive health check:
      * Dispatches parallel probes and completes in ~150-300ms.
@@ -95,31 +106,44 @@ object AdBlockDetector {
                 )
             }
 
-            // 3. Network health check
+            // 3. Ad domains resolution & connectivity check
+            val adBlockingResult = checkAdDomainBlockingParallel()
+            if (adBlockingResult != null) {
+                return@withContext adBlockingResult
+            }
+
             AdHealthResult.Healthy
         } catch (e: Exception) {
             Log.e(TAG, "Error checking ad health status", e)
-            AdHealthResult.Healthy
+            if (!hasNetworkCapability(context)) {
+                AdHealthResult.NoInternet()
+            } else {
+                AdHealthResult.Healthy
+            }
         }
     }
 
     suspend fun isAdBlockerActive(context: Context): Boolean = withContext(Dispatchers.IO) {
-        false
-    }
-
-    private fun hasNetworkCapability(context: Context): Boolean {
-        return try {
-            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return true
-            val network = cm.activeNetwork ?: return false
-            val caps = cm.getNetworkCapabilities(network) ?: return false
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        } catch (_: Exception) {
-            true
-        }
+        !checkAdHealth(context).isHealthy
     }
 
     private fun checkPrivateDnsSettings(context: Context): Boolean {
-        return false
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val mode = Settings.Global.getString(context.contentResolver, "private_dns_mode")
+                val specifier = Settings.Global.getString(context.contentResolver, "private_dns_specifier") ?: ""
+                val lower = specifier.lowercase()
+                (mode == "hostname" || mode == "custom") && (
+                    lower.contains("adguard") || lower.contains("adblock") ||
+                    lower.contains("dnsforge") || lower.contains("nextdns") ||
+                    lower.contains("rethinkdns")
+                )
+            } else {
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun checkHostsFile(): Boolean {

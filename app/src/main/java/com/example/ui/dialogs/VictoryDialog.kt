@@ -354,6 +354,7 @@ fun VictoryDialog(
                             .height(48.dp)
                             .testTag("victory_2x_reward_button"),
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         border = BorderStroke(1.5.dp, Color(0xFF9333EA)),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = Color(0xFF9333EA)
@@ -364,11 +365,14 @@ fun VictoryDialog(
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "2X Ödül Kazan (+2 Jeton, +1 Matkap)",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            text = "2X Ödül (+2 Jeton, +1 Matkap)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -384,6 +388,7 @@ fun VictoryDialog(
                         .shadow(4.dp, RoundedCornerShape(14.dp))
                         .testTag("victory_next_level_button"),
                     shape = RoundedCornerShape(14.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF0284C7),
                         contentColor = Color.White
@@ -398,11 +403,14 @@ fun VictoryDialog(
                     Text(
                         text = "Sonraki Bölüm",
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Option B: Tekrar Oyna
                 OutlinedButton(
@@ -412,6 +420,7 @@ fun VictoryDialog(
                         .height(48.dp)
                         .testTag("victory_replay_button"),
                     shape = RoundedCornerShape(14.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFF334155)
                     ),
@@ -426,7 +435,10 @@ fun VictoryDialog(
                     Text(
                         text = "Tekrar Oyna",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }

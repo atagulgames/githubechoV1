@@ -284,9 +284,11 @@ object StartIoManager {
                     override fun adClicked(ad: Ad) {}
 
                     override fun adNotDisplayed(ad: Ad) {
-                        Log.w(TAG, "Preloaded video adNotDisplayed")
-                        grantRewardOnce()
-                        activity.runOnUiThread { onAdClosed() }
+                        Log.w(TAG, "Preloaded video adNotDisplayed. No reward granted.")
+                        activity.runOnUiThread {
+                            onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
+                            onAdClosed()
+                        }
                         preloadAds(activity)
                     }
                 })
@@ -314,8 +316,11 @@ object StartIoManager {
                     override fun adClicked(ad: Ad) {}
 
                     override fun adNotDisplayed(ad: Ad) {
-                        grantRewardOnce()
-                        activity.runOnUiThread { onAdClosed() }
+                        Log.w(TAG, "Preloaded interstitial adNotDisplayed. No reward granted.")
+                        activity.runOnUiThread {
+                            onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
+                            onAdClosed()
+                        }
                         preloadAds(activity)
                     }
                 })
@@ -371,8 +376,11 @@ object StartIoManager {
                     override fun adClicked(ad: Ad) {}
 
                     override fun adNotDisplayed(ad: Ad) {
-                        grantReward()
-                        activity.runOnUiThread { onAdClosed() }
+                        Log.w(TAG, "Dynamic video adNotDisplayed. No reward granted.")
+                        activity.runOnUiThread {
+                            onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
+                            onAdClosed()
+                        }
                         preloadAds(activity)
                     }
                 })
@@ -418,24 +426,30 @@ object StartIoManager {
                     override fun adClicked(ad: Ad) {}
 
                     override fun adNotDisplayed(ad: Ad) {
-                        grantReward()
-                        activity.runOnUiThread { onAdClosed() }
+                        Log.w(TAG, "Fallback adNotDisplayed. No reward granted.")
+                        activity.runOnUiThread {
+                            onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
+                            onAdClosed()
+                        }
                         preloadAds(activity)
                     }
                 })
 
                 if (!displayed) {
-                    grantReward()
-                    activity.runOnUiThread { onAdClosed() }
+                    Log.w(TAG, "Fallback ad was not displayed. No reward granted.")
+                    activity.runOnUiThread {
+                        onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
+                        onAdClosed()
+                    }
                     preloadAds(activity)
                 }
             }
 
             override fun onFailedToReceiveAd(ad: Ad?) {
                 val errMsg = ad?.errorMessage ?: "NO FILL"
-                Log.w(TAG, "Start.io live ad returned $errMsg. Granting reward fallback so gameplay is never blocked.")
+                Log.w(TAG, "Start.io live ad returned $errMsg. No reward granted because ad could not be shown.")
                 activity.runOnUiThread {
-                    grantReward()
+                    onAdUnavailable("Reklam yüklenemedi. Ödül verilemedi.")
                     onAdClosed()
                 }
                 preloadAds(activity)

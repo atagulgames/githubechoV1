@@ -6,19 +6,24 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Lock
@@ -44,8 +49,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.LevelEntity
 
+/**
+ * Responsive Level Selection Menu using Jetpack Compose.
+ * Displays all 100 levels with clear visual states:
+ * - Current active level
+ * - Completed with star ratings
+ * - Unlocked and playable
+ * - Locked with padlock icon
+ * Dynamically scales to fit compact, medium, and expanded screens without overflowing.
+ */
 @Composable
 fun LevelSelectDialog(
     levels: List<LevelEntity>,
@@ -55,8 +70,13 @@ fun LevelSelectDialog(
     onSelectLevel: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedTier by remember { mutableIntStateOf((currentLevelIndex / 10).coerceIn(0, 9)) }
-    val tierRanges = listOf(
+    // 0 = All 100 levels, 1 = Tier 1 (1-10), ..., 10 = Tier 10 (91-100)
+    var selectedFilterIndex by remember {
+        mutableIntStateOf(((currentLevelIndex / 10) + 1).coerceIn(1, 10))
+    }
+
+    val filterOptions = listOf(
+        "Tümü (100)",
         "1-10 Harmonik",
         "11-20 Yönlü",
         "21-30 Kilit",
@@ -69,23 +89,42 @@ fun LevelSelectDialog(
         "91-100 OMEGA"
     )
 
-    val currentTierLevels = remember(levels, selectedTier) {
-        val startId = selectedTier * 10 + 1
-        val endId = (selectedTier + 1) * 10
-        levels.filter { it.id in startId..endId }
+    val displayedLevels = remember(levels, selectedFilterIndex) {
+        if (selectedFilterIndex == 0) {
+            levels
+        } else {
+            val tierIdx = selectedFilterIndex - 1
+            val startId = tierIdx * 10 + 1
+            val endId = (tierIdx + 1) * 10
+            levels.filter { it.id in startId..endId }
+        }
     }
 
-    val dialogBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
+    val totalStars = remember(levels) {
+        levels.sumOf { it.stars }
+    }
+
+    val completedCount = remember(levels, completedLevels) {
+        levels.count { it.isCompleted || completedLevels.contains(it.id) }
+    }
+
+    val dialogBg = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+    val cardBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
     val textPrimary = if (isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
     val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
     val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
-    val tabContainerBg = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9)
+    val tabContainerBg = if (isDarkTheme) Color(0xFF0B1120) else Color(0xFFEDF2F7)
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(16.dp, RoundedCornerShape(24.dp))
+                .fillMaxWidth(0.94f)
+                .widthIn(max = 620.dp)
+                .fillMaxHeight(0.88f)
+                .shadow(24.dp, RoundedCornerShape(24.dp))
                 .testTag("level_select_dialog"),
             shape = RoundedCornerShape(24.dp),
             color = dialogBg,
@@ -93,10 +132,10 @@ fun LevelSelectDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                // Header
+                // Header Bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -105,7 +144,7 @@ fun LevelSelectDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(if (isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)),
                             contentAlignment = Alignment.Center
@@ -114,22 +153,40 @@ fun LevelSelectDialog(
                                 imageVector = Icons.Default.GridOn,
                                 contentDescription = null,
                                 tint = Color(0xFF0284C7),
-                                modifier = Modifier.size(19.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "100 Seviye",
+                                text = "100 Seviye Menüsü",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
                             )
-                            Text(
-                                text = "Tamamlanan: ${completedLevels.size}/100",
-                                fontSize = 12.sp,
-                                color = textSecondary
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Tamamlanan: $completedCount/100",
+                                    fontSize = 12.sp,
+                                    color = textSecondary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = Color(0xFFF59E0B),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = "$totalStars",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFF59E0B)
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -145,74 +202,79 @@ fun LevelSelectDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Tier tabs
+                // Filter Tabs
                 ScrollableTabRow(
-                    selectedTabIndex = selectedTier,
+                    selectedTabIndex = selectedFilterIndex,
                     containerColor = tabContainerBg,
                     contentColor = Color(0xFF0284C7),
-                    edgePadding = 8.dp,
+                    edgePadding = 6.dp,
                     modifier = Modifier.clip(RoundedCornerShape(12.dp))
                 ) {
-                    tierRanges.forEachIndexed { idx, label ->
+                    filterOptions.forEachIndexed { idx, label ->
                         Tab(
-                            selected = selectedTier == idx,
-                            onClick = { selectedTier = idx },
+                            selected = selectedFilterIndex == idx,
+                            onClick = { selectedFilterIndex = idx },
                             text = {
                                 Text(
                                     text = label,
                                     fontSize = 12.sp,
-                                    fontWeight = if (selectedTier == idx) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selectedTier == idx) Color(0xFF0284C7) else textSecondary
+                                    fontWeight = if (selectedFilterIndex == idx) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedFilterIndex == idx) Color(0xFF0284C7) else textSecondary
                                 )
                             }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Grid of 10 levels for selected tier
+                // Responsive Grid of Levels with locked/unlocked states
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
+                    columns = GridCells.Adaptive(minSize = 56.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.height(160.dp)
+                    contentPadding = PaddingValues(bottom = 8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    items(currentTierLevels) { levelEntity ->
+                    items(displayedLevels, key = { it.id }) { levelEntity ->
                         val index = levelEntity.id - 1
-                        val isCompleted = levelEntity.isCompleted
+                        val isCompleted = levelEntity.isCompleted || completedLevels.contains(levelEntity.id)
                         val isCurrent = index == currentLevelIndex
                         val isUnlocked = levelEntity.isUnlocked || index <= currentLevelIndex || isCompleted
 
-                        val bgColor = when {
+                        val itemBg = when {
                             isCurrent -> Color(0xFF0284C7)
                             isCompleted -> if (isDarkTheme) Color(0xFF064E3B) else Color(0xFFF0FDF4)
-                            isUnlocked -> if (isDarkTheme) Color(0xFF334155) else Color.White
-                            else -> if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+                            isUnlocked -> cardBg
+                            else -> if (isDarkTheme) Color(0xFF0B1120) else Color(0xFFEDF2F7)
                         }
 
                         val itemContentColor = when {
                             isCurrent -> Color.White
                             isCompleted -> if (isDarkTheme) Color(0xFF4ADE80) else Color(0xFF15803D)
                             isUnlocked -> textPrimary
-                            else -> textSecondary
+                            else -> textSecondary.copy(alpha = 0.5f)
                         }
 
                         val itemBorderColor = when {
-                            isCurrent -> Color(0xFF0284C7)
-                            isCompleted -> if (isDarkTheme) Color(0xFF059669) else Color(0xFFBBF7D0)
+                            isCurrent -> Color(0xFF38BDF8)
+                            isCompleted -> if (isDarkTheme) Color(0xFF059669) else Color(0xFF86EFAC)
                             isUnlocked -> borderColor
-                            else -> borderColor
+                            else -> borderColor.copy(alpha = 0.5f)
                         }
 
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(bgColor)
-                                .border(1.dp, itemBorderColor, RoundedCornerShape(12.dp))
+                                .size(58.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(itemBg)
+                                .border(
+                                    width = if (isCurrent) 2.dp else 1.dp,
+                                    color = itemBorderColor,
+                                    shape = RoundedCornerShape(14.dp)
+                                )
                                 .clickable(enabled = isUnlocked) {
                                     onSelectLevel(index)
                                 }
@@ -220,12 +282,23 @@ fun LevelSelectDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             if (!isUnlocked) {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = "Kilitli",
-                                    tint = itemContentColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Kilitli",
+                                        tint = itemContentColor,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        text = "${levelEntity.id}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = itemContentColor
+                                    )
+                                }
                             } else {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -233,11 +306,18 @@ fun LevelSelectDialog(
                                 ) {
                                     Text(
                                         text = "${levelEntity.id}",
-                                        fontSize = 14.sp,
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = itemContentColor
                                     )
-                                    if (isCompleted) {
+                                    if (isCurrent) {
+                                        Text(
+                                            text = "AKTİF",
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White.copy(alpha = 0.9f)
+                                        )
+                                    } else if (isCompleted) {
                                         Row(
                                             modifier = Modifier.padding(top = 1.dp),
                                             horizontalArrangement = Arrangement.Center
@@ -257,7 +337,47 @@ fun LevelSelectDialog(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Legend / Explanation Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(tabContainerBg)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LegendItem(color = Color(0xFF0284C7), label = "Aktif", isDark = isDarkTheme)
+                    LegendItem(color = Color(0xFF059669), label = "Tamamlandı", isDark = isDarkTheme)
+                    LegendItem(color = if (isDarkTheme) Color.White else Color(0xFF0F172A), label = "Açık", isDark = isDarkTheme)
+                    LegendItem(color = textSecondary.copy(alpha = 0.6f), label = "Kilitli", isDark = isDarkTheme)
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun LegendItem(
+    color: Color,
+    label: String,
+    isDark: Boolean
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+        )
     }
 }

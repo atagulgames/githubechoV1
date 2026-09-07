@@ -98,8 +98,8 @@ fun EchoCanvas(
         val maxY = nodes.maxOfOrNull { it.y } ?: 340f
 
         // Generous margins so outer node rings, numbers, and "KARAKTER" label never clip
-        val padX = 42f
-        val padY = 56f
+        val padX = 52f
+        val padY = 64f
 
         val contentW = (maxX - minX + padX * 2f).coerceAtLeast(160f)
         val contentH = (maxY - minY + padY * 2f).coerceAtLeast(160f)
@@ -658,7 +658,9 @@ private fun DrawScope.drawNodes(
 
             NodeType.GATE -> {
                 // Gate Node: Locked Red border until key gathered
-                val isUnlocked = collectedKeyIds.contains(node.keyForGateId)
+                val isUnlocked = collectedKeyIds.contains(node.keyForGateId) ||
+                        collectedKeyIds.contains(node.id) ||
+                        (node.keyForGateId == -1 && collectedKeyIds.isNotEmpty())
                 val gateColor = if (isUnlocked) ColorGateUnlocked else ColorGateLocked
 
                 drawCircle(
@@ -745,7 +747,12 @@ private fun DrawScope.drawNodes(
             isVisited -> android.graphics.Color.WHITE
             isCharacterStart -> android.graphics.Color.parseColor("#0284C7")
             node.type == NodeType.KEY -> android.graphics.Color.parseColor("#D97706")
-            node.type == NodeType.GATE -> if (collectedKeyIds.contains(node.keyForGateId)) android.graphics.Color.parseColor("#059669") else android.graphics.Color.parseColor("#E11D48")
+            node.type == NodeType.GATE -> {
+                val isUnlocked = collectedKeyIds.contains(node.keyForGateId) ||
+                        collectedKeyIds.contains(node.id) ||
+                        (node.keyForGateId == -1 && collectedKeyIds.isNotEmpty())
+                if (isUnlocked) android.graphics.Color.parseColor("#059669") else android.graphics.Color.parseColor("#E11D48")
+            }
             else -> if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#0F172A")
         }
         textPaint.color = textColor

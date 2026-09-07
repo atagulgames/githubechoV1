@@ -2,6 +2,10 @@ package com.example.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -9,6 +13,7 @@ import android.os.VibratorManager
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ads.AdBlockDetector
 import com.example.ads.StartIoManager
 import com.example.audio.HarmonicAudioEngine
 import com.example.data.EchoPreferences
@@ -207,6 +212,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
 
         loadSavedPreferences()
+        checkInternetAndAdHealth()
+        registerNetworkCallback()
     }
 
     private fun loadSavedPreferences() {
@@ -264,6 +271,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
             return
         }
+        if (!AdBlockDetector.hasNetworkCapability(getApplication())) {
+            _uiState.update {
+                it.copy(
+                    isAdBlockerDetected = true,
+                    adBlockerTitle = "İnternet Bağlantısı Yok",
+                    adBlockerSubtitle = "Reklamlar çalıştırılamıyor",
+                    adBlockerDetails = "ECHO tamamen ücretsiz bir oyundur ve reklam servisleri ile desteklenmektedir. Oyuna devam etmek için lütfen internet bağlantınızı (Wi-Fi veya Mobil Veri) açın."
+                )
+            }
+            return
+        }
         val targetIdx = (levelIndex ?: _uiState.value.currentLevelIndex).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
         viewModelScope.launch {
             loadAndStartLevel(targetIdx)
@@ -311,6 +329,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
             return
         }
+        if (!AdBlockDetector.hasNetworkCapability(getApplication())) {
+            _uiState.update {
+                it.copy(
+                    isAdBlockerDetected = true,
+                    adBlockerTitle = "İnternet Bağlantısı Yok",
+                    adBlockerSubtitle = "Reklamlar çalıştırılamıyor",
+                    adBlockerDetails = "Günün bulmacasını oynamak için aktif bir internet bağlantısı gerekmektedir. Lütfen internetinizi açın."
+                )
+            }
+            return
+        }
         val todaySeed = (SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date()).hashCode() and 0x7FFFFFFF) % 250
         viewModelScope.launch {
             loadAndStartDailyChallenge(todaySeed)
@@ -346,11 +375,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     /**
      * User requested opening flow:
-     * intro.mp4 -> Login Screen -> Authentication Verification -> Main Menu
+     * İlk intro -> Sonra kullanıcı sözleşme kabulü -> Sonra Giriş / Ana Menü
+     * İntro bitmeden ve sözleşme onaylanmadan fon müziği çalmaz.
      */
     fun finishIntro() {
-        HarmonicAudioEngine.onIntroFinished()
-        _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+        HarmonicAudioEngine.setIntroActive(false)
+        if (!prefs.isKvkkConsentAccepted) {
+            _uiState.update { it.copy(screenState = ScreenState.LEGAL_CONSENT) }
+        } else {
+            HarmonicAudioEngine.startBgm()
+            if (_uiState.value.isAuthenticated || (prefs.rememberMe && prefs.authenticatedUsername.isNotEmpty())) {
+                _uiState.update { it.copy(screenState = ScreenState.MAIN_MENU, isAuthenticated = true) }
+            } else {
+                _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+            }
+        }
     }
 
     /**
@@ -491,17 +530,23 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
 
             // Check Lock & Key if starting at gate
-            if (hitNode.type == NodeType.GATE && !state.collectedKeyIds.contains(hitNode.keyForGateId)) {
-                showToast("Bu kapı kilitli! Önce anahtarı topla.")
-                triggerCollisionFeedback()
-                return
+            if (hitNode.type == NodeType.GATE) {
+                val isUnlocked = state.collectedKeyIds.contains(hitNode.keyForGateId) ||
+                        state.collectedKeyIds.contains(hitNode.id) ||
+                        (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
+                if (!isUnlocked) {
+                    showToast("Bu kapı kilitli! Önce anahtarı topla.")
+                    triggerCollisionFeedback()
+                    return
+                }
             }
 
             HarmonicAudioEngine.playNodeTone(0)
             triggerHapticClick()
 
             val newCollectedKeys = if (hitNode.type == NodeType.KEY) {
-                state.collectedKeyIds + hitNode.keyForGateId
+                showToast("Anahtar toplandı! Kilitli kapı açıldı.")
+                state.collectedKeyIds + hitNode.keyForGateId + hitNode.id
             } else state.collectedKeyIds
 
             _uiState.update {
@@ -603,15 +648,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
 
             // Lock & Key Gate check:
-            if (hitNode.type == NodeType.GATE && !state.collectedKeyIds.contains(hitNode.keyForGateId)) {
-                showToast("Kapı kilitli! Önce anahtar düğümünü bağla.")
-                triggerCollisionFailure("Kilitli kapıya çarptın!")
-                return
+            if (hitNode.type == NodeType.GATE) {
+                val isUnlocked = state.collectedKeyIds.contains(hitNode.keyForGateId) ||
+                        state.collectedKeyIds.contains(hitNode.id) ||
+                        (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
+                if (!isUnlocked) {
+                    showToast("Kapı kilitli! Önce anahtar düğümünü bağla.")
+                    triggerCollisionFailure("Kilitli kapıya çarptın!")
+                    return
+                }
             }
 
             // Collect key if this node is a key
             val updatedKeys = if (hitNode.type == NodeType.KEY) {
-                state.collectedKeyIds + hitNode.keyForGateId
+                showToast("Anahtar toplandı! Kilitli kapı açıldı.")
+                state.collectedKeyIds + hitNode.keyForGateId + hitNode.id
             } else state.collectedKeyIds
 
             val finishedSegment = Segment(lastNode.toPoint(), hitNode.toPoint(), lastVisitedId, hitNode.id)
@@ -1288,34 +1339,83 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isRewardedSimulating = false
             )
         }
-        grantRewardedReward(type)
-        showToast("🎁 Reklam servisi yanıt vermediği için ödülünüz otomatik tanımlandı!")
+        // Strict policy: "sadece rewarda eğer gerçek reklam gösterilmediyse ödülü vermesin"
+        showToast("Reklam yüklenemediği veya tamamlanmadığı için ödül verilemedi.")
     }
 
     fun shouldShowInterstitialOnNextLevel(): Boolean {
-        if (_uiState.value.isAdFree) return false
-        val currentLvl = _uiState.value.level.levelId
+        // User rule: "sonraki bölüm butonunna basınca reklam çıkacak sadece oyunun ortasında deyil"
+        return !_uiState.value.isAdFree
+    }
 
-        // Rule: Level 1 completed -> No ad ("1 bölüm geçsin sonra ilk başta reklamlarala sıkma")
-        if (currentLvl <= 1) {
-            prefs.levelsSinceLastInterstitial = 1
-            return false
+    fun checkInternetAndAdHealth(silent: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCheckingAdBlocker = true) }
+            val healthResult = AdBlockDetector.checkAdHealth(getApplication())
+            if (healthResult.isHealthy) {
+                _uiState.update {
+                    it.copy(
+                        isAdBlockerDetected = false,
+                        isCheckingAdBlocker = false,
+                        adBlockerTitle = "",
+                        adBlockerSubtitle = "",
+                        adBlockerDetails = ""
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isAdBlockerDetected = true,
+                        isCheckingAdBlocker = false,
+                        adBlockerTitle = healthResult.title,
+                        adBlockerSubtitle = healthResult.subtitle,
+                        adBlockerDetails = healthResult.details
+                    )
+                }
+            }
         }
+    }
 
-        // Rule: After Level 20 -> show ad consecutively after every completed level ("20 geçince art arda koyabilirsin her bölüm sonrası")
-        if (currentLvl > 20) {
-            prefs.levelsSinceLastInterstitial = 0
-            return true
-        }
+    private fun registerNetworkCallback() {
+        try {
+            val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+            val request = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+            cm.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    viewModelScope.launch {
+                        delay(600)
+                        val health = AdBlockDetector.checkAdHealth(getApplication())
+                        if (health.isHealthy) {
+                            _uiState.update {
+                                it.copy(
+                                    isAdBlockerDetected = false,
+                                    isCheckingAdBlocker = false,
+                                    adBlockerTitle = "",
+                                    adBlockerSubtitle = "",
+                                    adBlockerDetails = ""
+                                )
+                            }
+                        }
+                    }
+                }
 
-        // Rule: Levels 2 to 20 -> show ad every 2 completed levels ("2 bölüm geçsin sonra olsun")
-        val currentCount = prefs.levelsSinceLastInterstitial + 1
-        if (currentCount >= 2) {
-            prefs.levelsSinceLastInterstitial = 0
-            return true
-        } else {
-            prefs.levelsSinceLastInterstitial = currentCount
-            return false
+                override fun onLost(network: Network) {
+                    viewModelScope.launch {
+                        _uiState.update {
+                            it.copy(
+                                isAdBlockerDetected = true,
+                                adBlockerTitle = "İnternet Bağlantısı Kesildi",
+                                adBlockerSubtitle = "Reklam servislerine erişilemiyor",
+                                adBlockerDetails = "ECHO tamamen ücretsiz bir oyundur ve reklam servisleri ile desteklenmektedir. Oyuna devam etmek için lütfen internet bağlantınızı (Wi-Fi veya Mobil Veri) açın."
+                            )
+                        }
+                    }
+                }
+            })
+        } catch (e: Exception) {
+            Log.e("EchoGameViewModel", "Failed to register network callback", e)
         }
     }
 
@@ -1418,7 +1518,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun acceptKvkkConsent() {
         prefs.isKvkkConsentAccepted = true
-        _uiState.update { it.copy(isKvkkConsentAccepted = true) }
+        _uiState.update {
+            it.copy(
+                isKvkkConsentAccepted = true,
+                screenState = if (it.isAuthenticated || (prefs.rememberMe && prefs.authenticatedUsername.isNotEmpty())) {
+                    ScreenState.MAIN_MENU
+                } else {
+                    ScreenState.LOGIN
+                }
+            )
+        }
     }
 
     fun restartLevel(clearEchoes: Boolean = false) {

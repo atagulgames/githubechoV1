@@ -105,6 +105,7 @@ fun DeadlockDialog(
                             .shadow(4.dp, RoundedCornerShape(14.dp))
                             .testTag("deadlock_ad_clear_button"),
                         shape = RoundedCornerShape(14.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF0284C7),
                             contentColor = Color.White
@@ -115,11 +116,14 @@ fun DeadlockDialog(
                             contentDescription = null,
                             modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Reklam ile Temizle & +1 Jeton",
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
 
@@ -134,6 +138,7 @@ fun DeadlockDialog(
                         .height(48.dp)
                         .testTag("deadlock_clear_echoes_button"),
                     shape = RoundedCornerShape(14.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (onClearWithAd != null) Color(0xFFF1F5F9) else Color(0xFF0284C7),
                         contentColor = if (onClearWithAd != null) Color(0xFF334155) else Color.White
@@ -144,17 +149,20 @@ fun DeadlockDialog(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Yankıları Temizle",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Option B: Bölümü Baştan Başlat
+                // Option C: Bölümü Baştan Başlat
                 OutlinedButton(
                     onClick = onRestartLevel,
                     modifier = Modifier
@@ -162,6 +170,7 @@ fun DeadlockDialog(
                         .height(48.dp)
                         .testTag("deadlock_restart_level_button"),
                     shape = RoundedCornerShape(14.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFF334155)
                     ),
@@ -176,7 +185,10 @@ fun DeadlockDialog(
                     Text(
                         text = "Bölümü Baştan Başlat",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }

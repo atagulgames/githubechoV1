@@ -78,6 +78,7 @@ enum class GameStatus {
 
 enum class ScreenState {
     INTRO,
+    LEGAL_CONSENT,
     LOGIN,
     MAIN_MENU,
     PLAYING_LEVEL,

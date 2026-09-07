@@ -78,7 +78,7 @@ class EchoPreferences(context: Context) {
         private const val KEY_SHRINKER_ADS_WATCHED = "echo_shrinker_ads_watched"
         private const val KEY_USER_AVATAR_URI = "echo_user_avatar_uri"
         private const val KEY_USER_CUSTOM_TITLE = "echo_user_custom_title"
-        private const val KEY_KVKK_CONSENT_ACCEPTED = "echo_kvkk_consent_accepted"
+        private const val KEY_KVKK_CONSENT_ACCEPTED = "echo_user_agreement_v2_accepted"
         private const val KEY_HINT_ADS_WATCHED = "echo_hint_ads_watched"
         private const val KEY_SHOWN_MECHANIC_TIERS = "echo_shown_mechanic_tiers"
     }
@@ -582,6 +582,7 @@ class EchoPreferences(context: Context) {
             .remove(KEY_LAST_LOGIN_CLAIM_DATE)
             .remove(KEY_LAST_FREE_CHEST_DATE)
             .remove(KEY_UNLOCKED_THEMES)
+            .remove(KEY_KVKK_CONSENT_ACCEPTED)
             .apply()
     }
 }

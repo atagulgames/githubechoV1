@@ -801,6 +801,7 @@ fun EchoMainMenu(
                         .shadow(6.dp, RoundedCornerShape(18.dp))
                         .testTag("play_button"),
                     shape = RoundedCornerShape(18.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF0284C7),
                         contentColor = Color.White
@@ -816,14 +817,17 @@ fun EchoMainMenu(
                         text = "${EchoStrings.get("play", state.language)} (${EchoStrings.get("level", state.language)} ${state.currentLevelIndex + 1})",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
 
                 // Row: Bölümler (100 Seviye), Temalar, Mağaza
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Level Select
                     Button(
@@ -835,6 +839,7 @@ fun EchoMainMenu(
                             .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                             .testTag("main_levels_button"),
                         shape = RoundedCornerShape(14.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 2.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = cardBg,
                             contentColor = textPrimary
@@ -847,7 +852,14 @@ fun EchoMainMenu(
                             modifier = Modifier.size(17.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("100 ${EchoStrings.get("levels", state.language)}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "100 ${EchoStrings.get("levels", state.language)}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
 
                     // Themes / Skins
@@ -860,6 +872,7 @@ fun EchoMainMenu(
                             .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                             .testTag("main_skins_button"),
                         shape = RoundedCornerShape(14.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 2.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = cardBg,
                             contentColor = textPrimary
@@ -872,7 +885,14 @@ fun EchoMainMenu(
                             modifier = Modifier.size(17.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(EchoStrings.get("themes", state.language), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = EchoStrings.get("themes", state.language),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
 
                     // Shop
@@ -885,6 +905,7 @@ fun EchoMainMenu(
                             .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                             .testTag("main_shop_button"),
                         shape = RoundedCornerShape(14.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 2.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = cardBg,
                             contentColor = textPrimary
@@ -897,7 +918,14 @@ fun EchoMainMenu(
                             modifier = Modifier.size(17.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(EchoStrings.get("shop", state.language), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = EchoStrings.get("shop", state.language),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
                 }
 

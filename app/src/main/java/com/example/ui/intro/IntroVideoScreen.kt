@@ -163,8 +163,6 @@ fun IntroVideoScreen(
                         }
                     }
                 )
-
-
             } else {
                 // Media file not yet found on disk: Report exact required path as mandated by Rule 5
                 Card(
