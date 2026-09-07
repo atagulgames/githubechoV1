@@ -216,7 +216,6 @@ fun EchoGameScreen(
             if (state.gameStatus == GameStatus.DEADLOCK) {
                 DeadlockDialog(
                     echoCount = state.echoCountForLevel,
-                    onClearEchoes = { viewModel.clearAllEchoes() },
                     onClearWithAd = { onShowRewardedAd("CLEAR_ECHOES") },
                     onRestartLevel = { viewModel.restartLevel(clearEchoes = true) }
                 )
@@ -358,6 +357,8 @@ fun EchoGameScreen(
                 LeaderboardDialog(
                     players = state.leaderboardPlayers,
                     isDarkTheme = state.isDarkTheme,
+                    isRefreshing = state.isLeaderboardRefreshing,
+                    onRefresh = { viewModel.refreshLeaderboard() },
                     onSelectPlayer = { player -> viewModel.openPlayerProfile(player) },
                     onViewMyProfile = { viewModel.openMyProfile() },
                     onDismiss = { viewModel.closeLeaderboard() }

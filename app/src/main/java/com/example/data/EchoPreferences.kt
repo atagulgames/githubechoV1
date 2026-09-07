@@ -81,6 +81,13 @@ class EchoPreferences(context: Context) {
         private const val KEY_KVKK_CONSENT_ACCEPTED = "echo_user_agreement_v2_accepted"
         private const val KEY_HINT_ADS_WATCHED = "echo_hint_ads_watched"
         private const val KEY_SHOWN_MECHANIC_TIERS = "echo_shown_mechanic_tiers"
+
+        // LootLocker Global Leaderboard
+        private const val KEY_LOOTLOCKER_SESSION_TOKEN = "echo_lootlocker_session_token"
+        private const val KEY_LOOTLOCKER_PLAYER_ID = "echo_lootlocker_player_id"
+        private const val KEY_LOOTLOCKER_PLAYER_IDENTIFIER = "echo_lootlocker_player_identifier"
+        private const val KEY_LOOTLOCKER_GAME_KEY = "echo_lootlocker_game_key"
+        private const val KEY_LOOTLOCKER_LEADERBOARD_KEY = "echo_lootlocker_leaderboard_key"
     }
 
     var shownMechanicTiersCsv: String
@@ -564,6 +571,37 @@ class EchoPreferences(context: Context) {
         if (requiredStars == 0 || totalStars >= requiredStars) return true
         return getUnlockedThemes().contains(themeName)
     }
+
+    // --- LootLocker Session & Player Credentials ---
+    var lootLockerSessionToken: String?
+        get() = prefs.getString(KEY_LOOTLOCKER_SESSION_TOKEN, null)
+        set(value) = prefs.edit().putString(KEY_LOOTLOCKER_SESSION_TOKEN, value).apply()
+
+    var lootLockerPlayerId: Int
+        get() = prefs.getInt(KEY_LOOTLOCKER_PLAYER_ID, 0)
+        set(value) = prefs.edit().putInt(KEY_LOOTLOCKER_PLAYER_ID, value).apply()
+
+    var lootLockerPlayerIdentifier: String
+        get() {
+            var id = prefs.getString(KEY_LOOTLOCKER_PLAYER_IDENTIFIER, null)
+            if (id.isNullOrBlank()) {
+                id = java.util.UUID.randomUUID().toString()
+                prefs.edit().putString(KEY_LOOTLOCKER_PLAYER_IDENTIFIER, id).apply()
+            }
+            return id
+        }
+        set(value) = prefs.edit().putString(KEY_LOOTLOCKER_PLAYER_IDENTIFIER, value).apply()
+
+    var lootLockerGameKey: String
+        get() {
+            val key = prefs.getString(KEY_LOOTLOCKER_GAME_KEY, "") ?: ""
+            return if (key == "BURAYA_GAME_KEY" || key == "ekoleadbordglobal") "" else key
+        }
+        set(value) = prefs.edit().putString(KEY_LOOTLOCKER_GAME_KEY, value.trim()).apply()
+
+    var lootLockerLeaderboardKey: String
+        get() = prefs.getString(KEY_LOOTLOCKER_LEADERBOARD_KEY, "ekoleadbordglobal") ?: "ekoleadbordglobal"
+        set(value) = prefs.edit().putString(KEY_LOOTLOCKER_LEADERBOARD_KEY, value.trim()).apply()
 
     var hasFreshStartV2: Boolean
         get() = prefs.getBoolean("echo_v2_fresh_start_done", false)

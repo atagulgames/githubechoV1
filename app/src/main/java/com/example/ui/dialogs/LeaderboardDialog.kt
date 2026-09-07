@@ -25,10 +25,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -59,6 +61,8 @@ import com.example.model.LeaderboardPlayer
 fun LeaderboardDialog(
     players: List<LeaderboardPlayer>,
     isDarkTheme: Boolean = true,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     onSelectPlayer: (LeaderboardPlayer) -> Unit,
     onViewMyProfile: () -> Unit,
     onDismiss: () -> Unit
@@ -129,7 +133,7 @@ fun LeaderboardDialog(
                                 color = textPrimary
                             )
                             Text(
-                                text = "Gerçek Global Oyuncu Sıralaması",
+                                text = "LootLocker Global • ekoleadbordglobal",
                                 fontSize = 11.sp,
                                 color = Color(0xFF10B981),
                                 fontWeight = FontWeight.SemiBold
@@ -137,15 +141,37 @@ fun LeaderboardDialog(
                         }
                     }
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.testTag("leaderboard_close_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
-                            tint = textSecondary
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onRefresh,
+                            modifier = Modifier.testTag("leaderboard_refresh_button"),
+                            enabled = !isRefreshing
+                        ) {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color(0xFF3B82F6)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Yenile",
+                                    tint = textSecondary
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.testTag("leaderboard_close_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Kapat",
+                                tint = textSecondary
+                            )
+                        }
                     }
                 }
 

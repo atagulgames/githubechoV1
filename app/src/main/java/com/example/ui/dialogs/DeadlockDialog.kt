@@ -38,7 +38,6 @@ import androidx.compose.ui.window.Dialog
 @Composable
 fun DeadlockDialog(
     echoCount: Int,
-    onClearEchoes: () -> Unit,
     onClearWithAd: (() -> Unit)? = null,
     onRestartLevel: () -> Unit
 ) {
@@ -130,19 +129,20 @@ fun DeadlockDialog(
                     Spacer(modifier = Modifier.height(10.dp))
                 }
 
-                // Option B: Doğrudan Yankıları Temizle
+                // Option: Bölümü Baştan Başlat
                 Button(
-                    onClick = onClearEchoes,
+                    onClick = onRestartLevel,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                        .testTag("deadlock_clear_echoes_button"),
+                        .testTag("deadlock_restart_level_button"),
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (onClearWithAd != null) Color(0xFFF1F5F9) else Color(0xFF0284C7),
                         contentColor = if (onClearWithAd != null) Color(0xFF334155) else Color.White
-                    )
+                    ),
+                    border = if (onClearWithAd != null) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)) else null
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
@@ -151,41 +151,9 @@ fun DeadlockDialog(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Yankıları Temizle",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Option C: Bölümü Baştan Başlat
-                OutlinedButton(
-                    onClick = onRestartLevel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("deadlock_restart_level_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF334155)
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
                         text = "Bölümü Baştan Başlat",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         softWrap = false,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis

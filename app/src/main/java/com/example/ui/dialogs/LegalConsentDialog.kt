@@ -188,7 +188,8 @@ fun LegalConsentCard(
                     text = "Bu oyunu indirerek, kurarak veya oynayarak aşağıdaki kuralları kabul etmiş sayılırsınız:\n" +
                             "• Oyun içi içerikler, seviye tasarımları, grafikler ve ses motoru fikri mülkiyet hukuku ile korunmaktadır.\n" +
                             "• Hile, üçüncü parti müdahale yazılımları veya adil rekabeti bozan yöntemler kesinlikle yasaktır ve hesap sıfırlanmasına sebep olabilir.\n" +
-                            "• Oyun içi ödüller, jetonlar ve elmaslar dijital oyun içi varlıklardır, gerçek para karşılığı veya takas değeri taşımaz.",
+                            "• Oyun içi ödüller, jetonlar ve elmaslar dijital oyun içi varlıklardır, gerçek para karşılığı veya takas değeri taşımaz.\n" +
+                            "• Uygulamada gösterilen reklamlar bizim kontrolümüz altında değildir; reklam içeriği ve yönlendirmeleri tamamen reklamı veren tarafa aittir, çıkan reklamlardan biz sorumlu değiliz.",
                     fontSize = 12.sp,
                     color = Color(0xFFCBD5E1),
                     lineHeight = 17.sp
@@ -272,7 +273,33 @@ fun LegalConsentCard(
                     lineHeight = 17.sp
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // 5. Reklam Sorumluluk Reddi (Ad Disclaimer)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFFF9100),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "5. Reklamlar ve Üçüncü Taraf Sorumluluk Reddi",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color(0xFFFF9100)
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Uygulama içerisinde gösterilen reklamlar ve reklam içerikleri bizim kontrolümüz altında değildir; tamamen reklamı veren tarafların ve reklam ağlarının kontrolündedir. Bu nedenle çıkan reklamlardan, reklam içeriklerinden ve yönlendirilen bağlantılardan geliştirici olarak biz sorumlu değiliz.",
+                    fontSize = 12.sp,
+                    color = Color(0xFFCBD5E1),
+                    lineHeight = 17.sp
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     text = "✓ Bu sözleşme ve onay bir defaya mahsus alınır ve daha sonra tekrar sorulmaz.",
                     fontSize = 11.sp,

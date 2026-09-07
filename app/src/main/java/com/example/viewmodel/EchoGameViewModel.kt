@@ -137,6 +137,7 @@ data class EchoUiState(
     val maxCombo: Int = 0,
     val levelStartTimeMs: Long = 0L,
     val isLeaderboardDialogVisible: Boolean = false,
+    val isLeaderboardRefreshing: Boolean = false,
     val isProfileDialogVisible: Boolean = false,
     val selectedPlayerProfile: com.example.model.LeaderboardPlayer? = null,
     val leaderboardPlayers: List<com.example.model.LeaderboardPlayer> = emptyList(),
@@ -162,6 +163,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private val prefs = EchoPreferences(application)
     private val repo = EchoRepository(application)
     private val authRepo = com.example.data.AuthRepository(application)
+    private val lootLocker = com.example.data.LootLockerManager.getInstance(application)
 
     private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val vibratorManager = application.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -179,7 +181,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private var toastResetJob: Job? = null
     private var ghostFadeJob: Job? = null
 
-    private val nodeHitRadius: Float = 42f
+    private val nodeHitRadius: Float = 36f
     private val deadlockThreshold: Int = 8
     private var candyCalloutDismissJob: kotlinx.coroutines.Job? = null
 
@@ -214,6 +216,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         loadSavedPreferences()
         checkInternetAndAdHealth()
         registerNetworkCallback()
+
+        // Initialize LootLocker session and sync player score
+        lootLocker.loginGuest(
+            onSuccess = { _, _ ->
+                if (prefs.trophies > 0) {
+                    val user = prefs.authenticatedUsername.ifBlank { "Oyuncu" }
+                    lootLocker.submitScore(user, prefs.trophies)
+                }
+            }
+        )
     }
 
     private fun loadSavedPreferences() {
@@ -520,7 +532,12 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val state = _uiState.value
         if (state.gameStatus != GameStatus.PLAYING) return
 
-        val hitNode = findNodeAtPoint(point, state.nodes)
+        val node1 = state.nodes.firstOrNull { it.id == 1 }
+        val hitNode = if (node1 != null && node1.toPoint().distanceTo(point) <= nodeHitRadius) {
+            node1
+        } else {
+            findNodeAtPoint(point, state.nodes)
+        }
         if (hitNode != null) {
             // "Karakter 1'den başlayacak" kuralı: Çizim mutlaka 1 numaralı başlangıç düğümünden başlamalıdır.
             if (hitNode.id != 1) {
@@ -597,8 +614,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
-        // 4. Check if reaching a new node
-        val hitNode = findNodeAtPoint(point, state.nodes)
+        // 4. Expected next node determination:
+        // 1. If level has an explicit hint order, follow hintOrder
+        // 2. Otherwise follow consecutive node numbers (1, 2, 3...)
+        val hintOrder = state.level.hintOrder
+        val expectedNextId = if (hintOrder.isNotEmpty()) {
+            val curIdx = hintOrder.indexOf(lastVisitedId)
+            if (curIdx != -1 && curIdx + 1 < hintOrder.size) hintOrder[curIdx + 1] else lastVisitedId + 1
+        } else {
+            lastVisitedId + 1
+        }
+
+        // Check if reaching a new node, prioritizing expectedNextId
+        val hitNode = findTargetNodeForDrag(point, state.nodes, state.visitedNodeIds, expectedNextId)
         if (hitNode != null && hitNode.id != lastVisitedId) {
             // Already visited node?
             if (state.visitedNodeIds.contains(hitNode.id)) {
@@ -614,17 +642,6 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 showToast("Bu kenar tek yönlü! Yalnızca ok yönünde çizilebilir.")
                 triggerCollisionFailure("Ters yönlü kenar!")
                 return
-            }
-
-            // Expected next node determination:
-            // 1. If level has an explicit hint order, follow hintOrder
-            // 2. Otherwise follow consecutive node numbers (1, 2, 3...)
-            val hintOrder = state.level.hintOrder
-            val expectedNextId = if (hintOrder.isNotEmpty()) {
-                val curIdx = hintOrder.indexOf(lastVisitedId)
-                if (curIdx != -1 && curIdx + 1 < hintOrder.size) hintOrder[curIdx + 1] else lastVisitedId + 1
-            } else {
-                lastVisitedId + 1
             }
 
             if (hitNode.id != expectedNextId) {
@@ -785,16 +802,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val newCombo = if (echoCount == 0) state.currentCombo + 1 else 0
         prefs.recordCombo(newCombo)
 
-        val baseTrophies = 30 + (stars * 10)
-        val zeroEchoBonus = if (echoCount == 0) 50 else 0
-        val comboBonus = if (newCombo > 1) newCombo * 10 else 0
-        val speedBonus = if (durationSeconds <= 12f) 15 else 0
+        val baseTrophies = 5 + (stars * 3) // 8..14 base trophies
+        val zeroEchoBonus = if (echoCount == 0) 5 else 0
+        val comboBonus = if (newCombo > 1) (newCombo * 2).coerceAtMost(10) else 0
+        val speedBonus = if (durationSeconds <= 12f) 3 else 0
         val isDoubleBoosterActive = System.currentTimeMillis() < prefs.doubleTrophiesExpiresAt
         val rawTrophies = baseTrophies + zeroEchoBonus + comboBonus + speedBonus
         val totalLevelTrophies = if (isDoubleBoosterActive) rawTrophies * 2 else rawTrophies
 
         prefs.addTrophies(totalLevelTrophies)
         prefs.addPlayTime(durationSeconds.toLong())
+
+        // Automatically submit score to LootLocker Global Leaderboard (ekoleadbordglobal)
+        val currentTrophies = prefs.trophies
+        val currentUsername = _uiState.value.authenticatedUser.ifBlank { "Oyuncu" }
+        lootLocker.submitScore(currentUsername, currentTrophies)
         prefs.recordLevelResult(
             levelId = state.level.levelId,
             title = state.level.title,
@@ -1996,9 +2018,31 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun findNodeAtPoint(point: Point, nodes: List<Node>): Node? {
-        return nodes.firstOrNull { node ->
-            node.toPoint().distanceTo(point) <= nodeHitRadius
-        }
+        return nodes
+            .filter { it.toPoint().distanceTo(point) <= nodeHitRadius }
+            .minByOrNull { it.toPoint().distanceTo(point) }
+    }
+
+    private fun findTargetNodeForDrag(
+        point: Point,
+        nodes: List<Node>,
+        visitedNodeIds: List<Int>,
+        expectedNextId: Int
+    ): Node? {
+        val candidates = nodes.filter { it.toPoint().distanceTo(point) <= nodeHitRadius }
+        if (candidates.isEmpty()) return null
+
+        // 1. Priority: Expected target node in solution path (e.g. Node 20 in Level 51)
+        val expected = candidates.firstOrNull { it.id == expectedNextId }
+        if (expected != null) return expected
+
+        // 2. Unvisited closest node
+        val unvisited = candidates.filter { !visitedNodeIds.contains(it.id) }
+            .minByOrNull { it.toPoint().distanceTo(point) }
+        if (unvisited != null) return unvisited
+
+        // 3. Closest visited node (for detecting genuine backtracking)
+        return candidates.minByOrNull { it.toPoint().distanceTo(point) }
     }
 
     private fun showToast(msg: String) {
@@ -2061,12 +2105,57 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     // --- Leaderboard & Player Profile Systems ---
 
     fun openLeaderboard() {
+        _uiState.update { it.copy(isLeaderboardDialogVisible = true) }
+        loadLeaderboardData()
+    }
+
+    fun refreshLeaderboard() {
+        loadLeaderboardData()
+    }
+
+    private fun loadLeaderboardData() {
         viewModelScope.launch {
-            val list = authRepo.getLeaderboardPlayers()
+            _uiState.update { it.copy(isLeaderboardRefreshing = true) }
+            val username = _uiState.value.authenticatedUser.ifBlank { "Oyuncu" }
+
+            // Submit current trophies if any
+            if (prefs.trophies > 0) {
+                lootLocker.submitScore(username, prefs.trophies)
+            }
+
+            // Fetch live scores from LootLocker
+            val remoteResult = lootLocker.fetchLeaderboard(count = 50, currentUsername = username)
+            val finalPlayers = if (remoteResult.isSuccess && !remoteResult.getOrNull().isNullOrEmpty()) {
+                val remoteList = remoteResult.getOrNull()!!
+                val hasMe = remoteList.any { it.isCurrentUser }
+                if (!hasMe) {
+                    val me = com.example.model.LeaderboardPlayer(
+                        id = "current_user",
+                        rank = remoteList.size + 1,
+                        username = username,
+                        avatarEmoji = "⚡",
+                        title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
+                        trophies = prefs.trophies,
+                        totalEchoes = prefs.totalEchoes,
+                        totalPlayTimeSec = prefs.totalPlayTimeSec,
+                        maxCombo = prefs.maxCombo,
+                        completedLevelsCount = prefs.getCompletedLevels().size,
+                        isCurrentUser = true,
+                        levelRecords = prefs.getLevelRecords()
+                    )
+                    (remoteList + me).sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
+                } else {
+                    remoteList
+                }
+            } else {
+                // Fallback to local accounts and curated global competitors if offline/not configured
+                authRepo.getLeaderboardPlayers()
+            }
+
             _uiState.update {
                 it.copy(
-                    leaderboardPlayers = list,
-                    isLeaderboardDialogVisible = true
+                    leaderboardPlayers = finalPlayers,
+                    isLeaderboardRefreshing = false
                 )
             }
         }

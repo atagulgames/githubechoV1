@@ -22,7 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -34,16 +36,23 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -474,6 +483,97 @@ fun SettingsDialog(
                         ),
                         modifier = Modifier.testTag("test_ads_toggle")
                     )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Global Leaderboard (LootLocker) Status Card
+                val context = LocalContext.current
+                val lootLocker = remember { com.example.data.LootLockerManager.getInstance(context) }
+                var showKeyEditor by remember { mutableStateOf(false) }
+                var enteredKey by remember { mutableStateOf(lootLocker.getEffectiveGameKey()) }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(cardBg)
+                        .border(1.dp, borderColor, RoundedCornerShape(14.dp))
+                        .padding(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Leaderboard,
+                                contentDescription = null,
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Global Sıralama Tablosu",
+                                fontWeight = FontWeight.SemiBold,
+                                color = textPrimary,
+                                fontSize = 13.sp
+                            )
+                        }
+
+                        Text(
+                            text = if (lootLocker.isConfigured()) "🟢 Canlı Bulut" else "🟡 Yerel Aktif",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (lootLocker.isConfigured()) Color(0xFF16A34A) else Color(0xFFD97706)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "Tablo Anahtarı: ekoleadbordglobal",
+                        fontSize = 11.sp,
+                        color = textSecondary
+                    )
+
+                    if (!showKeyEditor) {
+                        Text(
+                            text = if (lootLocker.isConfigured()) "Game API Key aktif (düzenlemek için dokun)" else "LootLocker Game API Key ekle (İsteğe bağlı)",
+                            fontSize = 11.sp,
+                            color = Color(0xFF0284C7),
+                            modifier = Modifier
+                                .clickable { showKeyEditor = true }
+                                .padding(vertical = 4.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = enteredKey,
+                            onValueChange = { enteredKey = it },
+                            placeholder = { Text("LootLocker Game API Key", fontSize = 11.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF0284C7),
+                                unfocusedBorderColor = borderColor
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = {
+                                    lootLocker.setGameKey(enteredKey)
+                                    showKeyEditor = false
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
+                            ) {
+                                Text("Kaydet", fontSize = 11.sp)
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

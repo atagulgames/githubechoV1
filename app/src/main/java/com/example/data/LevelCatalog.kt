@@ -9,6 +9,7 @@ import com.example.model.NodeType
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -228,234 +229,189 @@ object LevelCatalog {
         val nodeCount = (3 + ((clampedId - 1) * 33.0 / 99.0).roundToInt()).coerceIn(3, 36)
 
         val centerX = 180f
-        val centerY = 220f
+        val centerY = 230f
 
-        // Key & Gate mechanics: Key appears early (index 2..nodeCount-2), Gate is at index nodeCount
+        // Key & Gate mechanics: Key appears along the first half/third, Gate is at the final node
         val hasKeyGate = (tierIndex == 2 || tierIndex == 6 || (tierIndex == 9 && clampedId % 2 == 0)) && nodeCount >= 4
-        val keyIndex = if (hasKeyGate) (2 + ((clampedId % (nodeCount - 3)).coerceAtLeast(0))).coerceIn(2, nodeCount - 1) else -1
+        val keyIndex = if (hasKeyGate) (nodeCount / 3).coerceIn(2, nodeCount - 1) else -1
         val gateIndex = if (hasKeyGate) nodeCount else -1
 
-        val nodes = ArrayList<LevelNode>(nodeCount)
+        // 12 distinct open, non-self-intersecting geometric archetypes.
+        // Every archetype forms an open curve where Node 1 and the final node (nodeCount)
+        // are widely separated (80-140px), eliminating false collisions when reaching the goal!
+        val shapeArchetype = (clampedId - 1) % 12
 
-        when (tierIndex) {
+        fun clampPt(x: Float, y: Float): Pair<Float, Float> =
+            Pair(x.coerceIn(48f, 312f), y.coerceIn(88f, 372f))
+
+        val curveFn: (Float) -> Pair<Float, Float> = when (shapeArchetype) {
             0 -> {
-                // Tier 1: Pure Harmonic Polygons & Celestial Arcs (3 to 6 nodes)
-                val rx = 96f + (clampedId % 3) * 4f
-                val ry = 92f + (clampedId % 2) * 6f
-                val baseAngle = ((clampedId * 41) % 360) * (PI / 180.0)
-                val sweepSpan = (1.55 + ((clampedId % 4) * 0.04)) * PI
-                for (i in 1..nodeCount) {
-                    val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
-                    val angle = baseAngle + (sweepSpan * progress)
-                    val px = (centerX + rx * cos(angle).toFloat()).coerceIn(45f, 315f)
-                    val py = (centerY + ry * sin(angle).toFloat()).coerceIn(90f, 370f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 0: Open Celestial Arc (sweeps ~280 degrees, leaving wide ~80 deg opening)
+                val rx = 115f + (clampedId * 5 % 15)
+                val ry = 125f + (clampedId * 7 % 15)
+                val baseAngle = ((clampedId * 37) % 360) * (PI / 180.0)
+                val sweep = 1.55 * PI
+                { t ->
+                    val angle = baseAngle + sweep * t
+                    clampPt(centerX + rx * cos(angle).toFloat(), centerY + ry * sin(angle).toFloat())
                 }
             }
             1 -> {
-                // Tier 2: Polar Celestial Spiral & Inward Vortex (7 to 10 nodes)
-                val spiralTurns = 1.45 * PI
-                val startR = 124f
-                val endR = 64f
-                val baseAngle = ((clampedId * 67) % 360) * (PI / 180.0)
-                for (i in 1..nodeCount) {
-                    val progress = (i - 1).toFloat() / (nodeCount - 1).coerceAtLeast(1)
-                    val r = startR + (endR - startR) * progress
-                    val angle = baseAngle + (spiralTurns * progress)
-                    val px = (centerX + r * cos(angle).toFloat()).coerceIn(45f, 315f)
-                    val py = (centerY + r * sin(angle).toFloat()).coerceIn(80f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 1: Inward Archimedean Spiral (Monotonically decreasing radius)
+                val startR = 130f
+                val endR = 56f
+                val baseAngle = ((clampedId * 53) % 360) * (PI / 180.0)
+                val turns = 1.35 * PI
+                { t ->
+                    val r = startR + (endR - startR) * t
+                    val angle = baseAngle + turns * t
+                    clampPt(centerX + r * cos(angle).toFloat(), centerY + r * sin(angle).toFloat())
                 }
             }
             2 -> {
-                // Tier 3: Diamond Fortress & Gateway (10 to 13 nodes)
-                val w = 115f
-                val h = 130f
-                for (i in 1..nodeCount) {
-                    val t = (i - 1).toFloat() / nodeCount
-                    val angle = t * 2.0 * PI
-                    // Diamond superellipse formula: |x/a| + |y/b| = 1
+                // Archetype 2: Open Diamond / Rhombus Horseshoe (Level 51 Archetype)
+                // Sweeps 279 degrees around 3 of the 4 diamond quadrants, leaving a wide 120px gap
+                // between Node 1 and Node 20. Reaching Node 20 is completely unobstructed!
+                val w = 118f + (clampedId % 4) * 4f
+                val h = 130f + (clampedId % 3) * 5f
+                val rot = ((clampedId * 29) % 360) * (PI / 180.0)
+                val sweep = 1.55 * PI
+                { t ->
+                    val angle = rot + sweep * t
                     val ca = cos(angle).toFloat()
                     val sa = sin(angle).toFloat()
                     val denom = (abs(ca) + abs(sa)).coerceAtLeast(0.001f)
-                    val px = (centerX + (w * ca / denom)).coerceIn(45f, 315f)
-                    val py = (centerY + (h * sa / denom)).coerceIn(80f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                    clampPt(centerX + (w * ca / denom), centerY + (h * sa / denom))
                 }
             }
             3 -> {
-                // Tier 4: Lemniscate Infinity Hourglass (13 to 16 nodes)
-                val w = 110f
-                val h = 125f
-                for (i in 1..nodeCount) {
-                    val angle = ((i - 1).toFloat() / nodeCount) * 2.0 * PI - (PI / 2.0)
-                    val sinA = sin(angle).toFloat()
-                    val cosA = cos(angle).toFloat()
-                    // Hourglass waist: narrower near waist, wider at top/bottom
-                    val waistFactor = 0.55f + 0.45f * (sinA * sinA)
-                    val px = (centerX + (w * cosA * waistFactor)).coerceIn(45f, 315f)
-                    val py = (centerY + (h * sinA)).coerceIn(80f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 3: Harmonic Sine Wave Meander
+                val w = 122f
+                val h = 118f
+                val waves = 1.5
+                val rot = ((clampedId * 17) % 360) * (PI / 180.0)
+                { t ->
+                    val u = -w + t * 2f * w
+                    val v = (sin(t * waves * PI) * (h * 0.6)).toFloat()
+                    val rx = (u * cos(rot) - v * sin(rot)).toFloat()
+                    val ry = (u * sin(rot) + v * cos(rot)).toFloat()
+                    clampPt(centerX + rx, centerY + ry)
                 }
             }
             4 -> {
-                // Tier 5: Mirrored Chevron Wings (17 to 20 nodes)
-                val half = nodeCount / 2
-                for (i in 1..nodeCount) {
-                    val isLeft = i <= half
-                    val step = if (isLeft) (i - 1) else (nodeCount - i)
-                    val prog = step.toFloat() / (half.coerceAtLeast(1))
-                    val px = if (isLeft) {
-                        (centerX - 24f - (prog * 105f)).coerceIn(45f, 315f)
-                    } else {
-                        (centerX + 24f + (prog * 105f)).coerceIn(45f, 315f)
-                    }
-                    val py = (100f + prog * 240f).coerceIn(80f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 4: S-Serpentine Track
+                val w = 118f
+                val h = 125f
+                { t ->
+                    val u = (sin(t * 3.0 * PI) * w).toFloat()
+                    val v = -h + t * 2f * h
+                    clampPt(centerX + u, centerY + v)
                 }
             }
             5 -> {
-                // Tier 6: Hexagonal Honeycomb Matrix (20 to 23 nodes)
-                val cols = 3
-                val rows = (nodeCount + cols - 1) / cols
-                val xSpacing = 92f
-                val ySpacing = 245f / (rows - 1).coerceAtLeast(1)
-                for (i in 1..nodeCount) {
-                    val idx = i - 1
-                    val r = idx / cols
-                    val c = if (r % 2 == 0) (idx % cols) else (cols - 1 - (idx % cols))
-                    val stagger = if (c % 2 == 1) 18f else -18f
-                    val px = (centerX - xSpacing + (c * xSpacing)).coerceIn(45f, 315f)
-                    val py = (100f + (r * ySpacing) + stagger).coerceIn(75f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 5: Spiral Outward (Nebula Spire)
+                val startR = 56f
+                val endR = 130f
+                val baseAngle = ((clampedId * 31) % 360) * (PI / 180.0)
+                val turns = 1.35 * PI
+                { t ->
+                    val r = startR + (endR - startR) * t
+                    val angle = baseAngle + turns * t
+                    clampPt(centerX + r * cos(angle).toFloat(), centerY + r * sin(angle).toFloat())
                 }
             }
             6 -> {
-                // Tier 7: Concentric Cybernetic Rings (23 to 26 nodes)
-                val innerCount = nodeCount / 3
-                val outerCount = nodeCount - innerCount
-                for (i in 1..nodeCount) {
-                    val isOuter = i <= outerCount
-                    val r = if (isOuter) 115f else 58f
-                    val count = if (isOuter) outerCount else innerCount
-                    val prog = if (isOuter) (i - 1).toFloat() / count else (i - outerCount - 1).toFloat() / count
-                    val angle = (prog * 2.0 * PI) + (if (isOuter) 0.0 else 0.5)
-                    val px = (centerX + r * cos(angle).toFloat()).coerceIn(45f, 315f)
-                    val py = (centerY + r * sin(angle).toFloat()).coerceIn(80f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
+                // Archetype 6: U-Shaped Canyon (Hairpin Track)
+                val w = 108f
+                val h = 128f
+                val rot = ((clampedId * 23) % 360) * (PI / 180.0)
+                { t ->
+                    val (u, v) = when {
+                        t <= 0.4f -> Pair(-w, -h + (t / 0.4f) * (1.5f * h))
+                        t <= 0.6f -> {
+                            val angle = PI - ((t - 0.4f) / 0.2f) * PI
+                            Pair(cos(angle).toFloat() * w, 0.5f * h + sin(angle).toFloat() * (0.5f * h))
+                        }
+                        else -> Pair(w, 0.5f * h - ((t - 0.6f) / 0.4f) * (1.5f * h))
                     }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                    val rx = (u * cos(rot) - v * sin(rot)).toFloat()
+                    val ry = (u * sin(rot) + v * cos(rot)).toFloat()
+                    clampPt(centerX + rx, centerY + ry)
                 }
             }
             7 -> {
-                // Tier 8: Sinusoidal Undulating Wave Labyrinth (27 to 30 nodes)
-                val rows = 4
-                val nodesPerRow = (nodeCount + rows - 1) / rows
-                val rowHeight = 255f / (rows - 1).coerceAtLeast(1)
-                for (i in 1..nodeCount) {
-                    val idx = i - 1
-                    val r = idx / nodesPerRow
-                    val c = idx % nodesPerRow
-                    val isLtr = r % 2 == 0
-                    val colProg = if (isLtr) c.toFloat() / (nodesPerRow - 1).coerceAtLeast(1) else (nodesPerRow - 1 - c).toFloat() / (nodesPerRow - 1).coerceAtLeast(1)
-                    val px = (50f + colProg * 260f).coerceIn(45f, 315f)
-                    val waveOffset = (sin(colProg * 2.0 * PI) * 16f).toFloat()
-                    val py = (92f + r * rowHeight + waveOffset).coerceIn(75f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 7: Diagonal Ascending Ribbon
+                val w = 120f
+                val h = 125f
+                { t ->
+                    val u = -w + t * 2f * w
+                    val v = -h + t * 2f * h + (sin(t * 2.0 * PI) * 35.0).toFloat()
+                    clampPt(centerX + u, centerY + v)
                 }
             }
             8 -> {
-                // Tier 9: Grand Neural Constellation (30 to 33 nodes)
-                val rows = 5
-                val nodesPerRow = (nodeCount + rows - 1) / rows
-                val rowHeight = 250f / (rows - 1).coerceAtLeast(1)
-                for (i in 1..nodeCount) {
-                    val idx = i - 1
-                    val r = idx / nodesPerRow
-                    val c = idx % nodesPerRow
-                    val isLtr = r % 2 == 0
-                    val colProg = if (isLtr) c.toFloat() / (nodesPerRow - 1).coerceAtLeast(1) else (nodesPerRow - 1 - c).toFloat() / (nodesPerRow - 1).coerceAtLeast(1)
-                    val stagger = if (c % 2 == 1) 10f else -10f
-                    val px = (50f + colProg * 260f).coerceIn(45f, 315f)
-                    val py = (96f + r * rowHeight + stagger).coerceIn(75f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 8: Open Hexagonal Crown (5 sides, 6th side open)
+                val rad = 125f
+                val rot = ((clampedId * 23) % 360) * (PI / 180.0)
+                val sweep = 1.60 * PI
+                val secAngle = PI / 6.0
+                { t ->
+                    val angle = rot + sweep * t
+                    val ca = cos(angle).toFloat()
+                    val sa = sin(angle).toFloat()
+                    val phi = (angle % (2.0 * secAngle)) - secAngle
+                    val r = (rad * cos(secAngle) / cos(phi).coerceAtLeast(0.001)).toFloat()
+                    clampPt(centerX + r * ca, centerY + r * sa)
+                }
+            }
+            9 -> {
+                // Archetype 9: Horseshoe Arch (Open U loop)
+                val rx = 118f
+                val ry = 128f
+                val baseAngle = PI * 0.15
+                val sweep = PI * 1.7
+                { t ->
+                    val angle = baseAngle + sweep * t
+                    clampPt(centerX + rx * cos(angle).toFloat(), centerY + ry * sin(angle).toFloat())
+                }
+            }
+            10 -> {
+                // Archetype 10: Smooth S-Curve Wave
+                val w = 120f
+                val h = 125f
+                val rot = ((clampedId * 37) % 360) * (PI / 180.0)
+                { t ->
+                    val u = -w + t * 2f * w
+                    val v = (sin(t * PI * 2.0 - PI / 2.0) * (h * 0.55)).toFloat()
+                    val rx = (u * cos(rot) - v * sin(rot)).toFloat()
+                    val ry = (u * sin(rot) + v * cos(rot)).toFloat()
+                    clampPt(centerX + rx, centerY + ry)
                 }
             }
             else -> {
-                // Tier 10: Omega Hyper-Lattice & Galactic Core (34 to 36 nodes)
-                val rows = 6
-                val nodesPerRow = (nodeCount + rows - 1) / rows
-                val rowHeight = 255f / (rows - 1).coerceAtLeast(1)
-                for (i in 1..nodeCount) {
-                    val idx = i - 1
-                    val r = idx / nodesPerRow
-                    val c = idx % nodesPerRow
-                    val isLtr = r % 2 == 0
-                    val colProg = if (isLtr) c.toFloat() / (nodesPerRow - 1).coerceAtLeast(1) else (nodesPerRow - 1 - c).toFloat() / (nodesPerRow - 1).coerceAtLeast(1)
-                    val wave = (sin(colProg * 3.0 * PI) * 8f).toFloat()
-                    val px = (48f + colProg * 264f).coerceIn(45f, 315f)
-                    val py = (92f + r * rowHeight + wave).coerceIn(75f, 375f)
-                    val type = when (i) {
-                        keyIndex -> NodeType.KEY
-                        gateIndex -> NodeType.GATE
-                        else -> NodeType.NORMAL
-                    }
-                    val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
-                    nodes.add(LevelNode(i, px, py, type, keyForGate))
+                // Archetype 11: Crescent Ribbon
+                val r = 125f
+                val baseAngle = ((clampedId * 43) % 360) * (PI / 180.0)
+                val span = 1.45 * PI
+                { t ->
+                    val angle = baseAngle + span * t
+                    val curR = r - (20.0 * sin(t * PI)).toFloat()
+                    clampPt(centerX + curR * cos(angle).toFloat(), centerY + curR * sin(angle).toFloat())
                 }
             }
+        }
+
+        val sampledPoints = sampleCurve(nodeCount, curveFn)
+        val nodes = ArrayList<LevelNode>(nodeCount)
+        for (i in 1..nodeCount) {
+            val pt = sampledPoints[i - 1]
+            val type = when (i) {
+                keyIndex -> NodeType.KEY
+                gateIndex -> NodeType.GATE
+                else -> NodeType.NORMAL
+            }
+            val keyForGate = if (type == NodeType.KEY || type == NodeType.GATE) gateIndex else -1
+            nodes.add(LevelNode(i, pt.first, pt.second, type, keyForGate))
         }
 
         // Mechanic classification for the 10 tiers
@@ -516,5 +472,46 @@ object LevelCatalog {
             isGhostEchoes = isGhostEchoes,
             description = description
         )
+    }
+
+    private fun sampleCurve(count: Int, curveFn: (Float) -> Pair<Float, Float>): List<Pair<Float, Float>> {
+        val fineSteps = 400
+        val finePts = ArrayList<Pair<Float, Float>>(fineSteps)
+        for (step in 0 until fineSteps) {
+            val t = step.toFloat() / (fineSteps - 1).coerceAtLeast(1)
+            finePts.add(curveFn(t))
+        }
+
+        val cumLens = ArrayList<Float>(fineSteps)
+        cumLens.add(0f)
+        var totalLen = 0f
+        for (i in 0 until fineSteps - 1) {
+            val p1 = finePts[i]
+            val p2 = finePts[i + 1]
+            val d = hypot(p2.first - p1.first, p2.second - p1.second)
+            totalLen += d
+            cumLens.add(totalLen)
+        }
+
+        val resampled = ArrayList<Pair<Float, Float>>(count)
+        val stepLen = totalLen / (count - 1).coerceAtLeast(1)
+
+        resampled.add(finePts.first())
+        var curIdx = 0
+        for (i in 1 until count - 1) {
+            val targetLen = i * stepLen
+            while (curIdx < fineSteps - 1 && cumLens[curIdx + 1] < targetLen) {
+                curIdx++
+            }
+            val segLen = cumLens[curIdx + 1] - cumLens[curIdx]
+            val t = if (segLen <= 0f) 0f else (targetLen - cumLens[curIdx]) / segLen
+            val p1 = finePts[curIdx]
+            val p2 = finePts[curIdx + 1]
+            val x = p1.first + t * (p2.first - p1.first)
+            val y = p1.second + t * (p2.second - p1.second)
+            resampled.add(Pair(x, y))
+        }
+        resampled.add(finePts.last())
+        return resampled
     }
 }

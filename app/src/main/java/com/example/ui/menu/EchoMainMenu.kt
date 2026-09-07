@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.viewmodel.EchoUiState
@@ -125,7 +126,7 @@ fun EchoMainMenu(
         ) {
             val isNarrow = maxWidth < 380.dp
             val isShort = maxHeight < 700.dp
-            val horizontalPadding = if (isNarrow) 12.dp else 22.dp
+            val horizontalPadding = if (isNarrow) 12.dp else 16.dp
             val logoBaseSize = if (isNarrow || isShort) 100.dp else 130.dp
 
             Column(
@@ -137,109 +138,68 @@ fun EchoMainMenu(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(if (isShort) 12.dp else 16.dp)
             ) {
-                // Top Bar: Stars, Trophies, Tokens, Leaderboard, Profile, Theme Toggle, Settings
+                // Top Navigation Bar: Profile/Player Pill on Left, Action Buttons on Right
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Stars & Trophies Progress Chips
+                    // Left: Player Profile Pill
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(if (isNarrow) 4.dp else 6.dp)
+                        modifier = Modifier
+                            .shadow(2.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(cardBg)
+                            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+                            .clickable { onOpenMyProfile() }
+                            .padding(horizontal = 9.dp, vertical = 5.dp)
+                            .testTag("profile_icon_button")
                     ) {
-                        // Stars Chip
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Box(
                             modifier = Modifier
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(cardBg)
-                                .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-                                .padding(horizontal = if (isNarrow) 7.dp else 10.dp, vertical = 6.dp)
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF3B82F6).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Yıldızlar",
-                                tint = Color(0xFFF59E0B),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = if (isNarrow) "${state.totalStars}" else "${state.totalStars}/300",
-                                color = textPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                                text = if (state.userAvatarUri.isNotBlank()) state.userAvatarUri else "⚡",
+                                fontSize = 14.sp
                             )
                         }
-
-                        // Trophies Chip (Click to open profile)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(cardBg)
-                                .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-                                .clickable { onOpenMyProfile() }
-                                .padding(horizontal = if (isNarrow) 7.dp else 10.dp, vertical = 6.dp)
-                                .testTag("menu_trophies_chip")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.EmojiEvents,
-                                contentDescription = "Kupalar",
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
                             Text(
-                                text = "${state.trophies} 🏆",
-                                color = textPrimary,
+                                text = state.authenticatedUser.ifBlank { "Oyuncu" },
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                                color = textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (state.userCustomTitle.isNotBlank()) state.userCustomTitle else "Ses Kaşifi",
+                                fontSize = 10.sp,
+                                color = textSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    // Tokens, Leaderboard, Profile, Theme Toggle & Settings
+                    // Right: Quick Action Buttons (Leaderboard, Theme, Support, Settings)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(if (isNarrow) 3.dp else 6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val iconBtnSize = if (isNarrow) 32.dp else 36.dp
-                        val iconInnerSize = if (isNarrow) 16.dp else 18.dp
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(cardBg)
-                                .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-                                .clickable { onOpenShop() }
-                                .padding(horizontal = if (isNarrow) 7.dp else 10.dp, vertical = 6.dp)
-                                .testTag("menu_token_chip")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Diamond,
-                                contentDescription = "Jetonlar",
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = "${state.tokens}",
-                                color = textPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
-                        }
-
-                        // Leaderboard icon button
+                        // Leaderboard
                         IconButton(
                             onClick = onOpenLeaderboard,
                             modifier = Modifier
-                                .size(iconBtnSize)
+                                .size(36.dp)
                                 .shadow(2.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(cardBg)
@@ -250,34 +210,15 @@ fun EchoMainMenu(
                                 imageVector = Icons.Default.Leaderboard,
                                 contentDescription = "Liderlik Tablosu",
                                 tint = Color(0xFFF59E0B),
-                                modifier = Modifier.size(iconInnerSize)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
-                        // Profile icon button
-                        IconButton(
-                            onClick = onOpenMyProfile,
-                            modifier = Modifier
-                                .size(iconBtnSize)
-                                .shadow(2.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(cardBg)
-                                .border(1.dp, borderColor, CircleShape)
-                                .testTag("profile_icon_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Profilim",
-                                tint = Color(0xFF3B82F6),
-                                modifier = Modifier.size(iconInnerSize)
-                            )
-                        }
-
-                        // Dark / White Theme Quick Toggle Button
+                        // Theme Toggle
                         IconButton(
                             onClick = onToggleDarkTheme,
                             modifier = Modifier
-                                .size(iconBtnSize)
+                                .size(36.dp)
                                 .shadow(2.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(cardBg)
@@ -286,16 +227,17 @@ fun EchoMainMenu(
                         ) {
                             Icon(
                                 imageVector = if (state.isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
-                                contentDescription = "Tema Değiştir (Dark / White)",
+                                contentDescription = "Tema Değiştir",
                                 tint = if (state.isDarkTheme) Color(0xFF38BDF8) else Color(0xFFF59E0B),
-                                modifier = Modifier.size(iconInnerSize)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
+                        // Support
                         IconButton(
                             onClick = onOpenSupport,
                             modifier = Modifier
-                                .size(iconBtnSize)
+                                .size(36.dp)
                                 .shadow(2.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(cardBg)
@@ -306,14 +248,15 @@ fun EchoMainMenu(
                                 imageVector = Icons.Default.Email,
                                 contentDescription = "Destek & İletişim",
                                 tint = Color(0xFF0284C7),
-                                modifier = Modifier.size(iconInnerSize)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
+                        // Settings Button - Ample spacing, unconstrained, clean top-right corner
                         IconButton(
                             onClick = onOpenSettings,
                             modifier = Modifier
-                                .size(iconBtnSize)
+                                .size(36.dp)
                                 .shadow(2.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(cardBg)
@@ -324,7 +267,104 @@ fun EchoMainMenu(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = "Ayarlar",
                                 tint = textSecondary,
-                                modifier = Modifier.size(iconInnerSize)
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Economy & Resource Badges: Stars, Trophies, Tokens
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Stars Chip
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = cardBg,
+                        border = BorderStroke(1.dp, borderColor),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Yıldızlar",
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${state.totalStars}/300",
+                                color = textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    // Trophies Chip (Click to open profile)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = cardBg,
+                        border = BorderStroke(1.dp, borderColor),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onOpenMyProfile() }
+                            .testTag("menu_trophies_chip")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = "Kupalar",
+                                tint = Color(0xFFD97706),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${state.trophies} 🏆",
+                                color = textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    // Tokens Chip (Click to open shop)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = cardBg,
+                        border = BorderStroke(1.dp, borderColor),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onOpenShop() }
+                            .testTag("menu_token_chip")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Diamond,
+                                contentDescription = "Jetonlar",
+                                tint = Color(0xFF0284C7),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${state.tokens} Jeton",
+                                color = textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
                             )
                         }
                     }
