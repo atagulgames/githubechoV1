@@ -81,23 +81,16 @@ object CollisionEngine {
 
     /**
      * Self-Intersection check (Anlık Yol Çarpışması):
-     * Checks whether candidate segment (being drawn) intersects any earlier non-adjacent
-     * segments of the active stroke.
+     * Per user directives:
+     * - "Işınlar bir birinin içinde geçebilsin yankılardanda geçebilsin."
+     * - "düğümler içinden geçilebilinsin mesela sağ ya sola doğru sol alt çapraz iç içe geçsin yani."
+     * Lasers, segments, and nodes can freely intertwine, cross diagonally, and pass through each other.
      */
     fun checkSelfIntersection(
         activeSegments: List<Segment>,
         candidate: Segment
     ): Boolean {
-        if (activeSegments.size < 2) return false
-
-        // Check all segments except the immediate predecessor (which shares candidate.p1)
-        val checkLimit = activeSegments.size - 1
-        for (i in 0 until checkLimit) {
-            val pastSegment = activeSegments[i]
-            if (doLinesIntersect(candidate.p1, candidate.p2, pastSegment.p1, pastSegment.p2, endpointTolerance = 8.0f)) {
-                return true
-            }
-        }
+        // Freely allow intertwining, overlapping, and diagonal criss-crossing
         return false
     }
 

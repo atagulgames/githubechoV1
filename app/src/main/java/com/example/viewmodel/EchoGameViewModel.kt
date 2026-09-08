@@ -161,7 +161,13 @@ data class EchoUiState(
     val diamondRewardCooldownSeconds: Long = 0L,
     val coinRewardCooldownSeconds: Long = 0L,
     val breakerRewardCooldownSeconds: Long = 0L,
-    val megaChestRewardCooldownSeconds: Long = 0L
+    val megaChestRewardCooldownSeconds: Long = 0L,
+    // 5s Preview & 60s Gameplay Timer System
+    val isPreviewActive: Boolean = false,
+    val previewCountdownSeconds: Int = 5,
+    val showDurationStartedBanner: Boolean = false,
+    val levelRemainingTimeSec: Int = 60,
+    val isGameOverTimeUpDialogVisible: Boolean = false
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -186,6 +192,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private var rewardJob: Job? = null
     private var toastResetJob: Job? = null
     private var ghostFadeJob: Job? = null
+    private var previewJob: Job? = null
+    private var levelTimerJob: Job? = null
 
     private val nodeHitRadius: Float = 36f
     private val deadlockThreshold: Int = 8
@@ -399,6 +407,107 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isDoubleRewardClaimedThisLevel = false
             )
         }
+        startLevelSequence(levelData.levelId, isRestart = false)
+    }
+
+    fun startLevelSequence(levelId: Int, isRestart: Boolean = false) {
+        previewJob?.cancel()
+        levelTimerJob?.cancel()
+
+        val savedRemaining = if (isRestart) {
+            prefs.clearLevelTimer(levelId)
+            60
+        } else {
+            prefs.getLevelRemainingSeconds(levelId)
+        }
+
+        if (savedRemaining <= 0) {
+            _uiState.update {
+                it.copy(
+                    isPreviewActive = false,
+                    levelRemainingTimeSec = 0,
+                    isGameOverTimeUpDialogVisible = true,
+                    gameStatus = GameStatus.DEADLOCK
+                )
+            }
+            HarmonicAudioEngine.playTimeUpHata()
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                isPreviewActive = true,
+                previewCountdownSeconds = 5,
+                showDurationStartedBanner = false,
+                levelRemainingTimeSec = savedRemaining,
+                isGameOverTimeUpDialogVisible = false
+            )
+        }
+
+        // 1. Preview begins: 5second.mp3 plays immediately, all other sounds stop
+        HarmonicAudioEngine.stopCurrentSfx()
+        HarmonicAudioEngine.play5Second()
+
+        previewJob = viewModelScope.launch {
+            for (sec in 5 downTo 1) {
+                _uiState.update { it.copy(previewCountdownSeconds = sec) }
+                delay(1000L)
+            }
+            _uiState.update {
+                it.copy(
+                    previewCountdownSeconds = 0,
+                    isPreviewActive = false,
+                    showDurationStartedBanner = true
+                )
+            }
+
+            // 2. Countdown reaches 0: party.mp3 plays cleanly and "Süre Başladı" banner pops up
+            HarmonicAudioEngine.stopCurrentSfx()
+            HarmonicAudioEngine.playParty()
+
+            val deadlineMs = System.currentTimeMillis() + savedRemaining * 1000L
+            prefs.setLevelTimerDeadlineMs(levelId, deadlineMs)
+
+            launch {
+                delay(1800L)
+                _uiState.update { it.copy(showDurationStartedBanner = false) }
+            }
+
+            // 3. Start 60s gameplay countdown
+            startGameplayTimer(levelId)
+        }
+    }
+
+    private fun startGameplayTimer(levelId: Int) {
+        levelTimerJob?.cancel()
+        levelTimerJob = viewModelScope.launch {
+            var played5SecSound = false
+            while (isActive) {
+                val rem = prefs.getLevelRemainingSeconds(levelId)
+                _uiState.update { it.copy(levelRemainingTimeSec = rem) }
+
+                if (rem in 1..5 && !played5SecSound) {
+                    played5SecSound = true
+                    HarmonicAudioEngine.stopCurrentSfx()
+                    HarmonicAudioEngine.play5Second()
+                }
+
+                if (rem <= 0) {
+                    if (_uiState.value.gameStatus == GameStatus.PLAYING) {
+                        HarmonicAudioEngine.stopCurrentSfx()
+                        HarmonicAudioEngine.playTimeUpHata()
+                        _uiState.update {
+                            it.copy(
+                                gameStatus = GameStatus.DEADLOCK,
+                                isGameOverTimeUpDialogVisible = true
+                            )
+                        }
+                    }
+                    break
+                }
+                delay(500L)
+            }
+        }
     }
 
     fun startDailyChallenge() {
@@ -448,6 +557,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isDoubleRewardClaimedThisLevel = false
             )
         }
+        startLevelSequence(levelData.levelId, isRestart = false)
     }
 
     /**
@@ -579,6 +689,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun returnToMainMenu() {
+        previewJob?.cancel()
+        levelTimerJob?.cancel()
+        HarmonicAudioEngine.stopCurrentSfx()
         val isAuth = _uiState.value.isAuthenticated
         _uiState.update {
             it.copy(
@@ -586,7 +699,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isLevelSelectVisible = false,
                 isShopDialogVisible = false,
                 isSettingsDialogVisible = false,
-                isSkinsDialogVisible = false
+                isSkinsDialogVisible = false,
+                isPreviewActive = false,
+                showDurationStartedBanner = false,
+                isGameOverTimeUpDialogVisible = false
             )
         }
     }
@@ -596,6 +712,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun onPointerDown(point: Point) {
         val state = _uiState.value
         if (state.gameStatus != GameStatus.PLAYING) return
+        if (state.isPreviewActive) {
+            showToast("Ön izleme aşamasındasınız (5sn). Süre başlayınca çizim yapabilirsiniz.")
+            return
+        }
 
         val node1 = state.nodes.firstOrNull { it.id == 1 }
         val hitNode = if (node1 != null && node1.toPoint().distanceTo(point) <= nodeHitRadius) {
@@ -606,8 +726,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         if (hitNode != null) {
             // "Karakter 1'den başlayacak" kuralı: Çizim mutlaka 1 numaralı başlangıç düğümünden başlamalıdır.
             if (hitNode.id != 1) {
-                showToast("Karakter 1'den başlar! Çizime 1 numaralı noktadan başlayın.")
+                showToast("Karakter 1'den başlar! Çizime 1 numaralı noktadan başlayın. (+1 Hata)")
+                HarmonicAudioEngine.playCollisionBuzz()
                 triggerCollisionFeedback()
+                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
                 return
             }
 
@@ -617,8 +739,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         state.collectedKeyIds.contains(hitNode.id) ||
                         (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
                 if (!isUnlocked) {
-                    showToast("Bu kapı kilitli! Önce anahtarı topla.")
+                    showToast("Bu kapı kilitli! Önce anahtarı topla. (+1 Hata)")
+                    HarmonicAudioEngine.playCollisionBuzz()
                     triggerCollisionFeedback()
+                    _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
                     return
                 }
             }
@@ -646,13 +770,12 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun onPointerMove(point: Point) {
         val state = _uiState.value
-        if (!state.isDrawing || state.gameStatus != GameStatus.PLAYING) return
+        if (!state.isDrawing || state.gameStatus != GameStatus.PLAYING || state.isPreviewActive) return
 
         val lastVisitedId = state.visitedNodeIds.lastOrNull() ?: return
         val lastNode = state.nodes.firstOrNull { it.id == lastVisitedId } ?: return
-        val candidateSegment = Segment(lastNode.toPoint(), point, lastVisitedId, -1)
 
-        // 1. Proximity detection to past echoes: vibrates & alerts when close (< 16px)
+        // 1. Proximity detection to past echoes: subtle haptic feedback
         val minDist = CollisionEngine.minDistanceToEchoStrokes(point, state.echoes)
         val isNear = minDist < 18f
         if (isNear != state.isProximityAlertActive) {
@@ -660,28 +783,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             if (isNear) triggerProximityHaptic()
         }
 
-        // 2. Self-Intersection Check (Anlık Yol Çarpışması):
-        // If the line currently being drawn crosses any earlier segments of this stroke!
-        if (CollisionEngine.checkSelfIntersection(state.currentStrokeSegments, candidateSegment)) {
-            triggerSelfIntersectionFailure("Kendi çizdiğin yola çarptın! (Self-Intersection)")
-            return
-        }
+        // Note: Per user request:
+        // "Işınlar bir birinin içinde geçebilsin yankılardanda geçebilsin. Her bir yapılacak hata yankı olarak sayılacak."
+        // Lasers and strokes can freely pass through each other and past echoes without failing!
 
-        // 3. Collision with past Echo Colliders:
-        val hitboxScale = if (state.isEchoShrinkerActive) 0.5f else 1.0f
-        val collidedEcho = CollisionEngine.checkCollisionWithEchoStrokes(
-            candidate = candidateSegment,
-            echoStrokes = state.echoes,
-            hitboxScale = hitboxScale
-        )
-        if (collidedEcho != null) {
-            triggerCollisionFailure("Geçmiş yankı bariyerine çarptın!")
-            return
-        }
-
-        // 4. Expected next node determination:
-        // 1. If level has an explicit hint order, follow hintOrder
-        // 2. Otherwise follow consecutive node numbers (1, 2, 3...)
+        // Expected next node determination:
         val hintOrder = state.level.hintOrder
         val expectedNextId = if (hintOrder.isNotEmpty()) {
             val curIdx = hintOrder.indexOf(lastVisitedId)
@@ -690,12 +796,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             lastVisitedId + 1
         }
 
-        // Check if reaching a new node, prioritizing expectedNextId
+        // Check if reaching a target node
         val hitNode = findTargetNodeForDrag(point, lastNode, state.nodes, state.visitedNodeIds, expectedNextId)
         if (hitNode != null && hitNode.id != lastVisitedId) {
             // Already visited node?
             if (state.visitedNodeIds.contains(hitNode.id)) {
-                triggerCollisionFailure("Ziyaret edilen düğüme geri dönemezsin!")
+                showToast("Ziyaret edilen düğüme tekrar bağlanamazsın! (+1 Hata)")
+                HarmonicAudioEngine.playCollisionBuzz()
+                triggerCollisionFeedback()
+                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
                 return
             }
 
@@ -704,28 +813,18 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 edge.fromId == hitNode.id && edge.toId == lastVisitedId
             }
             if (illegalDirected) {
-                showToast("Bu kenar tek yönlü! Yalnızca ok yönünde çizilebilir.")
-                triggerCollisionFailure("Ters yönlü kenar!")
+                showToast("Bu kenar tek yönlü! Yalnızca ok yönünde çizilebilir. (+1 Hata)")
+                HarmonicAudioEngine.playCollisionBuzz()
+                triggerCollisionFeedback()
+                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
                 return
             }
 
             if (hitNode.id != expectedNextId) {
-                showToast("Sıradaki hedef: $expectedNextId numaralı nokta!")
+                showToast("Sıradaki hedef: $expectedNextId numaralı nokta! (+1 Hata)")
                 HarmonicAudioEngine.playCollisionBuzz()
                 triggerCollisionFeedback()
-                return
-            }
-
-            // Check collision of this target connection with past Echo Colliders
-            val connectionSegment = Segment(lastNode.toPoint(), hitNode.toPoint(), lastVisitedId, hitNode.id)
-            val echoHit = CollisionEngine.checkCollisionWithEchoStrokes(
-                candidate = connectionSegment,
-                echoStrokes = state.echoes,
-                endpointTolerance = 14f,
-                hitboxScale = if (state.isEchoShrinkerActive) 0.5f else 1.0f
-            )
-            if (echoHit != null) {
-                triggerCollisionFailure("Geçmiş yankı bariyerine çarptın!")
+                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
                 return
             }
 
@@ -735,8 +834,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         state.collectedKeyIds.contains(hitNode.id) ||
                         (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
                 if (!isUnlocked) {
-                    showToast("Kapı kilitli! Önce anahtar düğümünü bağla.")
-                    triggerCollisionFailure("Kilitli kapıya çarptın!")
+                    showToast("Kapı kilitli! Önce anahtar düğümünü bağla. (+1 Hata)")
+                    HarmonicAudioEngine.playCollisionBuzz()
+                    triggerCollisionFeedback()
+                    _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
                     return
                 }
             }
@@ -842,20 +943,24 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun handleVictory(completedSegments: List<Segment>) {
+        previewJob?.cancel()
+        levelTimerJob?.cancel()
+        prefs.clearLevelTimer(_uiState.value.level.levelId)
+
         val state = _uiState.value
-        if (state.level.levelId >= LevelCatalog.TOTAL_LEVELS) {
-            HarmonicAudioEngine.playWinAllLevels()
-        } else {
-            HarmonicAudioEngine.playVictoryCascade()
-        }
+        HarmonicAudioEngine.stopCurrentSfx()
+        HarmonicAudioEngine.playParty()
         triggerHapticVictory()
 
         val echoCount = state.echoCountForLevel
         val parEchoes = state.level.parEchoes
 
+        // User requirement:
+        // "yankılar kaç yıldızla bitireceğini belirlesin bölümler 3 yıldızla değerlendirilecek"
+        // 0 mistakes = 3 stars, <= 2 mistakes = 2 stars, > 2 = 1 star
         val stars = when {
-            echoCount <= parEchoes -> 3
-            echoCount <= parEchoes + 2 -> 2
+            echoCount == 0 -> 3
+            echoCount <= 2 -> 2
             else -> 1
         }
 
@@ -1452,8 +1557,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun shouldShowInterstitialOnNextLevel(): Boolean {
-        // "sonraki bölüm ==> reklam"
-        return true
+        val currentLevelId = _uiState.value.level.levelId
+        return prefs.shouldShowInterstitial(currentLevelId)
+    }
+
+    fun onInterstitialAdShownOrSkipped(wasShown: Boolean) {
+        val currentLevelId = _uiState.value.level.levelId
+        if (wasShown) {
+            prefs.onInterstitialDisplayed(currentLevelId)
+        } else {
+            prefs.incrementLevelsSinceInterstitial()
+        }
     }
 
     fun checkInternetAndAdHealth(silent: Boolean = false) {
@@ -1650,12 +1764,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 echoes = if (clearEchoes) emptyList() else it.echoes,
                 echoCountForLevel = if (clearEchoes) 0 else it.echoCountForLevel,
                 gameStatus = GameStatus.PLAYING,
+                isGameOverTimeUpDialogVisible = false,
                 levelStartTimeMs = System.currentTimeMillis(),
                 candyParticles = emptyList(),
                 candyCallout = null,
                 nodes = it.nodes.map { n -> n.copy(connected = false) }
             )
         }
+        startLevelSequence(state.level.levelId, isRestart = clearEchoes)
     }
 
     fun clearAllEchoes() {
@@ -2121,30 +2237,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             val distToExpected = point.distanceTo(expectedNode.toPoint())
             val distToLast = point.distanceTo(lastNode.toPoint())
             val segLen = lastNode.toPoint().distanceTo(expectedNode.toPoint())
-            val captureRadius = (segLen * 0.48f).coerceIn(8f, 28f)
+            val captureRadius = (segLen * 0.48f).coerceIn(12f, 32f)
             if (distToExpected <= captureRadius && distToExpected < distToLast) {
                 return expectedNode
             }
         }
-
-        // Check genuine collision with other nodes
-        val otherRadius = if (nodes.size >= 25) 8f else if (nodes.size >= 15) 10f else 14f
-        for (node in nodes) {
-            if (node.id == lastNode.id) continue
-            val d = point.distanceTo(node.toPoint())
-            if (!visitedNodeIds.contains(node.id)) {
-                // Wrong unvisited node only if player moved closer to it than lastNode
-                val distToLast = point.distanceTo(lastNode.toPoint())
-                if (d <= otherRadius && d < distToLast) {
-                    return node
-                }
-            } else {
-                // Backtracking into an already visited node only if finger directly penetrates it
-                if (d <= (otherRadius * 0.85f)) {
-                    return node
-                }
-            }
-        }
+        // Kullanıcı isteği: Düğümler içinden serbestçe geçilebilsin (sağa, sola, sol alt çapraza iç içe geçişler).
+        // Diğer düğümlerin içinden geçerken takılma veya hata olmadan akıcı geçiş sağlanır.
         return null
     }
 

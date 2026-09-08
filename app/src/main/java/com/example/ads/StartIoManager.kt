@@ -25,16 +25,30 @@ object StartIoManager {
     private var isRewardedLoading = false
     private var isInterstitialLoading = false
 
+    private var rewardedRetryCount = 0
+    private var interstitialRetryCount = 0
+    private const val MAX_RETRY_COUNT = 2
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var retryRewardedRunnable: Runnable? = null
     private var retryInterstitialRunnable: Runnable? = null
 
+    fun isEmulator(): Boolean {
+        return (android.os.Build.FINGERPRINT.startsWith("generic")
+                || android.os.Build.FINGERPRINT.startsWith("unknown")
+                || android.os.Build.MODEL.contains("google_sdk")
+                || android.os.Build.MODEL.contains("Emulator")
+                || android.os.Build.MODEL.contains("Android SDK built for x86")
+                || android.os.Build.MANUFACTURER.contains("Genymotion")
+                || (android.os.Build.BRAND.startsWith("generic") && android.os.Build.DEVICE.startsWith("generic"))
+                || "google_sdk" == android.os.Build.PRODUCT)
+    }
+
     /**
-     * Initializes Start.io SDK for live production ads.
-     * When testMode is false (default), Start.io serves strictly live production ads.
+     * Initializes Start.io SDK.
      */
     fun initialize(activity: Activity, testMode: Boolean = false) {
-        isTestMode = testMode
+        isTestMode = testMode || isEmulator()
         try {
             StartAppSDK.setTestAdsEnabled(isTestMode)
 
@@ -46,7 +60,7 @@ object StartIoManager {
                 // Submit GDPR/Privacy consent for highest fill rate and maximum eCPM on live networks
                 StartAppSDK.setUserConsent(activity, "pas", System.currentTimeMillis(), true)
                 isInitialized = true
-                Log.d(TAG, "Start.io SDK successfully initialized with App ID: $APP_ID (Live Mode=${!isTestMode})")
+                Log.d(TAG, "Start.io SDK successfully initialized with App ID: $APP_ID (Test Mode=$isTestMode)")
             }
 
             preloadAds(activity)
@@ -78,6 +92,8 @@ object StartIoManager {
      */
     fun preloadAds(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
+        rewardedRetryCount = 0
+        interstitialRetryCount = 0
         preloadRewardedVideo(activity)
         preloadInterstitial(activity)
     }
@@ -95,27 +111,39 @@ object StartIoManager {
             preloadedRewardedAd = ad
             isRewardedLoading = true
 
-            Log.d(TAG, "Preloading Start.io Live Rewarded Video (AppId=$APP_ID)...")
+            Log.d(TAG, "Preloading Start.io Rewarded Video (AppId=$APP_ID, TestMode=$isTestMode)...")
             ad.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
                 override fun onReceiveAd(receivedAd: Ad) {
                     isRewardedLoading = false
-                    Log.d(TAG, "Start.io Live Rewarded Video successfully loaded and ready!")
+                    rewardedRetryCount = 0
+                    Log.d(TAG, "Start.io Rewarded Video successfully loaded and ready!")
                 }
 
                 override fun onFailedToReceiveAd(receivedAd: Ad?) {
                     isRewardedLoading = false
                     preloadedRewardedAd = null
                     val errMsg = receivedAd?.errorMessage ?: "NO FILL"
-                    Log.w(TAG, "Start.io Rewarded Video preload failed: $errMsg. Scheduling retry in 15s...")
 
-                    // Intelligent retry with backoff: strictly live ads, never fall back to test ads
-                    if (!activity.isFinishing && !activity.isDestroyed) {
-                        retryRewardedRunnable = Runnable {
-                            if (!activity.isFinishing && !activity.isDestroyed) {
-                                preloadRewardedVideo(activity)
+                    if (isEmulator() && !isTestMode) {
+                        Log.d(TAG, "Emulator detected with live NO FILL. Switching to test ads mode.")
+                        setTestModeEnabled(true, activity)
+                        return
+                    }
+
+                    if (rewardedRetryCount < MAX_RETRY_COUNT) {
+                        rewardedRetryCount++
+                        val delayMs = 30_000L * rewardedRetryCount
+                        Log.d(TAG, "Start.io Rewarded Video preload failed: $errMsg. Backoff retry $rewardedRetryCount in ${delayMs / 1000}s...")
+                        if (!activity.isFinishing && !activity.isDestroyed) {
+                            retryRewardedRunnable = Runnable {
+                                if (!activity.isFinishing && !activity.isDestroyed) {
+                                    preloadRewardedVideo(activity)
+                                }
                             }
+                            mainHandler.postDelayed(retryRewardedRunnable!!, delayMs)
                         }
-                        mainHandler.postDelayed(retryRewardedRunnable!!, 15_000L)
+                    } else {
+                        Log.d(TAG, "Start.io Rewarded Video inventory temporarily unavailable ($errMsg). Pausing retries.")
                     }
                 }
             })
@@ -139,27 +167,38 @@ object StartIoManager {
             preloadedInterstitialAd = ad
             isInterstitialLoading = true
 
-            Log.d(TAG, "Preloading Start.io Live Interstitial (AppId=$APP_ID)...")
+            Log.d(TAG, "Preloading Start.io Interstitial (AppId=$APP_ID, TestMode=$isTestMode)...")
             ad.loadAd(StartAppAd.AdMode.AUTOMATIC, object : AdEventListener {
                 override fun onReceiveAd(receivedAd: Ad) {
                     isInterstitialLoading = false
-                    Log.d(TAG, "Start.io Live Interstitial successfully loaded and ready!")
+                    interstitialRetryCount = 0
+                    Log.d(TAG, "Start.io Interstitial successfully loaded and ready!")
                 }
 
                 override fun onFailedToReceiveAd(receivedAd: Ad?) {
                     isInterstitialLoading = false
                     preloadedInterstitialAd = null
                     val errMsg = receivedAd?.errorMessage ?: "NO FILL"
-                    Log.w(TAG, "Start.io Interstitial preload failed: $errMsg. Scheduling retry in 15s...")
 
-                    // Intelligent retry without test mode pollution
-                    if (!activity.isFinishing && !activity.isDestroyed) {
-                        retryInterstitialRunnable = Runnable {
-                            if (!activity.isFinishing && !activity.isDestroyed) {
-                                preloadInterstitial(activity)
+                    if (isEmulator() && !isTestMode) {
+                        setTestModeEnabled(true, activity)
+                        return
+                    }
+
+                    if (interstitialRetryCount < MAX_RETRY_COUNT) {
+                        interstitialRetryCount++
+                        val delayMs = 30_000L * interstitialRetryCount
+                        Log.d(TAG, "Start.io Interstitial preload failed: $errMsg. Backoff retry $interstitialRetryCount in ${delayMs / 1000}s...")
+                        if (!activity.isFinishing && !activity.isDestroyed) {
+                            retryInterstitialRunnable = Runnable {
+                                if (!activity.isFinishing && !activity.isDestroyed) {
+                                    preloadInterstitial(activity)
+                                }
                             }
+                            mainHandler.postDelayed(retryInterstitialRunnable!!, delayMs)
                         }
-                        mainHandler.postDelayed(retryInterstitialRunnable!!, 15_000L)
+                    } else {
+                        Log.d(TAG, "Start.io Interstitial inventory temporarily unavailable ($errMsg). Pausing retries.")
                     }
                 }
             })

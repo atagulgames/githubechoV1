@@ -20,9 +20,15 @@ class MainActivity : ComponentActivity() {
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     enableEdgeToEdge()
 
-    // Initialize Start.io Ads SDK with App ID: 208838202 (Live Production Ads Mode)
+    // Ensure WebView HTTP cache directory structure exists so Chromium does not report missing dir errors
+    try {
+      java.io.File(cacheDir, "WebView/Default/HTTP Cache/Code Cache/js").mkdirs()
+      java.io.File(cacheDir, "WebView/Default/HTTP Cache/Code Cache/wasm").mkdirs()
+    } catch (_: Exception) {}
+
+    // Initialize Start.io Ads SDK with App ID: 208838202
     val echoPrefs = com.example.data.EchoPreferences(this)
-    val testMode = echoPrefs.isTestAdsEnabled
+    val testMode = echoPrefs.isTestAdsEnabled || StartIoManager.isEmulator()
     StartIoManager.initialize(this, testMode = testMode)
     com.example.audio.HarmonicAudioEngine.init(this)
 

@@ -587,6 +587,45 @@ class EchoPreferences(context: Context) {
         return getUnlockedThemes().contains(themeName)
     }
 
+    fun shouldShowInterstitial(levelId: Int): Boolean {
+        if (levelId <= 5) return false
+        val threshold = if (levelId > 50) 2 else nextInterstitialThreshold
+        return levelsSinceLastInterstitial >= threshold
+    }
+
+    fun onInterstitialDisplayed(levelId: Int) {
+        levelsSinceLastInterstitial = 0
+        if (levelId in 6..50) {
+            // Alternate between 2 and 3 levels: 2 -> 3 -> 2 -> 3
+            nextInterstitialThreshold = if (nextInterstitialThreshold == 2) 3 else 2
+        } else if (levelId > 50) {
+            nextInterstitialThreshold = 2
+        }
+    }
+
+    fun incrementLevelsSinceInterstitial() {
+        levelsSinceLastInterstitial += 1
+    }
+
+    fun getLevelTimerDeadlineMs(levelId: Int): Long {
+        return prefs.getLong("echo_level_deadline_$levelId", 0L)
+    }
+
+    fun setLevelTimerDeadlineMs(levelId: Int, deadlineMs: Long) {
+        prefs.edit().putLong("echo_level_deadline_$levelId", deadlineMs).apply()
+    }
+
+    fun clearLevelTimer(levelId: Int) {
+        prefs.edit().remove("echo_level_deadline_$levelId").apply()
+    }
+
+    fun getLevelRemainingSeconds(levelId: Int): Int {
+        val deadline = getLevelTimerDeadlineMs(levelId)
+        if (deadline <= 0L) return 60
+        val remaining = ((deadline - System.currentTimeMillis()) / 1000L).toInt()
+        return remaining.coerceIn(0, 60)
+    }
+
     // --- LootLocker Session & Player Credentials ---
     var lootLockerSessionToken: String?
         get() = prefs.getString(KEY_LOOTLOCKER_SESSION_TOKEN, null)

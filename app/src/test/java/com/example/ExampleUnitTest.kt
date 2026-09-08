@@ -42,28 +42,18 @@ class ExampleUnitTest {
   fun testAll100LevelsWithRealisticFingerDrag() {
     val levels = LevelCatalog.create100Levels()
 
-    fun findTarget(curPt: Point, lastNode: LevelNode, expectedNode: LevelNode?, allNodes: List<LevelNode>, visitedIds: List<Int>): LevelNode? {
+    fun findTarget(curPt: Point, lastNode: LevelNode, expectedNode: LevelNode?): LevelNode? {
       if (expectedNode != null) {
         val distToExpected = curPt.distanceTo(Point(expectedNode.x, expectedNode.y))
         val distToLast = curPt.distanceTo(Point(lastNode.x, lastNode.y))
         val segLen = Point(lastNode.x, lastNode.y).distanceTo(Point(expectedNode.x, expectedNode.y))
-        val captureRadius = (segLen * 0.48f).coerceIn(8f, 28f)
+        val captureRadius = (segLen * 0.48f).coerceIn(12f, 32f)
         if (distToExpected <= captureRadius && distToExpected < distToLast) {
           return expectedNode
         }
       }
-
-      val otherRadius = if (allNodes.size >= 25) 8f else if (allNodes.size >= 15) 10f else 14f
-      for (node in allNodes) {
-        if (node.id == lastNode.id) continue
-        val d = curPt.distanceTo(Point(node.x, node.y))
-        if (!visitedIds.contains(node.id)) {
-          val distToLast = curPt.distanceTo(Point(lastNode.x, lastNode.y))
-          if (d <= otherRadius && d < distToLast) return node
-        } else {
-          if (d <= (otherRadius * 0.85f)) return node
-        }
-      }
+      // Düğümler içinden serbestçe geçilebilir: Kullanıcı isteği gereği çizgiler ve düğümler
+      // birbirinin içinden geçebilir; sadece beklenen hedef düğüme ulaşıldığında bağlanır.
       return null
     }
 
@@ -93,13 +83,8 @@ class ExampleUnitTest {
           val lastNode = nodes.first { it.id == lastVisitedId }
           val expectedNode = nodes.getOrNull(visited.size)
 
-          val hit = findTarget(curPt, lastNode, expectedNode, nodes, visited)
+          val hit = findTarget(curPt, lastNode, expectedNode)
           if (hit != null && hit.id != lastVisitedId) {
-            if (visited.contains(hit.id)) {
-              failed = true
-              failureReason = "CRASH: Hit already visited Node ${hit.id} when dragging to Node ${n2.id} at dist=$currentDist/$dist"
-              break
-            }
             if (hit.id != n2.id) {
               failed = true
               failureReason = "CRASH: Hit wrong node ${hit.id} instead of expected ${n2.id} at dist=$currentDist/$dist"
@@ -140,7 +125,6 @@ class ExampleUnitTest {
     val nodes = level.nodes
     val visited = mutableListOf(nodes[0].id)
     val segments = mutableListOf<Segment>()
-    val nodeHitRadius = 36f
 
     for (step in 0 until nodes.size - 1) {
       val fromNode = nodes[step]
@@ -150,42 +134,20 @@ class ExampleUnitTest {
       val dist = fromPt.distanceTo(toPt)
       val numSubSteps = (dist * 2).toInt().coerceAtLeast(10)
 
-      println("Simulating drag from Node ${fromNode.id} to Node ${targetNode.id} (dist=$dist)...")
-
       var reached = false
       for (s in 1..numSubSteps) {
         val t = s.toFloat() / numSubSteps
         val curPt = Point(fromPt.x + t * (toPt.x - fromPt.x), fromPt.y + t * (toPt.y - fromPt.y))
-        val candidate = Segment(fromPt, curPt, fromNode.id, -1)
 
-        // Self-intersection check
-        if (CollisionEngine.checkSelfIntersection(segments, candidate)) {
-          fail("FAILED: Self-intersection when moving from Node ${fromNode.id} to Node ${targetNode.id} at t=$t, pt=$curPt")
-        }
-
-        // Check if hitting other nodes along the drag
-        val candidates = nodes.filter { Point(it.x, it.y).distanceTo(curPt) <= nodeHitRadius }
-        val expected = candidates.firstOrNull { it.id == targetNode.id }
-        val hit = if (expected != null) {
-          expected
-        } else {
-          val unvisited = candidates.filter { !visited.contains(it.id) }
-            .minByOrNull { Point(it.x, it.y).distanceTo(curPt) }
-          unvisited ?: candidates.minByOrNull { Point(it.x, it.y).distanceTo(curPt) }
-        }
-
-        if (hit != null && hit.id != fromNode.id) {
-          if (visited.contains(hit.id)) {
-            fail("FAILED: Hit already visited Node ${hit.id} when dragging to Node ${targetNode.id} at t=$t, pt=$curPt! Visited=$visited")
-          }
-          if (hit.id != targetNode.id) {
-            fail("FAILED: Hit wrong unvisited Node ${hit.id} instead of expected Node ${targetNode.id} at t=$t, pt=$curPt! Dist to wrong node=${Point(hit.x, hit.y).distanceTo(curPt)}, dist to target=${Point(targetNode.x, targetNode.y).distanceTo(curPt)}")
-          } else {
-            reached = true
-            visited.add(targetNode.id)
-            segments.add(Segment(fromPt, toPt, fromNode.id, targetNode.id))
-            break
-          }
+        // Target capture when finger approaches targetNode
+        val distToTarget = curPt.distanceTo(toPt)
+        val distToFrom = curPt.distanceTo(fromPt)
+        val captureRadius = (dist * 0.48f).coerceIn(12f, 32f)
+        if (distToTarget <= captureRadius && distToTarget < distToFrom) {
+          reached = true
+          visited.add(targetNode.id)
+          segments.add(Segment(fromPt, toPt, fromNode.id, targetNode.id))
+          break
         }
       }
       assertTrue("Did not reach target node ${targetNode.id} from ${fromNode.id}", reached)
@@ -224,21 +186,6 @@ class ExampleUnitTest {
             failures.add("Level $id nodes ${nodes[i].id} and ${nodes[j].id} too close: dist=$dist (min=$minAllowedDist)")
           }
         }
-      }
-
-      // Check straight-line path (1->2->...->N) self-intersection
-      val segments = mutableListOf<Segment>()
-      for (i in 0 until nodes.size - 1) {
-        val s = Segment(Point(nodes[i].x, nodes[i].y), Point(nodes[i + 1].x, nodes[i + 1].y), nodes[i].id, nodes[i + 1].id)
-        for (past in segments.dropLast(1)) {
-          val intersect = CollisionEngine.doLinesIntersect(
-            s.p1, s.p2, past.p1, past.p2, endpointTolerance = 8f
-          )
-          if (intersect) {
-            failures.add("Level $id has self-intersecting solution path between ${s.fromNodeId}->${s.toNodeId} and ${past.fromNodeId}->${past.toNodeId}")
-          }
-        }
-        segments.add(s)
       }
     }
     if (failures.isNotEmpty()) {

@@ -38,6 +38,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -142,11 +150,73 @@ fun EchoTopHUD(
                         }
                     }
 
-                    // Right: Tokens & Echoes count
+                    // Right: Timer, Tokens & Echoes count
+                    val timerShake = rememberInfiniteTransition(label = "timerShake")
+                    val timerShakeOffset by if (state.levelRemainingTimeSec <= 10) {
+                        timerShake.animateFloat(
+                            initialValue = -4f,
+                            targetValue = 4f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(60, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "urgentShake"
+                        )
+                    } else {
+                        timerShake.animateFloat(
+                            initialValue = -1.5f,
+                            targetValue = 1.5f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(120, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "regularShake"
+                        )
+                    }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 6.dp)
                     ) {
+                        // 60s Level Countdown Timer chip with Shake Animation
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    translationX = timerShakeOffset
+                                }
+                                .shadow(2.dp, RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (state.levelRemainingTimeSec <= 10)
+                                        (if (state.isDarkTheme) Color(0xFF7F1D1D) else Color(0xFFFEE2E2))
+                                    else hudCardBg
+                                )
+                                .border(
+                                    width = if (state.levelRemainingTimeSec <= 10) 1.5.dp else 1.dp,
+                                    color = if (state.levelRemainingTimeSec <= 10) Color(0xFFDC2626) else hudBorder,
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .padding(
+                                    horizontal = if (isCompact) 6.dp else 9.dp,
+                                    vertical = if (isCompact) 5.dp else 7.dp
+                                )
+                                .testTag("top_hud_timer_chip")
+                        ) {
+                            Text(
+                                text = if (state.levelRemainingTimeSec <= 10) "🔥" else "⏱️",
+                                fontSize = if (isCompact) 11.sp else 12.sp
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "${state.levelRemainingTimeSec}s",
+                                fontWeight = FontWeight.Black,
+                                color = if (state.levelRemainingTimeSec <= 10) Color(0xFFEF4444) else textPrimary,
+                                fontSize = if (isCompact) 11.sp else 13.sp,
+                                maxLines = 1
+                            )
+                        }
+
                         // Tokens chip
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

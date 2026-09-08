@@ -257,6 +257,7 @@ object HarmonicAudioEngine {
     private fun playInterveningSfx(
         resName: String,
         sfxDurationMs: Long = 1200L,
+        onCompletion: (() -> Unit)? = null,
         fallbackTone: () -> Unit
     ) {
         if (!isSoundEnabled) return
@@ -274,6 +275,12 @@ object HarmonicAudioEngine {
             if (resId == 0 && resName == "nextlevel") {
                 resId = ctx.resources.getIdentifier("next_level", "raw", ctx.packageName)
             }
+            if (resId == 0 && (resName == "5second" || resName == "fivesecond")) {
+                resId = ctx.resources.getIdentifier("fivesecond", "raw", ctx.packageName)
+            }
+            if (resId == 0 && (resName == "party" || resName == "part")) {
+                resId = ctx.resources.getIdentifier("party", "raw", ctx.packageName)
+            }
 
             var player: MediaPlayer? = if (resId != 0) {
                 MediaPlayer.create(ctx, resId)
@@ -282,7 +289,9 @@ object HarmonicAudioEngine {
             if (player == null) {
                 val assetCandidates = listOf(
                     "audio/$resName.mp3",
-                    "audio/${resName.lowercase()}.mp3"
+                    "audio/${resName.lowercase()}.mp3",
+                    "audio/5second.mp3",
+                    "audio/party.mp3"
                 )
                 for (path in assetCandidates) {
                     try {
@@ -305,7 +314,7 @@ object HarmonicAudioEngine {
 
             if (player != null) {
                 activeSfxPlayer = player
-                player.setVolume(0.95f, 0.95f)
+                player.setVolume(0.98f, 0.98f)
                 player.setOnCompletionListener { mp ->
                     try {
                         mp.release()
@@ -317,6 +326,7 @@ object HarmonicAudioEngine {
                         activeSfxCount.set(0)
                         restoreBgm(NORMAL_BGM_VOLUME)
                     }
+                    onCompletion?.invoke()
                 }
                 player.setOnErrorListener { mp, _, _ ->
                     try { mp.release() } catch (_: Exception) {}
@@ -339,7 +349,59 @@ object HarmonicAudioEngine {
                 activeSfxCount.set(0)
                 restoreBgm(NORMAL_BGM_VOLUME)
             }
+            onCompletion?.invoke()
         }
+    }
+
+    /**
+     * Plays party.mp3 (celebratory tone / phase sound).
+     * Automatically stops any playing SFX to prevent audio overlap.
+     */
+    fun playParty(onCompletion: (() -> Unit)? = null) {
+        playInterveningSfx("party", sfxDurationMs = 1500L, onCompletion = onCompletion) {
+            playVictoryCascade()
+        }
+    }
+
+    /**
+     * Plays 5second.mp3 (countdown tick / 5-second alert sound).
+     * Automatically stops any playing SFX to prevent audio overlap.
+     */
+    fun play5Second(onCompletion: (() -> Unit)? = null) {
+        playInterveningSfx("5second", sfxDurationMs = 5000L, onCompletion = onCompletion) {
+            activeSfxJob = audioScope.launch {
+                for (i in 5 downTo 1) {
+                    playSynthTone(440.00f + i * 40f, 150, 0.65f)
+                    delay(850L)
+                }
+            }
+        }
+    }
+
+    /**
+     * Plays the level start sequence:
+     * 1. party.mp3 plays immediately.
+     * 2. 5second.mp3 plays right after party.mp3 without overlap.
+     */
+    fun playPreviewSequence() {
+        stopCurrentSfx()
+        playParty {
+            play5Second()
+        }
+    }
+
+    /**
+     * Plays party.mp3 when the 5s preview ends and 60-second time begins.
+     */
+    fun playSüreBasladiParty() {
+        playParty()
+    }
+
+    /**
+     * Plays hata.mp3 when the 60-second timer hits 0 and player ran out of time.
+     */
+    fun playTimeUpHata() {
+        playCollisionBuzz()
     }
 
     /**

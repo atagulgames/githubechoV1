@@ -228,22 +228,23 @@ object LevelCatalog {
      */
     val LEVEL_NODE_COUNTS: IntArray = run {
         val arr = IntArray(TOTAL_LEVELS)
-        arr[0] = 3
-        for (i in 1 until TOTAL_LEVELS - 1) {
+        arr[0] = 3 // Level 1: 3 nodes (Gentle intro)
+        arr[1] = 4 // Level 2: 4 nodes (Gentle intro)
+        arr[2] = 5 // Level 3: 5 nodes (Gentle intro)
+        // Levels 4 to 100: "aşırı zor olsun manyak zor olsun düşündürsün yani 60 sn zor yapalm art arda deyil ilk üç bölüm dışındaki bütün böllümler aşırı zor karmaşık"
+        for (i in 3 until TOTAL_LEVELS - 1) {
             val id = i + 1
-            val t = (id - 1) / 99.0
-            val base = 3.0 + t * 33.0
-            val wave = when (id % 6) {
-                0 -> 2.2
-                1 -> -1.8
-                2 -> 1.7
-                3 -> -2.1
-                4 -> 1.9
-                else -> -1.4
+            val t = (id - 4) / 95.0
+            val base = 18.0 + t * 16.5 // Scaled between 18 and 35 nodes
+            val wave = when (id % 4) {
+                0 -> 1.6
+                1 -> -1.4
+                2 -> 1.8
+                else -> -1.5
             }
-            var count = (base + wave).roundToInt().coerceIn(3, 36)
+            var count = (base + wave).roundToInt().coerceIn(16, 36)
             if (count == arr[i - 1]) {
-                count = if (count < 36 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(3)
+                count = if (count < 36 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(16)
             }
             arr[i] = count
         }
@@ -388,5 +389,38 @@ object LevelCatalog {
         }
         resampled.add(finePts.last())
         return resampled
+    }
+
+    /**
+     * Creates a non-linear criss-crossing permutation of node indices for levels > 3.
+     * Ensures nodes in sequence (1 -> 2 -> 3...) are not placed right next to each other
+     * along the perimeter, transforming the puzzles into intellectually engaging geometric webs.
+     */
+    fun computeThoughtfulPermutation(levelId: Int, count: Int): List<Int> {
+        if (levelId <= 3 || count <= 3) {
+            return (0 until count).toList()
+        }
+        val result = ArrayList<Int>(count)
+        val visited = BooleanArray(count)
+        val half = (count / 2).coerceAtLeast(1)
+
+        for (i in 0 until count) {
+            val idx = if (i % 2 == 0) {
+                (i / 2) % count
+            } else {
+                ((i / 2) + half) % count
+            }
+            if (!visited[idx]) {
+                visited[idx] = true
+                result.add(idx)
+            }
+        }
+        for (i in 0 until count) {
+            if (!visited[i]) {
+                visited[i] = true
+                result.add(i)
+            }
+        }
+        return result
     }
 }

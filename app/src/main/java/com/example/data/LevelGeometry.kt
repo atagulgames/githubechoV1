@@ -143,14 +143,9 @@ object LevelGeometry {
                 }
                 clampPt(cx + u, cy + v)
             }
-            16 -> { t -> // Level 16: "Ion Net" (11 nodes)
+            16 -> { t -> // Level 16: "Ion Net"
                 val u = -140f + t * 280f
-                val v = when {
-                    t <= 0.25f -> -120f + (t / 0.25f) * 240f
-                    t <= 0.50f -> 120f - ((t - 0.25f) / 0.25f) * 240f
-                    t <= 0.75f -> -120f + ((t - 0.50f) / 0.25f) * 240f
-                    else -> 120f - ((t - 0.75f) / 0.25f) * 240f
-                }
+                val v = (sin(t * 3.5 * PI) * 120f).toFloat()
                 clampPt(cx + u, cy + v)
             }
             17 -> { t -> // Level 17: "Vortex Ray" (10 nodes)
@@ -249,13 +244,10 @@ object LevelGeometry {
                 val r = 140f + 25f * sin(a).toFloat()
                 clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
             }
-            29 -> { t -> // Level 29: "Crystal Seal" (16 nodes)
-                val (u, v) = when {
-                    t <= 0.333f -> Pair((t / 0.333f) * 130f, -135f + (t / 0.333f) * 135f)
-                    t <= 0.667f -> Pair(130f - ((t - 0.333f) / 0.334f) * 260f, ((t - 0.333f) / 0.334f) * 135f)
-                    else -> Pair(-130f + ((t - 0.667f) / 0.333f) * 130f, 135f - ((t - 0.667f) / 0.333f) * 200f)
-                }
-                clampPt(cx + u, cy + v)
+            29 -> { t -> // Level 29: "Crystal Seal"
+                val a = -PI * 0.85 + t * (1.7 * PI)
+                val r = 135f - 20f * cos(a * 3.0).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
             }
             30 -> { t -> // Level 30: "Unlocked Arch" (18 nodes)
                 val a = -PI * 0.95 + t * (1.55 * PI)
@@ -277,13 +269,9 @@ object LevelGeometry {
                 val v = (125f * (1f - 0.6f * t) * sin(t * 3.5 * PI)).toFloat()
                 clampPt(cx + u, cy + v)
             }
-            33 -> { t -> // Level 33: "Fragile Pulse" (17 nodes)
-                val u = -145f + t * 290f
-                val v = when {
-                    t in 0.35f..0.45f -> -130f * sin(((t - 0.35f) / 0.10f) * PI).toFloat()
-                    t in 0.50f..0.60f -> 130f * sin(((t - 0.50f) / 0.10f) * PI).toFloat()
-                    else -> 0f
-                }
+            33 -> { t -> // Level 33: "Fragile Pulse"
+                val u = -140f + t * 280f
+                val v = (sin(t * 3.0 * PI) * 125f).toFloat()
                 clampPt(cx + u, cy + v)
             }
             34 -> { t -> // Level 34: "Temporal Mark" (19 nodes)

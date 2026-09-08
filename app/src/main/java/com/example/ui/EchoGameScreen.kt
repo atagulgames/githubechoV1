@@ -2,13 +2,24 @@ package com.example.ui
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,10 +28,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.model.GameStatus
 import com.example.model.ScreenState
@@ -211,9 +228,11 @@ fun EchoGameScreen(
                             isNextLevelTransitioning = true
                             if (viewModel.shouldShowInterstitialOnNextLevel()) {
                                 onShowInterstitialAd {
+                                    viewModel.onInterstitialAdShownOrSkipped(true)
                                     viewModel.nextLevel()
                                 }
                             } else {
+                                viewModel.onInterstitialAdShownOrSkipped(false)
                                 viewModel.nextLevel()
                             }
                         }
@@ -224,11 +243,12 @@ fun EchoGameScreen(
                 )
             }
 
-            // 2. Deadlock / Game Over Dialog
-            if (state.gameStatus == GameStatus.DEADLOCK) {
+            // 2. Deadlock / Time-Up Game Over Dialog
+            if (state.isGameOverTimeUpDialogVisible || state.gameStatus == GameStatus.DEADLOCK) {
                 DeadlockDialog(
                     echoCount = state.echoCountForLevel,
-                    onClearWithAd = { onShowRewardedAd("CLEAR_ECHOES") },
+                    isTimeUp = state.isGameOverTimeUpDialogVisible,
+                    onClearWithAd = if (!state.isGameOverTimeUpDialogVisible) { { onShowRewardedAd("CLEAR_ECHOES") } } else null,
                     onRestartLevel = { viewModel.restartLevel(clearEchoes = true) }
                 )
             }
@@ -444,6 +464,167 @@ fun EchoGameScreen(
                     }
                 )
             }
+
+            // 18. 5-Second Preview Countdown with Shake Animation (User: 5sn sayarken ekranını görebilelim)
+            if (state.isPreviewActive && state.screenState == ScreenState.PLAYING_LEVEL) {
+                PreviewCountdownShakeOverlay(
+                    countdownSeconds = state.previewCountdownSeconds,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
+
+            // 19. "Süre Başladı!" Shake Banner with party.mp3 (User: party.mp3 çalıp ekranda shake animasyonu ile Süre Başladı Yazsın)
+            if (state.showDurationStartedBanner && state.screenState == ScreenState.PLAYING_LEVEL) {
+                DurationStartedShakeBanner(
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PreviewCountdownShakeOverlay(
+    countdownSeconds: Int,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "preview_shake")
+    val shakeX by infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(50, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shakeX"
+    )
+    val shakeY by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(70, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shakeY"
+    )
+
+    // Transparent container so nodes and level canvas remain 100% visible and unblocked
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 76.dp, start = 16.dp, end = 16.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier
+                .graphicsLayer {
+                    translationX = shakeX
+                    translationY = shakeY
+                }
+                .clip(RoundedCornerShape(22.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xEE0F172A),
+                            Color(0xEE1E293B)
+                        )
+                    )
+                )
+                .border(
+                    width = 2.5.dp,
+                    brush = Brush.horizontalGradient(
+                        listOf(Color(0xFF38BDF8), Color(0xFFA855F7), Color(0xFFF59E0B))
+                    ),
+                    shape = RoundedCornerShape(22.dp)
+                )
+                .padding(horizontal = 28.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = "ÖN İZLEME - BULMACAYI İNCELE",
+                color = Color(0xFF38BDF8),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.5.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${countdownSeconds}sn",
+                color = Color(0xFFFBBF24),
+                fontSize = 44.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun DurationStartedShakeBanner(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "started_shake")
+    val shakeX by infiniteTransition.animateFloat(
+        initialValue = -12f,
+        targetValue = 12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(45, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "startedShakeX"
+    )
+    val shakeY by infiniteTransition.animateFloat(
+        initialValue = -6f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(65, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "startedShakeY"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 76.dp, start = 16.dp, end = 16.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier
+                .graphicsLayer {
+                    translationX = shakeX
+                    translationY = shakeY
+                }
+                .clip(RoundedCornerShape(22.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xEE10B981),
+                            Color(0xEE059669)
+                        )
+                    )
+                )
+                .border(
+                    width = 2.5.dp,
+                    color = Color.White,
+                    shape = RoundedCornerShape(22.dp)
+                )
+                .padding(horizontal = 30.dp, vertical = 14.dp)
+        ) {
+            Text(
+                text = "⚡ SÜRE BAŞLADI! ⚡",
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.2.sp
+            )
+            Text(
+                text = "60 Saniyen Var!",
+                color = Color(0xFFFEF08A),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
