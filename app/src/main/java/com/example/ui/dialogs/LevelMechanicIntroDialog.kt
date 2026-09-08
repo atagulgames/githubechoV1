@@ -67,91 +67,91 @@ object MechanicCatalog {
             1 -> LevelMechanicInfo(
                 tier = 1,
                 icon = "🎯",
-                title = "Temel Yankı Kuralları",
+                title = "Öğretici: Temel Yaşayan Ağ",
                 subtitle = "Harmonik Başlangıç (Bölüm 1 - 10)",
-                description = "Parmağını basılı tutarak tüm düğümleri tek kesintisiz rotada birleştir! Çizdiğin rotadan oluşan kırmızı yankı çizgileri sonraki hamlede tehlikeli hale gelir; onlara çarpmadan bölümü tamamla!",
-                tip = "Çapraz ve birbirini kesmeyen geniş yaylar çizerek sonraki hamlelerin için tahtada açık alan bırak!",
+                description = "Tüm düğümleri tek kesintisiz rotada birleştir! Her hatan kırmızı bir Yankı yaratır. Yaptığın hatalar yok olmaz; geçmişin hayalet ışınları olarak ekranda kalır ve canlı bir labirent oluşturur!",
+                tip = "Düğümler arasında ferah rotalar çiz. 0 Hata ile bitirirsen Kusursuz Hayalet açılır!",
                 badgeColor = 0xFF0284C7
             )
             2 -> LevelMechanicInfo(
                 tier = 2,
                 icon = "⚡",
-                title = "Vektör Akışı & Dar Açı",
-                subtitle = "Hassas Geometrik Hatlar (Bölüm 11 - 20)",
-                description = "Düğümler artık daha dar ve köşeli dizilimlerde! Hızlı hareket etmek yerine parmağını sakin ve kontrollü kaydırarak dönüş açılarını iyi ayarla.",
-                tip = "Dönüş yaparken düğüm merkezlerini kaçırmamak için ses efektlerini dinle!",
+                title = "Öğretici: Hareketli Düğümler",
+                subtitle = "Yörüngesel Salınım (Bölüm 11 - 20)",
+                description = "Düğümler artık sabit durmuyor! Kozmik akıntıyla hafifçe hareket edip dalgalanıyorlar. Sadece ezberlemek yetmez; parmağını hareketin ritmine göre kaydırmalısın!",
+                tip = "Düğümlerin hareket salınımını izle; tepe noktalarında bağlantıyı kur!",
                 badgeColor = 0xFF8B5CF6
             )
             3 -> LevelMechanicInfo(
                 tier = 3,
-                icon = "🗝️",
-                title = "Kilit & Anahtar Mekaniği!",
-                subtitle = "Gizli Kapılar Açılıyor (Bölüm 21 - 30)",
-                description = "Sahada kilitli kapı düğümleri var! Kapıdan güvenle geçebilmek için önce parlak sarı Anahtar düğümünü rotana dahil etmelisin. Anahtarı almadan kapıya dokunursan yankı kırılır!",
-                tip = "Rotanı kurgularken ilk hedefin her zaman Anahtar düğümü olsun!",
+                icon = "🌌",
+                title = "Öğretici: Görünmez Işınlar",
+                subtitle = "Pulsar & Gizli Hatlar (Bölüm 21 - 30)",
+                description = "Bağladığın ışınlar ve yollar periyodik olarak görünmez olur ve soluklaşır! Zihninde rotanı ve geçmişin çizgilerini canlandırarak ilerle.",
+                tip = "Işınlar görünmez olsa da varlıklarını sürdürürler; hafızana güven!",
                 badgeColor = 0xFFD97706
             )
             4 -> LevelMechanicInfo(
                 tier = 4,
                 icon = "⏳",
-                title = "Sönen Dalgalar",
+                title = "Öğretici: Zamanla Kaybolan Düğümler",
                 subtitle = "Zamansal Çözünme (Bölüm 31 - 40)",
-                description = "Bu seviyelerde eski yankı çizgileri zamanla solarak erir. Ancak acele edip yanlış rotaya sapma; en az yankı hamlesiyle 3 yıldızı kap!",
-                tip = "'Yankı Kırıcı' güçlendiricisi ile tıkanan kırmızı hatları tek dokunuşla patlatabilirsin!",
+                description = "Bazı düğümler zaman geçtikçe enerjisini kaybeder ve solmaya başlar! 60 saniyelik geri sayım akarken acele etmeli, ama sakinliğini korumalısın.",
+                tip = "Solan düğümleri rotanın ilk adımlarına alarak onları erkenden kurtar!",
                 badgeColor = 0xFFEC4899
             )
             5 -> LevelMechanicInfo(
                 tier = 5,
                 icon = "👻",
-                title = "Gölge Rezonansı",
-                subtitle = "Hayalet Düğümler (Bölüm 41 - 50)",
-                description = "Simetrik ve yanılsamalı gölge düğümleri sahnede! Hangi düğümün öncelikli olduğunu anlamak için parlayan rezonans halkalarını takip et.",
-                tip = "İpucu butonuna dokunarak bir sonraki en doğru adımı önizleyebilirsin!",
+                title = "Öğretici: Gezgin Yankılar",
+                subtitle = "Hareket Eden Geçmiş (Bölüm 41 - 50)",
+                description = "Kırmızı yankı çizgilerin sabit kalmıyor; uzayda yavaşça süzülerek yer değiştiriyor! Hata yaptıkça Yankı Canavarı uyanmaya başlar!",
+                tip = "Yankıların süzülme yönünü takip et; boşluk bıraktıkları anda aralarından geç!",
                 badgeColor = 0xFF6366F1
             )
             6 -> LevelMechanicInfo(
                 tier = 6,
-                icon = "❄️",
-                title = "Fraktal Matris",
-                subtitle = "Altıgen Petek Mimarisi (Bölüm 51 - 60)",
-                description = "Doğanın en kusursuz geometrisi olan altıgen petekler! Çok yönlü dallanmalar sayesinde birden fazla alternatif çözüm yolu bulabilirsin.",
-                tip = "Dış halkadaki düğümlerden başlayıp merkeze doğru ilerlemek rotanı ferahlatır!",
+                icon = "🔮",
+                title = "Öğretici: Sahte Hedefler",
+                subtitle = "Kozmik İllüzyon (Bölüm 51 - 60)",
+                description = "Ağda sahte illüzyon düğümleri belirdi! Yanıp sönen gerçek rezonans halkalarını ve sıra rehberini takip et; sahte hedeflere dokunursan +1 Yankı oluşur!",
+                tip = "Gerçek hedefler canlı parıldarken, sahtelerin halkaları kesik kesik titrer!",
                 badgeColor = 0xFF14B8A6
             )
             7 -> LevelMechanicInfo(
                 tier = 7,
-                icon = "🌀",
-                title = "Kuantum Kapıları",
-                subtitle = "Çift Geçişli Boyut Tünelleri (Bölüm 61 - 70)",
-                description = "Kuantum seviyelerinde birden fazla kilit ve geçit bulunur. Sıralamayı doğru yap: Önce 1. anahtar -> 1. kapı, sonra 2. anahtar -> 2. kapı!",
-                tip = "Renk halkalarına dikkat et, kilidi açılmayan kapıya asla dokunma!",
+                icon = "🔄",
+                title = "Öğretici: Ters Yönler",
+                subtitle = "Vektör Akış İkilemi (Bölüm 61 - 70)",
+                description = "Vektör okları rotanın yönünü tersine çeviriyor! Belirli hatları yalnızca gösterilen ok yönünde geçebilirsin. Ters yöne gidersen akım kilitlenir!",
+                tip = "Ok yönlerini önceden analiz et; rotanı tek yönlü tünelleri kilitlemeyecek şekilde planla!",
                 badgeColor = 0xFF2563EB
             )
             8 -> LevelMechanicInfo(
                 tier = 8,
-                icon = "⌛",
-                title = "Zamansal Akış",
-                subtitle = "İleri-Geri Vektör Sınavı (Bölüm 71 - 80)",
-                description = "Uzun mesafeli düğüm geçişleri ve spiral hatlar! Yankı izlerinin birbirini kesmemesi için tahtanın kenarlarını akıllıca kullan.",
-                tip = "Kenar boşluklarından dolaşarak tahtanın ortasındaki düğümleri sonraya sakla!",
+                icon = "🌀",
+                title = "Öğretici: Dönen Ağ",
+                subtitle = "Açısal Rotasyon (Bölüm 71 - 80)",
+                description = "Tüm evren ve ağ ekseni yavaşça dönüyor! Parmağın ekranda kayarken tahtanın açısı değişecek; merkezkaç kuvvetini rotanın avantajına çevir!",
+                tip = "Dönüşün ritmini yakala, dönüş hızına ayak uydurarak parmağını akıcı sür!",
                 badgeColor = 0xFFF59E0B
             )
             9 -> LevelMechanicInfo(
                 tier = 9,
                 icon = "🕸️",
-                title = "Usta Ağları",
-                subtitle = "Büyük Strateji & Zeka (Bölüm 81 - 90)",
-                description = "30'dan fazla düğüm içeren devasa örümcek ağı geometrileri! Burası gerçek ustaların kendini kanıtladığı yerdir.",
-                tip = "Hamle yapmadan önce tahtayı birkaç saniye analiz et; rotanı zihninde tamamla!",
+                title = "Öğretici: İki Ağ Aynı Anda",
+                subtitle = "Çift Boyutlu Dolanıklık (Bölüm 81 - 90)",
+                description = "İki paralel ağ iç içe geçmiş durumda! Birinci ağdaki anahtarı alarak ikinci boyuttaki kilitli kapıyı açmalısın.",
+                tip = "İki ağ arasındaki geçiş düğümlerini köprü olarak kullan!",
                 badgeColor = 0xFF8B5CF6
             )
             else -> LevelMechanicInfo(
                 tier = 10,
                 icon = "👑",
-                title = "Omega Zirvesi",
-                subtitle = "Büyük Final İmtihanı (Bölüm 91 - 100)",
-                description = "Echo evreninin 100. ve nihai zirvesi! Tüm öğrendiğin mekanikleri bir arada kullanarak 100 seviyeyi de fethet ve efsanevi şampiyonluk kupasını kaldır!",
-                tip = "Başarılar Yankı Ustası! Şampiyonluk seni bekliyor!",
+                title = "Büyük Final: Tüm Kuralların Birleşimi",
+                subtitle = "Omega Zirvesi & Kader Ağı (Bölüm 91 - 100)",
+                description = "Echo evreninin 100. büyük zirvesi! Hareketli düğümler, görünmez hatlar, dönen ağ ve uyanmış Yankı Canavarı... Tüm mekanikler tek bir nefeste birleşti! Geçmişini aş ve Efsanevi Şampiyon ol!",
+                tip = "Kendi Kusursuz Hayaletinle yarış; geçmişindeki her hata senin en büyük öğretmenin oldu!",
                 badgeColor = 0xFFEF4444
             )
         }

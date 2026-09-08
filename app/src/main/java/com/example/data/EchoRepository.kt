@@ -50,8 +50,8 @@ class EchoRepository(context: Context) {
 
     suspend fun recordVictory(levelId: Int, echoCount: Int, parEchoes: Int) = withContext(Dispatchers.IO) {
         val stars = when {
-            echoCount <= parEchoes -> 3
-            echoCount <= parEchoes + 2 -> 2
+            echoCount == 0 -> 3
+            echoCount <= 2 -> 2
             else -> 1
         }
         val current = levelDao.getLevelById(levelId)

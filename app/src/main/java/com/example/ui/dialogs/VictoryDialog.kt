@@ -53,8 +53,8 @@ fun VictoryDialog(
     onReplay: () -> Unit
 ) {
     val stars = when {
-        echoCount <= parEchoes -> 3
-        echoCount <= parEchoes + 2 -> 2
+        echoCount == 0 -> 3
+        echoCount <= 2 -> 2
         else -> 1
     }
 

@@ -623,7 +623,18 @@ class EchoPreferences(context: Context) {
         val deadline = getLevelTimerDeadlineMs(levelId)
         if (deadline <= 0L) return 60
         val remaining = ((deadline - System.currentTimeMillis()) / 1000L).toInt()
-        return remaining.coerceIn(0, 60)
+        return remaining.coerceAtLeast(0)
+    }
+
+    /**
+     * User request: "eğer reklam izlersen 15 sn ek süre eklensin."
+     * Adds extra seconds to current level deadline.
+     */
+    fun addLevelTime(levelId: Int, additionalSeconds: Int = 15) {
+        val currentDeadline = getLevelTimerDeadlineMs(levelId)
+        val now = System.currentTimeMillis()
+        val baseMs = if (currentDeadline > now) currentDeadline else now
+        setLevelTimerDeadlineMs(levelId, baseMs + additionalSeconds * 1000L)
     }
 
     // --- LootLocker Session & Player Credentials ---
@@ -656,6 +667,107 @@ class EchoPreferences(context: Context) {
     var lootLockerLeaderboardKey: String
         get() = prefs.getString(KEY_LOOTLOCKER_LEADERBOARD_KEY, "ekoleadbordglobal") ?: "ekoleadbordglobal"
         set(value) = prefs.edit().putString(KEY_LOOTLOCKER_LEADERBOARD_KEY, value.trim()).apply()
+
+    // --- Ghost Error Trails (Geçmişin Hayaletleri) ---
+    fun saveGhostStroke(levelId: Int, points: List<Pair<Float, Float>>) {
+        if (points.isEmpty()) return
+        val currentRaw = prefs.getString("echo_ghost_strokes_$levelId", "") ?: ""
+        val newStrokeStr = points.joinToString(";") { "${it.first.toInt()},${it.second.toInt()}" }
+        // Keep up to 4 historical ghost strokes so screen turns into a rich living labyrinth of memories
+        val list = currentRaw.split("|").filter { it.isNotBlank() }.toMutableList()
+        if (list.size >= 4) list.removeAt(0)
+        list.add(newStrokeStr)
+        prefs.edit().putString("echo_ghost_strokes_$levelId", list.joinToString("|")).apply()
+    }
+
+    fun getGhostStrokes(levelId: Int): List<List<Pair<Float, Float>>> {
+        val raw = prefs.getString("echo_ghost_strokes_$levelId", "") ?: ""
+        if (raw.isBlank()) return emptyList()
+        return raw.split("|").filter { it.isNotBlank() }.map { strokeStr ->
+            strokeStr.split(";").mapNotNull { ptStr ->
+                val parts = ptStr.split(",")
+                if (parts.size == 2) {
+                    val x = parts[0].toFloatOrNull()
+                    val y = parts[1].toFloatOrNull()
+                    if (x != null && y != null) Pair(x, y) else null
+                } else null
+            }
+        }
+    }
+
+    fun clearGhostStrokes(levelId: Int) {
+        prefs.edit().remove("echo_ghost_strokes_$levelId").apply()
+    }
+
+    // --- Perfect Echo (Kusursuzluk & Kendi Hayaletinle Yarış) ---
+    fun savePerfectRun(levelId: Int, points: List<Pair<Float, Float>>, durationMs: Long) {
+        if (points.isEmpty()) return
+        val pathStr = points.joinToString(";") { "${it.first.toInt()},${it.second.toInt()}" }
+        prefs.edit()
+            .putString("echo_perfect_run_path_$levelId", pathStr)
+            .putLong("echo_perfect_run_dur_$levelId", durationMs)
+            .apply()
+    }
+
+    fun getPerfectRun(levelId: Int): Pair<List<Pair<Float, Float>>, Long>? {
+        val pathStr = prefs.getString("echo_perfect_run_path_$levelId", null) ?: return null
+        val dur = prefs.getLong("echo_perfect_run_dur_$levelId", 0L)
+        val pts = pathStr.split(";").mapNotNull { ptStr ->
+            val parts = ptStr.split(",")
+            if (parts.size == 2) {
+                val x = parts[0].toFloatOrNull()
+                val y = parts[1].toFloatOrNull()
+                if (x != null && y != null) Pair(x, y) else null
+            } else null
+        }
+        if (pts.isEmpty()) return null
+        return Pair(pts, dur)
+    }
+
+    fun hasPerfectRun(levelId: Int): Boolean {
+        return prefs.contains("echo_perfect_run_path_$levelId")
+    }
+
+    // --- Behavioral Telemetry (Oyuncu Davranış Analizi) ---
+    fun recordBehaviorError(x: Float, y: Float, isRetreat: Boolean, isFast: Boolean) {
+        val quadKey = if (y < 300f) {
+            if (x < 220f) "quad_top_left" else "quad_top_right"
+        } else {
+            if (x < 220f) "quad_bottom_left" else "quad_bottom_right"
+        }
+        val currentCount = prefs.getInt("echo_behavior_$quadKey", 0)
+        prefs.edit().putInt("echo_behavior_$quadKey", currentCount + 1).apply()
+
+        if (isRetreat) {
+            val retreats = prefs.getInt("echo_behavior_retreats", 0)
+            prefs.edit().putInt("echo_behavior_retreats", retreats + 1).apply()
+        }
+        if (isFast) {
+            val fastMoves = prefs.getInt("echo_behavior_fast_moves", 0)
+            prefs.edit().putInt("echo_behavior_fast_moves", fastMoves + 1).apply()
+        }
+    }
+
+    fun getBehaviorInsight(): String {
+        val tl = prefs.getInt("echo_behavior_quad_top_left", 0)
+        val tr = prefs.getInt("echo_behavior_quad_top_right", 0)
+        val bl = prefs.getInt("echo_behavior_quad_bottom_left", 0)
+        val br = prefs.getInt("echo_behavior_quad_bottom_right", 0)
+        val retreats = prefs.getInt("echo_behavior_retreats", 0)
+        val fastMoves = prefs.getInt("echo_behavior_fast_moves", 0)
+
+        val totalErrors = tl + tr + bl + br
+        return when {
+            totalErrors == 0 -> "Analiz: Kusursuz Yolculuk"
+            tr > tl && tr > bl && tr > br -> "Analiz: Sağ Üstte Tereddüt Tespit Edildi"
+            tl > tr && tl > bl && tl > br -> "Analiz: Sol Üst Dönüşlerde Hata Eğilimi"
+            bl > tr && bl > tl && bl > br -> "Analiz: Sol Alt Köşede Kararsızlık"
+            br > tr && br > tl && br > bl -> "Analiz: Sağ Alt Bölgede Odaklanma"
+            retreats >= 3 -> "Analiz: Geri Çekilme & İkilem Eğilimi"
+            fastMoves >= 4 -> "Analiz: Yüksek Hızlı Refleks Oyuncusu"
+            else -> "Analiz: Zihinsel Rota Hesaplaması Aktif"
+        }
+    }
 
     var hasFreshStartV2: Boolean
         get() = prefs.getBoolean("echo_v2_fresh_start_done", false)

@@ -38,6 +38,9 @@ import com.example.model.Point
 import com.example.model.ScreenState
 import com.example.model.Segment
 import com.example.model.StrokeTheme
+import com.example.model.EchoBeastState
+import com.example.ui.dialogs.MechanicCatalog
+import com.example.ui.dialogs.LevelMechanicInfo
 import com.example.model.ThemeRarity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -167,7 +170,23 @@ data class EchoUiState(
     val previewCountdownSeconds: Int = 5,
     val showDurationStartedBanner: Boolean = false,
     val levelRemainingTimeSec: Int = 60,
-    val isGameOverTimeUpDialogVisible: Boolean = false
+    val isGameOverTimeUpDialogVisible: Boolean = false,
+    // Ghost Trails of Past Errors (Geçmişin Hayalet Labirenti)
+    val pastGhostStrokes: List<List<com.example.model.Point>> = emptyList(),
+    // Perfect Echo & Race Against Your Ghost (Kendi Hayaletinle Yarış)
+    val isGhostRaceAvailable: Boolean = false,
+    val isGhostRaceActive: Boolean = true,
+    val ghostReplayPoints: List<com.example.model.Point> = emptyList(),
+    val ghostReplayDurationMs: Long = 0L,
+    val ghostRunnerCurrentPoint: com.example.model.Point? = null,
+    val ghostRacePlayerWon: Boolean = false,
+    // Behavioral Intelligence (Oyuncu Davranış Analizi)
+    val playerBehaviorInsight: String = "Analiz: Kusursuz Yolculuk",
+    // Echo Beast Corruption System (Yankı Canavarı)
+    val echoBeastState: com.example.model.EchoBeastState = com.example.model.EchoBeastState.CALM,
+    // 10 Evolution Tiers Tutorial Dialog System (Her kademenin ilk bölümü tutorial)
+    val isLevelMechanicIntroVisible: Boolean = false,
+    val activeMechanicInfo: com.example.ui.dialogs.LevelMechanicInfo? = null
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -194,6 +213,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private var ghostFadeJob: Job? = null
     private var previewJob: Job? = null
     private var levelTimerJob: Job? = null
+    private var ghostRunnerJob: Job? = null
 
     private val nodeHitRadius: Float = 36f
     private val deadlockThreshold: Int = 8
@@ -375,6 +395,18 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun loadAndStartLevel(targetIdx: Int) {
         val levelData = repo.getLevelData(targetIdx + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[0])
+        val rawGhosts = prefs.getGhostStrokes(levelData.levelId)
+        val ghostStrokes = rawGhosts.map { pts -> pts.map { Point(it.first, it.second) } }
+        val perfRun = prefs.getPerfectRun(levelData.levelId)
+        val hasPerf = perfRun != null
+        val perfPts = perfRun?.first?.map { Point(it.first, it.second) } ?: emptyList()
+        val perfDur = perfRun?.second ?: 0L
+        val tier = (((levelData.levelId - 1) / 10) + 1).coerceIn(1, 10)
+        val isTierIntroLevel = levelData.levelId in listOf(1, 11, 21, 31, 41, 51, 61, 71, 81, 91)
+        val shouldShowIntro = isTierIntroLevel && !prefs.isMechanicIntroShown(tier)
+        val introInfo = if (shouldShowIntro) MechanicCatalog.getMechanicInfoForLevel(levelData.levelId) else null
+        val insight = prefs.getBehaviorInsight()
+
         _uiState.update {
             it.copy(
                 screenState = ScreenState.PLAYING_LEVEL,
@@ -404,7 +436,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 candyParticles = emptyList(),
                 candyCallout = null,
                 levelStartTimeMs = System.currentTimeMillis(),
-                isDoubleRewardClaimedThisLevel = false
+                isDoubleRewardClaimedThisLevel = false,
+                pastGhostStrokes = ghostStrokes,
+                isGhostRaceAvailable = hasPerf,
+                ghostReplayPoints = perfPts,
+                ghostReplayDurationMs = perfDur,
+                ghostRunnerCurrentPoint = null,
+                ghostRacePlayerWon = false,
+                playerBehaviorInsight = insight,
+                echoBeastState = EchoBeastState.CALM,
+                isLevelMechanicIntroVisible = shouldShowIntro,
+                activeMechanicInfo = introInfo
             )
         }
         startLevelSequence(levelData.levelId, isRestart = false)
@@ -444,13 +486,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             )
         }
 
-        // 1. Preview begins: 5second.mp3 plays immediately, all other sounds stop
+        // 1. Preview begins: Stop other SFX and synchronize tick at each second (5, 4, 3, 2, 1)
         HarmonicAudioEngine.stopCurrentSfx()
-        HarmonicAudioEngine.play5Second()
 
         previewJob = viewModelScope.launch {
             for (sec in 5 downTo 1) {
                 _uiState.update { it.copy(previewCountdownSeconds = sec) }
+                // User requirement: "5second da dıt dıt diye sesler geliyorya ya onlar tam süreye denk gelecek mesela 5 sn ilk dıt 4 sn 2inci dır diye devam etsin"
+                HarmonicAudioEngine.playCountdownTick(sec)
                 delay(1000L)
             }
             _uiState.update {
@@ -481,15 +524,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private fun startGameplayTimer(levelId: Int) {
         levelTimerJob?.cancel()
         levelTimerJob = viewModelScope.launch {
-            var played5SecSound = false
+            var lastBeepSec = -1
             while (isActive) {
                 val rem = prefs.getLevelRemainingSeconds(levelId)
                 _uiState.update { it.copy(levelRemainingTimeSec = rem) }
 
-                if (rem in 1..5 && !played5SecSound) {
-                    played5SecSound = true
-                    HarmonicAudioEngine.stopCurrentSfx()
-                    HarmonicAudioEngine.play5Second()
+                // Synchronized tick for last 5 seconds: exactly at 5, 4, 3, 2, 1
+                if (rem in 1..5 && rem != lastBeepSec) {
+                    lastBeepSec = rem
+                    HarmonicAudioEngine.playCountdownTick(rem)
                 }
 
                 if (rem <= 0) {
@@ -505,7 +548,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     }
                     break
                 }
-                delay(500L)
+                delay(200L)
             }
         }
     }
@@ -726,10 +769,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         if (hitNode != null) {
             // "Karakter 1'den başlayacak" kuralı: Çizim mutlaka 1 numaralı başlangıç düğümünden başlamalıdır.
             if (hitNode.id != 1) {
-                showToast("Karakter 1'den başlar! Çizime 1 numaralı noktadan başlayın. (+1 Hata)")
-                HarmonicAudioEngine.playCollisionBuzz()
+                showToast("Karakter 1'den başlar! Çizime 1 numaralı noktadan başlayın. (+1 Yankı)")
+                HarmonicAudioEngine.playHataSound()
                 triggerCollisionFeedback()
-                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
+                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1, totalEchoes = it.totalEchoes + 1) }
+                prefs.incrementTotalEchoes()
                 return
             }
 
@@ -739,10 +783,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         state.collectedKeyIds.contains(hitNode.id) ||
                         (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
                 if (!isUnlocked) {
-                    showToast("Bu kapı kilitli! Önce anahtarı topla. (+1 Hata)")
-                    HarmonicAudioEngine.playCollisionBuzz()
+                    showToast("Bu kapı kilitli! Önce anahtarı topla. (+1 Yankı)")
+                    HarmonicAudioEngine.playHataSound()
                     triggerCollisionFeedback()
-                    _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
+                    _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1, totalEchoes = it.totalEchoes + 1) }
+                    prefs.incrementTotalEchoes()
                     return
                 }
             }
@@ -764,6 +809,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     currentPointerPos = point,
                     nodes = it.nodes.map { n -> if (n.id == hitNode.id) n.copy(connected = true) else n }
                 )
+            }
+
+            if (state.isGhostRaceAvailable && state.isGhostRaceActive && state.ghostReplayPoints.isNotEmpty()) {
+                startGhostRunner(state.ghostReplayPoints, state.ghostReplayDurationMs)
             }
         }
     }
@@ -799,12 +848,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         // Check if reaching a target node
         val hitNode = findTargetNodeForDrag(point, lastNode, state.nodes, state.visitedNodeIds, expectedNextId)
         if (hitNode != null && hitNode.id != lastVisitedId) {
-            // Already visited node?
+            // Already visited node? (User request: "örneğin önceki düğüme geri dönmesi bir yankı sayılsın")
             if (state.visitedNodeIds.contains(hitNode.id)) {
-                showToast("Ziyaret edilen düğüme tekrar bağlanamazsın! (+1 Hata)")
-                HarmonicAudioEngine.playCollisionBuzz()
-                triggerCollisionFeedback()
-                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
+                val isPrevNode = state.visitedNodeIds.size >= 2 && hitNode.id == state.visitedNodeIds[state.visitedNodeIds.size - 2]
+                val msg = if (isPrevNode) {
+                    "Önceki düğüme geri dönüldü! (+1 Yankı)"
+                } else {
+                    "Ziyaret edilen düğüme geri dönülemez! (+1 Yankı)"
+                }
+                showToast(msg)
+                commitStrokeAsEcho(msg)
                 return
             }
 
@@ -813,18 +866,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 edge.fromId == hitNode.id && edge.toId == lastVisitedId
             }
             if (illegalDirected) {
-                showToast("Bu kenar tek yönlü! Yalnızca ok yönünde çizilebilir. (+1 Hata)")
-                HarmonicAudioEngine.playCollisionBuzz()
-                triggerCollisionFeedback()
-                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
+                val msg = "Bu kenar tek yönlü! (+1 Yankı)"
+                showToast(msg)
+                commitStrokeAsEcho(msg)
                 return
             }
 
             if (hitNode.id != expectedNextId) {
-                showToast("Sıradaki hedef: $expectedNextId numaralı nokta! (+1 Hata)")
-                HarmonicAudioEngine.playCollisionBuzz()
-                triggerCollisionFeedback()
-                _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
+                val msg = "Sıradaki hedef: $expectedNextId numaralı nokta! (+1 Yankı)"
+                showToast(msg)
+                commitStrokeAsEcho(msg)
                 return
             }
 
@@ -834,10 +885,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         state.collectedKeyIds.contains(hitNode.id) ||
                         (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
                 if (!isUnlocked) {
-                    showToast("Kapı kilitli! Önce anahtar düğümünü bağla. (+1 Hata)")
-                    HarmonicAudioEngine.playCollisionBuzz()
-                    triggerCollisionFeedback()
-                    _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1) }
+                    val msg = "Kapı kilitli! Önce anahtarı topla (+1 Yankı)"
+                    showToast(msg)
+                    commitStrokeAsEcho(msg)
                     return
                 }
             }
@@ -922,6 +972,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onPointerUp() {
+        ghostRunnerJob?.cancel()
         val state = _uiState.value
         if (!state.isDrawing || state.gameStatus != GameStatus.PLAYING) return
 
@@ -936,7 +987,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     currentPointerPos = null,
                     visitedNodeIds = emptyList(),
                     currentStrokeSegments = emptyList(),
-                    nodes = it.nodes.map { n -> n.copy(connected = false) }
+                    nodes = it.nodes.map { n -> n.copy(connected = false) },
+                    ghostRunnerCurrentPoint = null
                 )
             }
         }
@@ -945,6 +997,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private fun handleVictory(completedSegments: List<Segment>) {
         previewJob?.cancel()
         levelTimerJob?.cancel()
+        ghostRunnerJob?.cancel()
         prefs.clearLevelTimer(_uiState.value.level.levelId)
 
         val state = _uiState.value
@@ -962,6 +1015,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             echoCount == 0 -> 3
             echoCount <= 2 -> 2
             else -> 1
+        }
+
+        // User requirement: "★★★ Kusursuz: Perfect Echo. Oyuncu 3 yıldız aldığında o bölümün kusursuz yolu kaydedilir."
+        if (stars == 3) {
+            val durationMs = (System.currentTimeMillis() - state.levelStartTimeMs).coerceAtLeast(1000L)
+            val pts = completedSegments.flatMap { listOf(Pair(it.p1.x, it.p1.y), Pair(it.p2.x, it.p2.y)) }.distinct()
+            prefs.savePerfectRun(state.level.levelId, pts, durationMs)
+        }
+
+        val wonGhostRace = state.isGhostRaceAvailable && state.ghostReplayDurationMs > 0 &&
+                (System.currentTimeMillis() - state.levelStartTimeMs) < state.ghostReplayDurationMs
+        if (wonGhostRace) {
+            showToast("🏆 Kendi Kusursuz Hayaletini Geride Bıraktın! Yeni Rekor!")
         }
 
         val startTime = if (state.levelStartTimeMs > 0) state.levelStartTimeMs else (System.currentTimeMillis() - 7500L)
@@ -1086,6 +1152,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private fun commitStrokeAsEcho(reason: String) {
         HarmonicAudioEngine.playHataSound()
         triggerCollisionFeedback()
+        ghostRunnerJob?.cancel()
 
         val state = _uiState.value
         val newEchoSegments = state.currentStrokeSegments.toList()
@@ -1105,6 +1172,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             )
         } else null
 
+        // Save failed stroke into persistent past ghost memories & record player behavioral telemetry
+        if (newEchoSegments.isNotEmpty()) {
+            val pts = newEchoSegments.flatMap { listOf(Pair(it.p1.x, it.p1.y), Pair(it.p2.x, it.p2.y)) }.distinct()
+            prefs.saveGhostStroke(state.level.levelId, pts)
+            val lastPt = pts.lastOrNull()
+            if (lastPt != null) {
+                prefs.recordBehaviorError(
+                    lastPt.first,
+                    lastPt.second,
+                    isRetreat = reason.contains("Geri") || reason.contains("Yarım"),
+                    isFast = (System.currentTimeMillis() - state.levelStartTimeMs) < 4000L
+                )
+            }
+        }
+
         // Decrement lifetime of past decaying echoes
         val updatedPastEchoes = state.echoes.mapNotNull { echo ->
             if (isDecaying) {
@@ -1114,8 +1196,12 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
 
         val finalEchoes = if (newEchoStroke != null) updatedPastEchoes + newEchoStroke else updatedPastEchoes
-        val newEchoCount = state.echoCountForLevel + (if (newEchoSegments.isNotEmpty()) 1 else 0)
+        val newEchoCount = state.echoCountForLevel + 1
         val isDeadlocked = newEchoCount >= deadlockThreshold
+
+        val updatedGhosts = prefs.getGhostStrokes(state.level.levelId).map { pts -> pts.map { Point(it.first, it.second) } }
+        val updatedBeast = EchoBeastState.fromEchoCount(newEchoCount)
+        val updatedInsight = prefs.getBehaviorInsight()
 
         prefs.recordCombo(0)
 
@@ -1132,7 +1218,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 currentCombo = 0,
                 isCollisionAlertActive = true,
                 nodes = it.nodes.map { n -> n.copy(connected = false) },
-                gameStatus = if (isDeadlocked) GameStatus.DEADLOCK else GameStatus.PLAYING
+                gameStatus = if (isDeadlocked) GameStatus.DEADLOCK else GameStatus.PLAYING,
+                pastGhostStrokes = updatedGhosts,
+                echoBeastState = updatedBeast,
+                playerBehaviorInsight = updatedInsight,
+                ghostRunnerCurrentPoint = null
             )
         }
 
@@ -1140,6 +1230,45 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         alertResetJob = viewModelScope.launch {
             delay(500)
             _uiState.update { it.copy(isCollisionAlertActive = false) }
+        }
+    }
+
+    fun showMechanicGuide(levelId: Int? = null) {
+        val targetId = levelId ?: _uiState.value.level.levelId
+        val info = MechanicCatalog.getMechanicInfoForLevel(targetId)
+        _uiState.update {
+            it.copy(
+                isLevelMechanicIntroVisible = true,
+                activeMechanicInfo = info
+            )
+        }
+    }
+
+    fun dismissMechanicGuide() {
+        val tier = (((_uiState.value.level.levelId - 1) / 10) + 1).coerceIn(1, 10)
+        prefs.markMechanicIntroShown(tier)
+        _uiState.update { it.copy(isLevelMechanicIntroVisible = false) }
+    }
+
+    fun toggleGhostRace() {
+        _uiState.update { it.copy(isGhostRaceActive = !it.isGhostRaceActive) }
+        val statusText = if (!_uiState.value.isGhostRaceActive) "Hayaletle Yarış Kapatıldı" else "Hayaletle Yarış Aktif!"
+        showToast(statusText)
+    }
+
+    private fun startGhostRunner(pts: List<Point>, durationMs: Long) {
+        ghostRunnerJob?.cancel()
+        ghostRunnerJob = viewModelScope.launch {
+            val totalTime = durationMs.coerceIn(1500L, 60000L)
+            val startTime = System.currentTimeMillis()
+            while (isActive && _uiState.value.isDrawing) {
+                val elapsed = System.currentTimeMillis() - startTime
+                val progress = (elapsed.toFloat() / totalTime).coerceIn(0f, 1f)
+                val idx = (progress * (pts.size - 1)).toInt().coerceIn(0, pts.size - 1)
+                _uiState.update { it.copy(ghostRunnerCurrentPoint = pts[idx]) }
+                if (progress >= 1f) break
+                delay(32L)
+            }
         }
     }
 
@@ -1187,8 +1316,42 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         showToast("🌟 Esnek Mod Aktif! Yankı bariyerleri %50 küçültüldü (Yalnızca bu bölüm için geçerli).")
     }
 
+    /**
+     * User request: "eğer reklam izlersen 15 sn ek süre eklensin."
+     * Adds +15s to level deadline and resumes timer loop cleanly.
+     */
+    fun addExtraTimeFromAd() {
+        val levelId = _uiState.value.level.levelId
+        prefs.addLevelTime(levelId, 15)
+        val newRem = prefs.getLevelRemainingSeconds(levelId)
+        _uiState.update {
+            it.copy(
+                levelRemainingTimeSec = newRem,
+                isGameOverTimeUpDialogVisible = false,
+                gameStatus = GameStatus.PLAYING
+            )
+        }
+        showToast("⏱️ +15 Saniye Ek Süre Eklendi!")
+        HarmonicAudioEngine.playParty()
+        startGameplayTimer(levelId)
+    }
+
     fun grantRewardedReward(type: String) {
         val rewardInfo = when (type) {
+            "EXTRA_TIME", "EXTRA_TIME_15S" -> {
+                addExtraTimeFromAd()
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false
+                    )
+                }
+                RewardClaimedInfo(
+                    title = "⏱️ +15 Saniye Eklendi!",
+                    subtitle = "Bölüm süresine +15 saniye başarıyla eklendi.",
+                    rewardType = type
+                )
+            }
             "CLEAR_ECHOES" -> {
                 clearAllEchoes()
                 prefs.addTokens(1)
@@ -2232,18 +2395,34 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         visitedNodeIds: List<Int>,
         expectedNextId: Int
     ): Node? {
+        val distToLast = point.distanceTo(lastNode.toPoint())
+
+        // 1. Highest priority: expected next target node in sequence
         val expectedNode = nodes.firstOrNull { it.id == expectedNextId }
         if (expectedNode != null) {
             val distToExpected = point.distanceTo(expectedNode.toPoint())
-            val distToLast = point.distanceTo(lastNode.toPoint())
             val segLen = lastNode.toPoint().distanceTo(expectedNode.toPoint())
-            val captureRadius = (segLen * 0.48f).coerceIn(12f, 32f)
+            val captureRadius = (segLen * 0.48f).coerceIn(16f, 36f)
             if (distToExpected <= captureRadius && distToExpected < distToLast) {
                 return expectedNode
             }
         }
-        // Kullanıcı isteği: Düğümler içinden serbestçe geçilebilsin (sağa, sola, sol alt çapraza iç içe geçişler).
-        // Diğer düğümlerin içinden geçerken takılma veya hata olmadan akıcı geçiş sağlanır.
+
+        // 2. Returning specifically to previous node (User request: "örneğin önceki düğüme geri dönmesi bir yankı sayılsın")
+        // User request: "bir ışın üzerine ışın binince yankı sayılmasın"
+        // Crossing or drawing across existing beams is freely permitted without triggering echoes.
+        if (visitedNodeIds.size >= 2) {
+            val prevId = visitedNodeIds[visitedNodeIds.size - 2]
+            val prevNode = nodes.firstOrNull { it.id == prevId }
+            if (prevNode != null) {
+                val distToPrev = point.distanceTo(prevNode.toPoint())
+                // Only triggers if player explicitly retreats back onto the previous node
+                if (distToPrev <= 16f && distToLast > 22f) {
+                    return prevNode
+                }
+            }
+        }
+
         return null
     }
 

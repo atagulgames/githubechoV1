@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.dialogs.LevelMechanicIntroDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.model.GameStatus
 import com.example.model.ScreenState
@@ -164,7 +165,10 @@ fun EchoGameScreen(
                             state = state,
                             onBackToMenu = { viewModel.returnToMainMenu() },
                             onOpenLevelSelect = { viewModel.setLevelSelectVisible(true) },
-                            onOpenShop = { viewModel.setShopVisible(true) }
+                            onOpenShop = { viewModel.setShopVisible(true) },
+                            onAddTimeWithAd = { onShowRewardedAd("EXTRA_TIME_15S") },
+                            onOpenMechanicGuide = { viewModel.showMechanicGuide() },
+                            onToggleGhostRace = { viewModel.toggleGhostRace() }
                         )
 
                         // Interactive Canvas with mathematical collision engine
@@ -249,7 +253,17 @@ fun EchoGameScreen(
                     echoCount = state.echoCountForLevel,
                     isTimeUp = state.isGameOverTimeUpDialogVisible,
                     onClearWithAd = if (!state.isGameOverTimeUpDialogVisible) { { onShowRewardedAd("CLEAR_ECHOES") } } else null,
+                    onAddTimeWithAd = if (state.isGameOverTimeUpDialogVisible) { { onShowRewardedAd("EXTRA_TIME_15S") } } else null,
                     onRestartLevel = { viewModel.restartLevel(clearEchoes = true) }
+                )
+            }
+
+            // 2.5. Level Mechanic Tutorial & Evolution Intro Dialog
+            if (state.isLevelMechanicIntroVisible && state.activeMechanicInfo != null) {
+                LevelMechanicIntroDialog(
+                    mechanicInfo = state.activeMechanicInfo,
+                    isDarkTheme = state.isDarkTheme,
+                    onDismiss = { viewModel.dismissMechanicGuide() }
                 )
             }
 

@@ -70,6 +70,34 @@ data class LevelData(
     val description: String = ""
 )
 
+enum class EchoBeastState(
+    val title: String,
+    val subtitle: String,
+    val icon: String,
+    val color: Color,
+    val level: Int // 0: Calm, 1: Awakening, 2: Enraged, 3: Dominion
+) {
+    CALM("Sakin Evren", "Yankı uykuda, evren sakin.", "✨", Color(0xFF10B981), 0),
+    AWAKENING("Yankı Uyanıyor", "Kozmik bozulmalar ve hafif titreşimler.", "⚡", Color(0xFFF59E0B), 1),
+    ENRAGED("Canavar Harekete Geçti", "Yankı ışınları dalgalanıyor, gölgeler büyüyor!", "🔥", Color(0xFFEA580C), 2),
+    DOMINION("Yankı Hakimiyeti", "Canavar hareketlerini taklit ediyor!", "😈", Color(0xFFDC2626), 3);
+
+    companion object {
+        fun fromEchoCount(echoes: Int): EchoBeastState = when {
+            echoes <= 0 -> CALM
+            echoes in 1..2 -> AWAKENING
+            echoes in 3..5 -> ENRAGED
+            else -> DOMINION
+        }
+    }
+}
+
+data class GhostReplay(
+    val levelId: Int,
+    val points: List<Point>,
+    val totalDurationMs: Long
+)
+
 enum class GameStatus {
     PLAYING,
     VICTORY,

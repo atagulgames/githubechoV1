@@ -40,6 +40,7 @@ fun DeadlockDialog(
     echoCount: Int,
     isTimeUp: Boolean = false,
     onClearWithAd: (() -> Unit)? = null,
+    onAddTimeWithAd: (() -> Unit)? = null,
     onRestartLevel: () -> Unit
 ) {
     Dialog(onDismissRequest = { /* Modal choice required */ }) {
@@ -97,6 +98,39 @@ fun DeadlockDialog(
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // User request: "eğer reklam izlersen 15 sn ek süre eklensin."
+                if (isTimeUp && onAddTimeWithAd != null) {
+                    Button(
+                        onClick = onAddTimeWithAd,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .shadow(6.dp, RoundedCornerShape(14.dp))
+                            .testTag("deadlock_add_time_ad_button"),
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF059669),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "🎬 Reklam İzle & +15 Sn Ek Süre",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
 
                 // Option: Tekrar Oyna
                 Button(

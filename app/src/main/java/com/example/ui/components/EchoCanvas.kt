@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -16,12 +17,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
@@ -34,6 +37,7 @@ import com.example.model.CandyParticle
 import com.example.model.DirectedEdge
 import com.example.model.EchoStroke
 import com.example.model.EchoTheme
+import com.example.model.EchoBeastState
 import com.example.model.GameStatus
 import com.example.model.Node
 import com.example.model.NodeType
@@ -70,6 +74,17 @@ fun EchoCanvas(
             repeatMode = RepeatMode.Reverse
         ),
         label = "PulseAlpha"
+    )
+
+    val infiniteTime = rememberInfiniteTransition(label = "EchoTime")
+    val timeSec by infiniteTime.animateFloat(
+        initialValue = 0f,
+        targetValue = 6.28318f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "TimeSec"
     )
 
     // Shake offset if collision alert is active
@@ -176,6 +191,34 @@ fun EchoCanvas(
             // 1. Grid Background (Single GPU drawPoints instruction for buttery 60+ FPS)
             drawGridBackground(size.width, size.height, state.isDarkTheme, gridPoints)
 
+            // 1.5. Living Web (Yaşayan Ağ) - harmonic breathing connective threads
+            drawLivingWebMesh(
+                nodes = state.nodes,
+                timeSec = timeSec,
+                isDarkTheme = state.isDarkTheme,
+                toScreen = ::toScreen,
+                scale = scale
+            )
+
+            // 1.8. Past Ghost Stroke Labyrinth (Geçmişin Hayaletleri - Yaşayan Labirent)
+            drawPastGhostLabyrinth(
+                ghosts = state.pastGhostStrokes,
+                timeSec = timeSec,
+                toScreen = ::toScreen,
+                scale = scale
+            )
+
+            // 1.9. Perfect Echo Ghost Race (Kusursuz Hayaletle Canlı Yarış)
+            if (state.isGhostRaceAvailable && state.isGhostRaceActive && state.ghostReplayPoints.isNotEmpty()) {
+                drawPerfectGhostRace(
+                    replayPoints = state.ghostReplayPoints,
+                    runnerPoint = state.ghostRunnerCurrentPoint,
+                    timeSec = timeSec,
+                    toScreen = ::toScreen,
+                    scale = scale
+                )
+            }
+
             // 2. Directed edge arrows (if level has one-way edges)
             drawDirectedEdgeArrows(
                 edges = state.level.directedEdges,
@@ -204,18 +247,20 @@ fun EchoCanvas(
                 scale = scale
             )
 
-            // 5. Active Player Stroke with Stroke Theme
+            // 5. Active Player Stroke with Stroke Theme (and invisible ray oscillations)
             drawPlayerStroke(
                 segments = state.currentStrokeSegments,
                 currentPointerPos = state.currentPointerPos,
                 visitedNodeIds = state.visitedNodeIds,
                 nodes = state.nodes,
                 strokeTheme = state.strokeTheme,
+                mechanicType = state.level.mechanicType,
+                timeSec = timeSec,
                 toScreen = ::toScreen,
                 scale = scale
             )
 
-            // 6. Game Nodes (with Normal, Key, Gate styles, and Character Node 1)
+            // 6. Game Nodes (with Normal, Key, Gate styles, Character Node 1, Floating Nodes & Decaying outer rings)
             drawNodes(
                 nodes = state.nodes,
                 visitedNodeIds = state.visitedNodeIds,
@@ -226,9 +271,19 @@ fun EchoCanvas(
                 pulseAlpha = pulseAlpha,
                 isDrawing = state.isDrawing,
                 isDarkTheme = state.isDarkTheme,
+                mechanicType = state.level.mechanicType,
+                remainingSec = state.levelRemainingTimeSec,
+                timeSec = timeSec,
                 toScreen = ::toScreen,
                 scale = scale,
                 textPaint = nodeTextPaint
+            )
+
+            // 6.5. Echo Beast Corruption Aura (Yankı Canavarı Atmosferi)
+            drawEchoBeastAtmosphere(
+                beastState = state.echoBeastState,
+                timeSec = timeSec,
+                size = size
             )
 
             // 7. Proximity Warning / Electric Glitch
@@ -458,25 +513,33 @@ private fun DrawScope.drawPlayerStroke(
     visitedNodeIds: List<Int>,
     nodes: List<Node>,
     strokeTheme: StrokeTheme,
+    mechanicType: String,
+    timeSec: Float,
     toScreen: (Point) -> Offset,
     scale: Float
 ) {
     val glowWidth = 16f * (scale / 1.5f).coerceAtLeast(1f)
     val coreWidth = 6f * (scale / 1.5f).coerceAtLeast(1f)
 
+    // Invisible Rays mechanic: pulse visibility of active beam
+    val isInvisibleRays = mechanicType in listOf("INVISIBLE_RAYS", "OMEGA_SYNTHESIS")
+    val rayAlpha = if (isInvisibleRays) (sin(timeSec * 3.8f) * 0.45f + 0.55f).coerceIn(0.12f, 1f) else 1f
+    val currentGlowColor = strokeTheme.glowColor.copy(alpha = strokeTheme.glowColor.alpha * rayAlpha)
+    val currentPrimaryColor = strokeTheme.primaryColor.copy(alpha = strokeTheme.primaryColor.alpha * rayAlpha)
+
     for (seg in segments) {
         val start = toScreen(seg.p1)
         val end = toScreen(seg.p2)
 
         drawLine(
-            color = strokeTheme.glowColor,
+            color = currentGlowColor,
             start = start,
             end = end,
             strokeWidth = glowWidth,
             cap = StrokeCap.Round
         )
         drawLine(
-            color = strokeTheme.primaryColor,
+            color = currentPrimaryColor,
             start = start,
             end = end,
             strokeWidth = coreWidth,
@@ -492,14 +555,14 @@ private fun DrawScope.drawPlayerStroke(
             val end = toScreen(currentPointerPos)
 
             drawLine(
-                color = strokeTheme.glowColor,
+                color = currentGlowColor,
                 start = start,
                 end = end,
                 strokeWidth = glowWidth,
                 cap = StrokeCap.Round
             )
             drawLine(
-                color = strokeTheme.primaryColor,
+                color = currentPrimaryColor,
                 start = start,
                 end = end,
                 strokeWidth = coreWidth,
@@ -507,13 +570,13 @@ private fun DrawScope.drawPlayerStroke(
             )
 
             drawCircle(
-                color = strokeTheme.glowColor,
+                color = currentGlowColor,
                 radius = 18f * (scale / 1.5f).coerceAtLeast(1f),
                 center = end,
                 style = Stroke(width = 2.5f)
             )
             drawCircle(
-                color = strokeTheme.primaryColor,
+                color = currentPrimaryColor,
                 radius = 5f * (scale / 1.5f).coerceAtLeast(1f),
                 center = end
             )
@@ -558,6 +621,9 @@ private fun DrawScope.drawNodes(
     pulseAlpha: Float,
     isDrawing: Boolean,
     isDarkTheme: Boolean,
+    mechanicType: String,
+    remainingSec: Int,
+    timeSec: Float,
     toScreen: (Point) -> Offset,
     scale: Float,
     textPaint: android.graphics.Paint
@@ -565,8 +631,17 @@ private fun DrawScope.drawNodes(
     val nodeDensityFactor = if (nodes.size >= 28) 0.65f else if (nodes.size >= 16) 0.82f else 1.0f
     val baseRadius = 20f * (scale / 1.5f).coerceAtLeast(1f) * nodeDensityFactor
 
+    val isFloatingTier = mechanicType in listOf("FLOATING_NODES", "OMEGA_SYNTHESIS")
+    val isDecayingTier = mechanicType in listOf("DECAYING_NODES", "OMEGA_SYNTHESIS")
+    val isDecoyTier = mechanicType in listOf("DECOY_TARGETS", "OMEGA_SYNTHESIS")
+
     for (node in nodes) {
-        val pos = toScreen(node.toPoint())
+        val basePos = toScreen(node.toPoint())
+        // Floating Nodes mechanic: harmonic subtle orbital drift
+        val floatDx = if (isFloatingTier) sin(timeSec * 2f + node.id * 1.5f) * (4.5f * scale) else 0f
+        val floatDy = if (isFloatingTier) cos(timeSec * 1.8f + node.id * 1.2f) * (4.5f * scale) else 0f
+        val pos = Offset(basePos.x + floatDx, basePos.y + floatDy)
+
         val isVisited = visitedNodeIds.contains(node.id)
         val isCharacterStart = node.id == 1
 
@@ -736,6 +811,34 @@ private fun DrawScope.drawNodes(
             }
         }
 
+        // Decaying Nodes mechanic: remaining time circle outline
+        if (isDecayingTier && !isVisited) {
+            val decayRatio = (remainingSec / 60f).coerceIn(0f, 1f)
+            drawArc(
+                color = Color(0xFFEF4444),
+                startAngle = -90f,
+                sweepAngle = 360f * decayRatio,
+                useCenter = false,
+                topLeft = Offset(pos.x - baseRadius * 1.35f, pos.y - baseRadius * 1.35f),
+                size = Size(baseRadius * 2.7f, baseRadius * 2.7f),
+                style = Stroke(width = 2.5f * (scale / 1.5f).coerceAtLeast(1f), cap = StrokeCap.Round)
+            )
+        }
+
+        // Decoy Target mechanic: dashed warning aura
+        val isDecoy = isDecoyTier && node.id > 1 && node.id % 4 == 0
+        if (isDecoy && !isVisited) {
+            drawCircle(
+                color = Color(0xFFF43F5E).copy(alpha = 0.45f * pulseAlpha),
+                radius = baseRadius * 1.4f,
+                center = pos,
+                style = Stroke(
+                    width = 2f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), timeSec * 15f)
+                )
+            )
+        }
+
         // Draw node number (1, 2, 3... N) or hint step
         val displayText = if (isHintActive) {
             val stepIndex = hintOrder.indexOf(node.id)
@@ -760,5 +863,192 @@ private fun DrawScope.drawNodes(
         textPaint.textSize = baseRadius * 1.05f
         val textY = pos.y - ((textPaint.descent() + textPaint.ascent()) / 2f)
         drawContext.canvas.nativeCanvas.drawText(displayText, pos.x, textY, textPaint)
+    }
+}
+
+// -------------------------------------------------------------
+// Living Web & Ghost System Helpers
+// -------------------------------------------------------------
+
+private fun DrawScope.drawLivingWebMesh(
+    nodes: List<Node>,
+    timeSec: Float,
+    isDarkTheme: Boolean,
+    toScreen: (Point) -> Offset,
+    scale: Float
+) {
+    if (nodes.size < 2) return
+    val baseColor = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    for (i in 0 until nodes.size - 1) {
+        val n1 = nodes[i]
+        val n2 = nodes[i + 1]
+        val p1 = toScreen(n1.toPoint())
+        val p2 = toScreen(n2.toPoint())
+        val distSq = (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y)
+        if (distSq < (320f * scale) * (320f * scale)) {
+            val ripple = (sin(timeSec * 2.5f + i * 0.8f) * 0.04f + 0.07f).coerceIn(0.02f, 0.14f)
+            drawLine(
+                color = baseColor.copy(alpha = ripple),
+                start = p1,
+                end = p2,
+                strokeWidth = 1.2f * scale,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f * scale, 6f * scale), timeSec * 10f)
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawPastGhostLabyrinth(
+    ghosts: List<List<Point>>,
+    timeSec: Float,
+    toScreen: (Point) -> Offset,
+    scale: Float
+) {
+    if (ghosts.isEmpty()) return
+    ghosts.forEachIndexed { strokeIdx, strokePts ->
+        if (strokePts.size < 2) return@forEachIndexed
+        val path = Path()
+        val p0 = toScreen(strokePts[0])
+        path.moveTo(p0.x, p0.y)
+        for (i in 1 until strokePts.size) {
+            val pi = toScreen(strokePts[i])
+            path.lineTo(pi.x, pi.y)
+        }
+
+        // Translucent ethereal ghost path
+        drawPath(
+            path = path,
+            color = Color(0x38A855F7),
+            style = Stroke(
+                width = 4.5f * scale,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f * scale, 10f * scale), (timeSec * 18f))
+            )
+        )
+
+        // Memory wisp wandering along the ghost trail
+        val t = ((timeSec * 0.35f + strokeIdx * 0.3f) % 1f)
+        val sampleIdx = (t * (strokePts.size - 1)).toInt().coerceIn(0, strokePts.size - 1)
+        val spiritPt = toScreen(strokePts[sampleIdx])
+        drawCircle(
+            color = Color(0x55C4B5FD),
+            radius = 6f * scale,
+            center = spiritPt
+        )
+        drawCircle(
+            color = Color(0x88EDE9FE),
+            radius = 2.8f * scale,
+            center = spiritPt
+        )
+    }
+}
+
+private fun DrawScope.drawPerfectGhostRace(
+    replayPoints: List<Point>,
+    runnerPoint: Point?,
+    timeSec: Float,
+    toScreen: (Point) -> Offset,
+    scale: Float
+) {
+    if (replayPoints.size < 2) return
+    val path = Path()
+    val p0 = toScreen(replayPoints[0])
+    path.moveTo(p0.x, p0.y)
+    for (i in 1 until replayPoints.size) {
+        val pi = toScreen(replayPoints[i])
+        path.lineTo(pi.x, pi.y)
+    }
+
+    // Golden celestial ideal path
+    drawPath(
+        path = path,
+        color = Color(0x50F59E0B),
+        style = Stroke(
+            width = 3.5f * scale,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f * scale, 8f * scale), timeSec * 22f)
+        )
+    )
+
+    // Animated gold ghost runner
+    val currentPt = runnerPoint ?: replayPoints.firstOrNull()
+    if (currentPt != null) {
+        val sc = toScreen(currentPt)
+        val pulseR = (sin(timeSec * 6f) * 2f + 8f) * scale
+        drawCircle(
+            color = Color(0x40F59E0B),
+            radius = pulseR * 1.8f,
+            center = sc
+        )
+        drawCircle(
+            color = Color(0xFFF59E0B),
+            radius = pulseR,
+            center = sc
+        )
+        drawCircle(
+            color = Color(0xFFFFFBEB),
+            radius = pulseR * 0.45f,
+            center = sc
+        )
+    }
+}
+
+private fun DrawScope.drawEchoBeastAtmosphere(
+    beastState: EchoBeastState,
+    timeSec: Float,
+    size: Size
+) {
+    if (beastState.level == 0) return
+    when (beastState) {
+        EchoBeastState.AWAKENING -> {
+            val alpha = (sin(timeSec * 3f) * 0.12f + 0.18f).coerceIn(0.05f, 0.35f)
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.Transparent, Color(0xFFF59E0B).copy(alpha = alpha)),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = size.width * 0.85f
+                )
+            )
+        }
+        EchoBeastState.ENRAGED -> {
+            val alpha = (sin(timeSec * 5f) * 0.18f + 0.32f).coerceIn(0.1f, 0.55f)
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.Transparent, Color(0xFFEF4444).copy(alpha = alpha)),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = size.width * 0.82f
+                )
+            )
+        }
+        EchoBeastState.DOMINION -> {
+            val alpha = (sin(timeSec * 4f) * 0.22f + 0.48f).coerceIn(0.25f, 0.75f)
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.Transparent, Color(0xFF881337).copy(alpha = alpha)),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = size.width * 0.78f
+                )
+            )
+            val eyeCenter = Offset(size.width / 2f, 32f)
+            val eyeGlow = (sin(timeSec * 6f) * 0.3f + 0.7f).coerceIn(0.4f, 1f)
+            val eyeColor = Color(0xFFEF4444).copy(alpha = eyeGlow)
+            drawLine(
+                color = eyeColor,
+                start = Offset(eyeCenter.x - 22f, eyeCenter.y),
+                end = Offset(eyeCenter.x - 6f, eyeCenter.y - 4f),
+                strokeWidth = 3f,
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = eyeColor,
+                start = Offset(eyeCenter.x + 6f, eyeCenter.y - 4f),
+                end = Offset(eyeCenter.x + 22f, eyeCenter.y),
+                strokeWidth = 3f,
+                cap = StrokeCap.Round
+            )
+        }
+        else -> {}
     }
 }

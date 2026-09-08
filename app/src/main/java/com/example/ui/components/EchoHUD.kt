@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.viewmodel.EchoUiState
+import com.example.ui.dialogs.MechanicCatalog
 
 @Composable
 fun EchoTopHUD(
@@ -66,6 +67,9 @@ fun EchoTopHUD(
     onBackToMenu: () -> Unit,
     onOpenLevelSelect: () -> Unit,
     onOpenShop: () -> Unit,
+    onAddTimeWithAd: (() -> Unit)? = null,
+    onOpenMechanicGuide: (() -> Unit)? = null,
+    onToggleGhostRace: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val hudCardBg = if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
@@ -178,7 +182,7 @@ fun EchoTopHUD(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 6.dp)
                     ) {
-                        // 60s Level Countdown Timer chip with Shake Animation
+                        // 60s Level Countdown Timer chip with Shake Animation & +15s ad extension
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -197,6 +201,9 @@ fun EchoTopHUD(
                                     color = if (state.levelRemainingTimeSec <= 10) Color(0xFFDC2626) else hudBorder,
                                     shape = RoundedCornerShape(20.dp)
                                 )
+                                .clickable(enabled = onAddTimeWithAd != null) {
+                                    onAddTimeWithAd?.invoke()
+                                }
                                 .padding(
                                     horizontal = if (isCompact) 6.dp else 9.dp,
                                     vertical = if (isCompact) 5.dp else 7.dp
@@ -215,6 +222,16 @@ fun EchoTopHUD(
                                 fontSize = if (isCompact) 11.sp else 13.sp,
                                 maxLines = 1
                             )
+                            if (onAddTimeWithAd != null && state.levelRemainingTimeSec <= 20) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "+15s 🎬",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF10B981),
+                                    fontSize = if (isCompact) 9.sp else 10.sp,
+                                    maxLines = 1
+                                )
+                            }
                         }
 
                         // Tokens chip
@@ -269,7 +286,13 @@ fun EchoTopHUD(
                             )
                         }
 
-                        // Echo count chip
+                        // Echo count & 3-Star status chip
+                        val currentStars = when {
+                            state.echoCountForLevel == 0 -> 3
+                            state.echoCountForLevel <= 2 -> 2
+                            else -> 1
+                        }
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -282,7 +305,7 @@ fun EchoTopHUD(
                                     RoundedCornerShape(20.dp)
                                 )
                                 .padding(
-                                    horizontal = if (isCompact) 8.dp else 12.dp,
+                                    horizontal = if (isCompact) 6.dp else 10.dp,
                                     vertical = if (isCompact) 5.dp else 7.dp
                                 )
                                 .testTag("echo_counter_chip")
@@ -293,7 +316,7 @@ fun EchoTopHUD(
                                     .clip(CircleShape)
                                     .background(if (state.echoCountForLevel > 0) Color(0xFFE11D48) else Color(0xFF0284C7))
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
                             Text(
                                 text = if (isCompact) "${state.echoCountForLevel}" else "Yankı: ${state.echoCountForLevel}",
                                 fontWeight = FontWeight.Bold,
@@ -301,6 +324,17 @@ fun EchoTopHUD(
                                 fontSize = if (isCompact) 11.sp else 13.sp,
                                 maxLines = 1,
                                 softWrap = false
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = when (currentStars) {
+                                    3 -> "★★★"
+                                    2 -> "★★☆"
+                                    else -> "★☆☆"
+                                },
+                                color = if (currentStars == 3) Color(0xFFF59E0B) else if (currentStars == 2) Color(0xFFFBBF24) else Color(0xFF94A3B8),
+                                fontSize = if (isCompact) 10.sp else 11.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -352,31 +386,84 @@ fun EchoTopHUD(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 6.dp)
+                        modifier = Modifier.padding(start = 4.dp)
                     ) {
-                        if (state.level.mechanicType != "STANDARD") {
-                            val badgeText = when (state.level.mechanicType) {
-                                "DECAYING" -> "⏱ Zaman Ayarlı"
-                                "LOCK_KEY" -> "🔑 Kilit & Anahtar"
-                                "GHOST" -> "👻 Hayalet Yankı"
-                                "ONE_WAY" -> "➔ Yönlü Kenar"
-                                else -> state.level.mechanicType
-                            }
+                        val tier = (((state.level.levelId - 1) / 10) + 1).coerceIn(1, 10)
+                        val tierInfo = MechanicCatalog.getMechanicInfoForLevel(state.level.levelId)
+
+                        // 1. Tier Mechanic & Tutorial Pill
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(tierInfo.badgeColor).copy(alpha = if (state.isDarkTheme) 0.25f else 0.15f))
+                                .border(1.dp, Color(tierInfo.badgeColor).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .clickable(enabled = onOpenMechanicGuide != null) { onOpenMechanicGuide?.invoke() }
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                                .testTag("tier_mechanic_badge")
+                        ) {
                             Text(
-                                text = badgeText,
-                                color = Color(0xFF0284C7),
+                                text = "${tierInfo.icon} K$tier: ${tierInfo.title.removePrefix("Öğretici: ")}",
+                                color = Color(tierInfo.badgeColor),
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE))
-                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                                softWrap = false
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            if (onOpenMechanicGuide != null) {
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(text = "ℹ️", fontSize = 10.sp)
+                            }
                         }
 
+                        // 2. Echo Beast Status (if active)
+                        if (state.echoBeastState.level > 0) {
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(state.echoBeastState.accentColor).copy(alpha = if (state.isDarkTheme) 0.35f else 0.18f))
+                                    .border(1.dp, Color(state.echoBeastState.accentColor).copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("echo_beast_chip")
+                            ) {
+                                Text(
+                                    text = "${state.echoBeastState.icon} ${state.echoBeastState.title}",
+                                    color = Color(state.echoBeastState.accentColor),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
+
+                        // 3. Ghost Racing Toggle (if available)
+                        if (state.isGhostRaceAvailable) {
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (state.isGhostRaceActive) Color(0xFFFEF3C7) else (if (state.isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)))
+                                    .border(1.dp, if (state.isGhostRaceActive) Color(0xFFF59E0B) else Color(0xFF94A3B8), RoundedCornerShape(8.dp))
+                                    .clickable(enabled = onToggleGhostRace != null) { onToggleGhostRace?.invoke() }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("ghost_race_toggle_button")
+                            ) {
+                                Text(
+                                    text = if (state.isGhostRaceActive) "👻 Hayalet: AÇIK" else "👻 Hayalet: KAPALI",
+                                    color = if (state.isGhostRaceActive) Color(0xFFD97706) else textSecondary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
@@ -392,6 +479,19 @@ fun EchoTopHUD(
                             maxLines = 1,
                             softWrap = false
                         )
+
+                        // 4. AI Real-Time Insight Badge
+                        if (state.playerBehaviorInsight.isNotBlank()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "🧠 ${state.playerBehaviorInsight}",
+                                color = textSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

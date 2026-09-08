@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.MediaPlayer
+import android.media.SoundPool
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -61,6 +62,9 @@ object HarmonicAudioEngine {
     private val audioScope = CoroutineScope(Dispatchers.Default)
     private val activeSfxCount = java.util.concurrent.atomic.AtomicInteger(0)
 
+    private var soundPool: SoundPool? = null
+    private var countdownTickSoundId: Int = 0
+
     private var currentBgmVolume = 0.70f
     private const val NORMAL_BGM_VOLUME = 0.70f
     private const val DUCKED_BGM_VOLUME = 0.15f
@@ -80,7 +84,28 @@ object HarmonicAudioEngine {
     )
 
     fun init(context: Context) {
-        appContext = context.applicationContext
+        val appCtx = context.applicationContext
+        appContext = appCtx
+        try {
+            if (soundPool == null) {
+                val attrs = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                soundPool = SoundPool.Builder()
+                    .setMaxStreams(4)
+                    .setAudioAttributes(attrs)
+                    .build()
+                var tickResId = appCtx.resources.getIdentifier("countdown_tick", "raw", appCtx.packageName)
+                if (tickResId != 0) {
+                    countdownTickSoundId = soundPool?.load(appCtx, tickResId, 1) ?: 0
+                } else {
+                    val afd = appCtx.assets.openFd("audio/countdown_tick.mp3")
+                    countdownTickSoundId = soundPool?.load(afd, 1) ?: 0
+                    afd.close()
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     /**
@@ -364,17 +389,36 @@ object HarmonicAudioEngine {
     }
 
     /**
-     * Plays 5second.mp3 (countdown tick / 5-second alert sound).
+     * Plays the single countdown tick ("dıt") instantaneously.
+     * Sourced directly from countdown_tick.mp3 (extracted from 5second.mp3) with SoundPool.
+     */
+    fun playCountdownTick(second: Int = 1) {
+        if (!isSoundEnabled) return
+        if (countdownTickSoundId != 0 && soundPool != null) {
+            soundPool?.play(countdownTickSoundId, 1.0f, 1.0f, 1, 0, 1.0f)
+            return
+        }
+        playSynthTone(880.0f, 140, 0.70f)
+    }
+
+    /**
+     * Plays 5second countdown ticks ("dıt dıt") in a precise 1-second cadence (5, 4, 3, 2, 1).
      * Automatically stops any playing SFX to prevent audio overlap.
      */
     fun play5Second(onCompletion: (() -> Unit)? = null) {
-        playInterveningSfx("5second", sfxDurationMs = 5000L, onCompletion = onCompletion) {
-            activeSfxJob = audioScope.launch {
-                for (i in 5 downTo 1) {
-                    playSynthTone(440.00f + i * 40f, 150, 0.65f)
-                    delay(850L)
-                }
+        if (!isSoundEnabled) {
+            onCompletion?.invoke()
+            return
+        }
+        duckBgm()
+        stopCurrentSfx()
+        activeSfxJob = audioScope.launch {
+            for (i in 5 downTo 1) {
+                playCountdownTick(i)
+                delay(1000L)
             }
+            restoreBgm()
+            onCompletion?.invoke()
         }
     }
 

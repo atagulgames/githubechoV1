@@ -219,40 +219,72 @@ object LevelCatalog {
     }
 
     /**
-     * Precomputed sequence of 100 level node counts spanning from 3 to 36 (average ~19.5).
+     * Precomputed sequence of 100 level node counts spanning from 3 to 24.
      * Guaranteed:
      * - Level 1 has 3 nodes
-     * - Level 100 has 36 nodes
+     * - Level 2 has 4 nodes
+     * - Level 3 has 5 nodes
+     * - Levels 4 to 100: scaled between 6 and 24 nodes, tuned so player can complete just in time within 60s
+     *   ("60sn ucu ucuna yetişecek şekilde"), with wide node spacing so buttons are never crowded ("dip dibe olmasınlar").
      * - Every adjacent level has a DIFFERENT node count: arr[i] != arr[i - 1]
-     * - Average is between 19 and 20 ("ortalama 3-36")
      */
     val LEVEL_NODE_COUNTS: IntArray = run {
         val arr = IntArray(TOTAL_LEVELS)
         arr[0] = 3 // Level 1: 3 nodes (Gentle intro)
         arr[1] = 4 // Level 2: 4 nodes (Gentle intro)
         arr[2] = 5 // Level 3: 5 nodes (Gentle intro)
-        // Levels 4 to 100: "aşırı zor olsun manyak zor olsun düşündürsün yani 60 sn zor yapalm art arda deyil ilk üç bölüm dışındaki bütün böllümler aşırı zor karmaşık"
         for (i in 3 until TOTAL_LEVELS - 1) {
             val id = i + 1
             val t = (id - 4) / 95.0
-            val base = 18.0 + t * 16.5 // Scaled between 18 and 35 nodes
+            val base = 6.5 + t * 16.5 // Scaled between 6 and 23 nodes
             val wave = when (id % 4) {
-                0 -> 1.6
-                1 -> -1.4
-                2 -> 1.8
-                else -> -1.5
+                0 -> 1.0
+                1 -> -0.9
+                2 -> 1.2
+                else -> -1.0
             }
-            var count = (base + wave).roundToInt().coerceIn(16, 36)
+            var count = (base + wave).roundToInt().coerceIn(6, 24)
             if (count == arr[i - 1]) {
-                count = if (count < 36 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(16)
+                count = if (count < 24 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(6)
             }
             arr[i] = count
         }
-        arr[TOTAL_LEVELS - 1] = 36
-        if (arr[TOTAL_LEVELS - 2] == 36) {
-            arr[TOTAL_LEVELS - 2] = 35
+        arr[TOTAL_LEVELS - 1] = 24
+        if (arr[TOTAL_LEVELS - 2] == 24) {
+            arr[TOTAL_LEVELS - 2] = 23
         }
         arr
+    }
+
+    /**
+     * User request: "düğmelerin biraz arasını açarsan sevinirim çok dip dibe olmasınlar"
+     * Enforces guaranteed minimum clearance distance between all level nodes.
+     */
+    fun ensureNodeSpacing(points: List<Pair<Float, Float>>, minDistance: Float = 46f): List<Pair<Float, Float>> {
+        val pts = points.map { floatArrayOf(it.first, it.second) }.toTypedArray()
+        val n = pts.size
+        for (iter in 0 until 15) {
+            var moved = false
+            for (i in 0 until n) {
+                for (j in i + 1 until n) {
+                    val dx = pts[j][0] - pts[i][0]
+                    val dy = pts[j][1] - pts[i][1]
+                    val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                    if (dist < minDistance && dist > 0.001f) {
+                        moved = true
+                        val overlap = (minDistance - dist) * 0.5f
+                        val nx = (dx / dist) * overlap
+                        val ny = (dy / dist) * overlap
+                        pts[i][0] = (pts[i][0] - nx).coerceIn(40f, 400f)
+                        pts[i][1] = (pts[i][1] - ny).coerceIn(80f, 520f)
+                        pts[j][0] = (pts[j][0] + nx).coerceIn(40f, 400f)
+                        pts[j][1] = (pts[j][1] + ny).coerceIn(80f, 520f)
+                    }
+                }
+            }
+            if (!moved) break
+        }
+        return pts.map { Pair(it[0], it[1]) }
     }
 
     fun buildLevelData(id: Int): LevelData {
@@ -262,7 +294,7 @@ object LevelCatalog {
         // Default title in English (as requested: "Herşey başlangıçta ingilizce olacak")
         val title = getLevelTitle(clampedId, Language.EN)
 
-        // Distinct node count from 3 to 36 for every level
+        // Distinct node count from 3 to 24 for every level
         val nodeCount = LEVEL_NODE_COUNTS[clampedId - 1]
 
         // Center and scale parameters for comfortable virtual canvas coordinate space
@@ -277,10 +309,12 @@ object LevelCatalog {
         // Distinct, dedicated geometry for every single level 1 to 100
         val curveFn: (Float) -> Pair<Float, Float> = LevelGeometry.getCurveForLevel(clampedId, cx, cy)
 
-        val sampledPoints = sampleCurve(nodeCount, curveFn)
+        val rawPoints = sampleCurve(nodeCount, curveFn)
+        val sampledPoints = ensureNodeSpacing(rawPoints, minDistance = 46f)
+        val perm = getPermutationForLevel(clampedId, nodeCount)
         val nodes = ArrayList<LevelNode>(nodeCount)
         for (i in 1..nodeCount) {
-            val pt = sampledPoints[i - 1]
+            val pt = sampledPoints[perm[i - 1]]
             val type = when (i) {
                 keyIndex -> NodeType.KEY
                 gateIndex -> NodeType.GATE
@@ -290,19 +324,19 @@ object LevelCatalog {
             nodes.add(LevelNode(i, pt.first, pt.second, type, keyForGate))
         }
 
-        // Mechanic classification for the 10 tiers
+        // Mechanic classification for the 10 evolution tiers
         val mechanicType = when (tierIndex) {
-            0 -> "STANDARD"
-            1 -> "ONE_WAY"
-            2 -> "KEY_GATE"
-            3 -> "DECAYING_ECHO"
-            4 -> "GHOST_ECHO"
-            5 -> "FRAKTAL_MATRIX"
-            6 -> "KEY_GATE"
-            7 -> "DECAYING_ECHO"
-            8 -> "MASTER_NETWORK"
-            9 -> if (clampedId == 100) "OMEGA" else if (clampedId % 2 == 0) "KEY_GATE" else "DECAYING_ECHO"
-            else -> "STANDARD"
+            0 -> "TUTORIAL_BASIC"
+            1 -> "FLOATING_NODES"
+            2 -> "INVISIBLE_RAYS"
+            3 -> "DECAYING_NODES"
+            4 -> "WANDERING_ECHOES"
+            5 -> "DECOY_TARGETS"
+            6 -> "REVERSE_FLOW"
+            7 -> "ROTATING_WEB"
+            8 -> "DUAL_ENTANGLED_WEB"
+            9 -> "OMEGA_SYNTHESIS"
+            else -> "TUTORIAL_BASIC"
         }
 
         val decayLifetime = when (mechanicType) {
@@ -330,7 +364,7 @@ object LevelCatalog {
         val parEchoes = (nodeCount / 4).coerceIn(1, 8)
 
         val description = if (clampedId == 100) {
-            "GRAND FINALE: Connect all 36 nodes across the Omega Arch to conquer the ECHO universe!"
+            "GRAND FINALE: Connect all 24 nodes across the Omega Arch to conquer the ECHO universe!"
         } else {
             "Level $clampedId: Connect all $nodeCount nodes with a single continuous stroke without colliding with echoes!"
         }
@@ -389,6 +423,29 @@ object LevelCatalog {
         }
         resampled.add(finePts.last())
         return resampled
+    }
+
+    /**
+     * User requirement:
+     * "ilk üç bölüm dışında diğer bölümlerin düğmelerini bir birine karıştır"
+     * Levels 1, 2, 3 keep their natural sequential node layout.
+     * Levels 4 to 100 have their nodes shuffled/mixed across the screen geometry deterministically.
+     */
+    fun getPermutationForLevel(levelId: Int, count: Int): List<Int> {
+        if (levelId <= 3 || count <= 3) {
+            return (0 until count).toList()
+        }
+        val list = (0 until count).toMutableList()
+        // Deterministic PRNG seeded uniquely per level
+        val rng = java.util.Random(levelId.toLong() * 9973L + 101L)
+        // Fisher-Yates shuffle
+        for (i in count - 1 downTo 1) {
+            val j = rng.nextInt(i + 1)
+            val temp = list[i]
+            list[i] = list[j]
+            list[j] = temp
+        }
+        return list
     }
 
     /**
