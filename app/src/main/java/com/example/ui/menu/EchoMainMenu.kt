@@ -659,7 +659,15 @@ fun EchoMainMenu(
                 }
             }
 
-            // Start.io Rewarded Video Card
+            val isRewardCooldown = state.rewardCooldownSeconds > 0
+            val rewardCooldownFormatted = if (isRewardCooldown) {
+                val h = state.rewardCooldownSeconds / 3600
+                val m = (state.rewardCooldownSeconds % 3600) / 60
+                val s = state.rewardCooldownSeconds % 60
+                String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+            } else ""
+
+            // Start.io Rewarded Video Card (3-Saatlik Yenilenen Ödül)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -668,7 +676,14 @@ fun EchoMainMenu(
                     .testTag("startio_reward_card"),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = cardBg),
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (state.isDarkTheme) Color(0xFF0369A1) else Color(0xFFBAE6FD))
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isRewardCooldown) {
+                        if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+                    } else {
+                        if (state.isDarkTheme) Color(0xFF0369A1) else Color(0xFFBAE6FD)
+                    }
+                )
             ) {
                 Row(
                     modifier = Modifier
@@ -677,49 +692,64 @@ fun EchoMainMenu(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)),
+                                .background(
+                                    if (isRewardCooldown) {
+                                        if (state.isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                                    } else {
+                                        if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)
+                                    }
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.PlayArrow,
+                                imageVector = if (isRewardCooldown) Icons.Default.Redeem else Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                tint = Color(0xFF0284C7),
+                                tint = if (isRewardCooldown) Color(0xFF94A3B8) else Color(0xFF0284C7),
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Ücretsiz Günlük Ödül",
+                                text = if (isRewardCooldown) "3 Saatlik Ödül Beklemede" else "Ücretsiz 3 Saatlik Ödül",
                                 fontWeight = FontWeight.Bold,
-                                color = textPrimary,
+                                color = if (isRewardCooldown) textSecondary else textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "+1 Matkap Lazeri & +2 Jeton Kazan",
-                                color = Color(0xFF0284C7),
+                                text = if (isRewardCooldown) {
+                                    "Yenilenme: $rewardCooldownFormatted (3 Saatte Bir)"
+                                } else {
+                                    "+1 Matkap Lazeri & +2 Jeton Kazan"
+                                },
+                                color = if (isRewardCooldown) Color(0xFFEAB308) else Color(0xFF0284C7),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
                     }
 
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF0284C7))
+                            .background(if (isRewardCooldown) Color(0xFF475569) else Color(0xFF0284C7))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "İZLE",
+                            text = if (isRewardCooldown) rewardCooldownFormatted else "İZLE",
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
-                            fontSize = 11.sp
+                            fontSize = if (isRewardCooldown) 10.sp else 11.sp
                         )
                     }
                 }
@@ -969,7 +999,7 @@ fun EchoMainMenu(
                     }
                 }
 
-                // Start.io Banner Ad
+                // Start.io Banner Ad - always visible
                 com.example.ads.StartAppBannerView(
                     modifier = Modifier.padding(top = 4.dp),
                     onAdLoaded = onBannerAdLoaded,

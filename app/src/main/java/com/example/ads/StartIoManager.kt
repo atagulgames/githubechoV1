@@ -25,9 +25,13 @@ object StartIoManager {
     private var isRewardedLoading = false
     private var isInterstitialLoading = false
 
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var retryRewardedRunnable: Runnable? = null
+    private var retryInterstitialRunnable: Runnable? = null
+
     /**
-     * Initializes Start.io SDK.
-     * When testMode is false (default), Start.io serves live production ads.
+     * Initializes Start.io SDK for live production ads.
+     * When testMode is false (default), Start.io serves strictly live production ads.
      */
     fun initialize(activity: Activity, testMode: Boolean = false) {
         isTestMode = testMode
@@ -35,14 +39,14 @@ object StartIoManager {
             StartAppSDK.setTestAdsEnabled(isTestMode)
 
             if (!isInitialized) {
-                // Initialize with App ID 208838202, return ads disabled
+                // Initialize with App ID 208838202, return ads disabled for optimal UX
                 StartAppSDK.init(activity, APP_ID, false)
                 StartAppAd.disableSplash()
 
-                // Submit GDPR consent for maximum fill rate on live ad networks
+                // Submit GDPR/Privacy consent for highest fill rate and maximum eCPM on live networks
                 StartAppSDK.setUserConsent(activity, "pas", System.currentTimeMillis(), true)
                 isInitialized = true
-                Log.d(TAG, "Start.io SDK initialized with App ID: $APP_ID (Live Mode=${!isTestMode})")
+                Log.d(TAG, "Start.io SDK successfully initialized with App ID: $APP_ID (Live Mode=${!isTestMode})")
             }
 
             preloadAds(activity)
@@ -69,49 +73,49 @@ object StartIoManager {
     fun isTestModeEnabled(): Boolean = isTestMode
 
     /**
-     * Preloads both pure Rewarded Video and Automatic Fullscreen/Interstitial ads
-     * so an ad is ready when the user requests it.
+     * Preloads both Rewarded Video and Interstitial ads in memory
+     * so they are ready for instantaneous zero-latency playback.
      */
     fun preloadAds(activity: Activity) {
+        if (activity.isFinishing || activity.isDestroyed) return
         preloadRewardedVideo(activity)
         preloadInterstitial(activity)
     }
 
     fun preloadRewardedVideo(activity: Activity) {
         try {
+            if (activity.isFinishing || activity.isDestroyed) return
             if (preloadedRewardedAd?.isReady == true || isRewardedLoading) {
                 return
             }
+
+            retryRewardedRunnable?.let { mainHandler.removeCallbacks(it) }
 
             val ad = StartAppAd(activity)
             preloadedRewardedAd = ad
             isRewardedLoading = true
 
-            Log.d(TAG, "Preloading Start.io Rewarded Video (AppId=$APP_ID, TestMode=$isTestMode)...")
+            Log.d(TAG, "Preloading Start.io Live Rewarded Video (AppId=$APP_ID)...")
             ad.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
                 override fun onReceiveAd(receivedAd: Ad) {
                     isRewardedLoading = false
-                    Log.d(TAG, "Start.io Rewarded Video successfully loaded and ready!")
+                    Log.d(TAG, "Start.io Live Rewarded Video successfully loaded and ready!")
                 }
 
                 override fun onFailedToReceiveAd(receivedAd: Ad?) {
                     isRewardedLoading = false
                     preloadedRewardedAd = null
                     val errMsg = receivedAd?.errorMessage ?: "NO FILL"
-                    Log.w(TAG, "Start.io Rewarded Video failed to preload: $errMsg")
-                    if (!isTestMode && errMsg.contains("NO FILL", ignoreCase = true)) {
-                        Log.d(TAG, "Live ads have NO FILL on test device, switching to test mode fallback")
-                        StartAppSDK.setTestAdsEnabled(true)
-                        val fallbackAd = StartAppAd(activity)
-                        preloadedRewardedAd = fallbackAd
-                        fallbackAd.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
-                            override fun onReceiveAd(ad: Ad) {
-                                Log.d(TAG, "Test fallback rewarded video successfully loaded!")
+                    Log.w(TAG, "Start.io Rewarded Video preload failed: $errMsg. Scheduling retry in 15s...")
+
+                    // Intelligent retry with backoff: strictly live ads, never fall back to test ads
+                    if (!activity.isFinishing && !activity.isDestroyed) {
+                        retryRewardedRunnable = Runnable {
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                preloadRewardedVideo(activity)
                             }
-                            override fun onFailedToReceiveAd(ad: Ad?) {
-                                preloadedRewardedAd = null
-                            }
-                        })
+                        }
+                        mainHandler.postDelayed(retryRewardedRunnable!!, 15_000L)
                     }
                 }
             })
@@ -124,39 +128,38 @@ object StartIoManager {
 
     fun preloadInterstitial(activity: Activity) {
         try {
+            if (activity.isFinishing || activity.isDestroyed) return
             if (preloadedInterstitialAd?.isReady == true || isInterstitialLoading) {
                 return
             }
+
+            retryInterstitialRunnable?.let { mainHandler.removeCallbacks(it) }
 
             val ad = StartAppAd(activity)
             preloadedInterstitialAd = ad
             isInterstitialLoading = true
 
-            Log.d(TAG, "Preloading Start.io Interstitial (AppId=$APP_ID, TestMode=$isTestMode)...")
+            Log.d(TAG, "Preloading Start.io Live Interstitial (AppId=$APP_ID)...")
             ad.loadAd(StartAppAd.AdMode.AUTOMATIC, object : AdEventListener {
                 override fun onReceiveAd(receivedAd: Ad) {
                     isInterstitialLoading = false
-                    Log.d(TAG, "Start.io Interstitial successfully loaded and ready!")
+                    Log.d(TAG, "Start.io Live Interstitial successfully loaded and ready!")
                 }
 
                 override fun onFailedToReceiveAd(receivedAd: Ad?) {
                     isInterstitialLoading = false
                     preloadedInterstitialAd = null
                     val errMsg = receivedAd?.errorMessage ?: "NO FILL"
-                    Log.w(TAG, "Start.io Interstitial failed to preload: $errMsg")
-                    if (!isTestMode && errMsg.contains("NO FILL", ignoreCase = true)) {
-                        Log.d(TAG, "Live interstitial has NO FILL, enabling test mode fallback")
-                        StartAppSDK.setTestAdsEnabled(true)
-                        val fallbackAd = StartAppAd(activity)
-                        preloadedInterstitialAd = fallbackAd
-                        fallbackAd.loadAd(StartAppAd.AdMode.AUTOMATIC, object : AdEventListener {
-                            override fun onReceiveAd(ad: Ad) {
-                                Log.d(TAG, "Test fallback interstitial successfully loaded!")
+                    Log.w(TAG, "Start.io Interstitial preload failed: $errMsg. Scheduling retry in 15s...")
+
+                    // Intelligent retry without test mode pollution
+                    if (!activity.isFinishing && !activity.isDestroyed) {
+                        retryInterstitialRunnable = Runnable {
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                preloadInterstitial(activity)
                             }
-                            override fun onFailedToReceiveAd(ad: Ad?) {
-                                preloadedInterstitialAd = null
-                            }
-                        })
+                        }
+                        mainHandler.postDelayed(retryInterstitialRunnable!!, 15_000L)
                     }
                 }
             })
@@ -175,12 +178,26 @@ object StartIoManager {
         }
     }
 
+    /**
+     * Displays a full-screen interstitial ad.
+     * Uses preloaded ad if available for instant presentation;
+     * otherwise triggers a live on-demand request with a safety timeout to protect UX.
+     */
     fun showInterstitialAd(
         activity: Activity,
         onAdDisplayed: () -> Unit = {},
         onAdClosed: () -> Unit = {}
     ) {
         try {
+            var isHandled = false
+            fun finishOnce() {
+                if (!isHandled) {
+                    isHandled = true
+                    activity.runOnUiThread { onAdClosed() }
+                    preloadAds(activity)
+                }
+            }
+
             val preloaded = preloadedInterstitialAd
             if (preloaded != null && preloaded.isReady) {
                 preloadedInterstitialAd = null
@@ -190,21 +207,20 @@ object StartIoManager {
                     }
 
                     override fun adHidden(ad: Ad) {
-                        activity.runOnUiThread { onAdClosed() }
-                        preloadAds(activity)
+                        finishOnce()
                     }
 
                     override fun adClicked(ad: Ad) {}
 
                     override fun adNotDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdClosed() }
-                        preloadAds(activity)
+                        finishOnce()
                     }
                 })
                 if (displayed) return
             }
 
-            loadAndShowInterstitial(activity, onAdDisplayed, onAdClosed, allowTestFallback = true)
+            // On-demand request for live interstitial with safety timeout
+            loadAndShowInterstitial(activity, onAdDisplayed) { finishOnce() }
         } catch (e: Exception) {
             Log.e(TAG, "Error displaying interstitial ad", e)
             activity.runOnUiThread { onAdClosed() }
@@ -214,61 +230,65 @@ object StartIoManager {
     private fun loadAndShowInterstitial(
         activity: Activity,
         onAdDisplayed: () -> Unit,
-        onAdClosed: () -> Unit,
-        allowTestFallback: Boolean
+        onAdClosed: () -> Unit
     ) {
+        var isHandled = false
+        fun finishOnce() {
+            if (!isHandled) {
+                isHandled = true
+                activity.runOnUiThread { onAdClosed() }
+                preloadAds(activity)
+            }
+        }
+
+        // 2.5s safety timeout: protect user experience if ad takes long to fill
+        val timeoutRunnable = Runnable {
+            Log.w(TAG, "Live on-demand interstitial timed out (2.5s). Advancing to next level seamlessly.")
+            finishOnce()
+        }
+        mainHandler.postDelayed(timeoutRunnable, 2500L)
+
         val startAppAd = StartAppAd(activity)
         startAppAd.loadAd(StartAppAd.AdMode.AUTOMATIC, object : AdEventListener {
             override fun onReceiveAd(ad: Ad) {
+                mainHandler.removeCallbacks(timeoutRunnable)
+                if (isHandled) return
                 val displayed = startAppAd.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
                         activity.runOnUiThread { onAdDisplayed() }
                     }
 
                     override fun adHidden(ad: Ad) {
-                        activity.runOnUiThread { onAdClosed() }
-                        preloadAds(activity)
+                        finishOnce()
                     }
 
                     override fun adClicked(ad: Ad) {}
 
                     override fun adNotDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdClosed() }
-                        preloadAds(activity)
+                        finishOnce()
                     }
                 })
                 if (!displayed) {
-                    activity.runOnUiThread { onAdClosed() }
-                    preloadAds(activity)
+                    finishOnce()
                 }
             }
 
             override fun onFailedToReceiveAd(ad: Ad?) {
-                if (allowTestFallback && !isTestMode) {
-                    Log.w(TAG, "Live interstitial no-fill on phone. Attempting test-mode fallback for device display...")
-                    StartAppSDK.setTestAdsEnabled(true)
-                    loadAndShowInterstitial(activity, onAdDisplayed, {
-                        StartAppSDK.setTestAdsEnabled(isTestMode)
-                        onAdClosed()
-                    }, allowTestFallback = false)
-                } else {
-                    activity.runOnUiThread { onAdClosed() }
-                    preloadAds(activity)
-                }
+                mainHandler.removeCallbacks(timeoutRunnable)
+                Log.w(TAG, "Live on-demand interstitial failed: ${ad?.errorMessage}")
+                finishOnce()
             }
         })
     }
 
     /**
-     * Shows a real Rewarded Ad to the user.
+     * Shows a real Live Rewarded Ad.
      * Strategy:
-     * 1. Checks if preloaded pure Rewarded Video is ready.
-     * 2. If not ready, checks if preloaded Fullscreen/Interstitial is ready.
-     * 3. If neither is preloaded, triggers an on-demand request: first trying REWARDED_VIDEO,
-     *    and if that has no instant video fill, seamlessly loading AUTOMATIC fullscreen.
-     * 4. If live fill is 0 on phone (unreleased app), seamlessly falls back to test ad
-     *    so that an actual ad plays on the physical phone!
-     * 5. If all fail or no network fill, triggers onAdUnavailable with fallback reward mechanism.
+     * 1. Check if preloaded pure Rewarded Video is ready -> show immediately.
+     * 2. If video not ready, check if preloaded Interstitial is ready -> show for reward.
+     * 3. If neither ready, request dynamic on-demand live ad with an 8-second safety timeout.
+     * 4. Reward is granted strictly on successful completion.
+     * 5. Zero test mode fallbacks.
      */
     fun showRewardedVideoAd(
         activity: Activity,
@@ -287,10 +307,10 @@ object StartIoManager {
                 }
             }
 
-            // Case 1: Preloaded Rewarded Video is ready
+            // Case 1: Preloaded Live Rewarded Video is ready
             val preloadedVideo = preloadedRewardedAd
             if (preloadedVideo != null && preloadedVideo.isReady) {
-                Log.d(TAG, "Showing preloaded Start.io Rewarded Video on device")
+                Log.d(TAG, "Showing preloaded Start.io Live Rewarded Video")
                 preloadedRewardedAd = null
 
                 preloadedVideo.setVideoListener(object : VideoListener {
@@ -326,10 +346,10 @@ object StartIoManager {
                 if (displayed) return
             }
 
-            // Case 2: Preloaded Interstitial/Fullscreen is ready
+            // Case 2: Preloaded Fullscreen/Interstitial is ready
             val preloadedInter = preloadedInterstitialAd
             if (preloadedInter != null && preloadedInter.isReady) {
-                Log.d(TAG, "Showing preloaded Start.io Interstitial for reward on device")
+                Log.d(TAG, "Showing preloaded Start.io Interstitial for reward")
                 preloadedInterstitialAd = null
 
                 val displayed = preloadedInter.showAd(object : AdDisplayListener {
@@ -358,14 +378,13 @@ object StartIoManager {
                 if (displayed) return
             }
 
-            // Case 3: On-demand load with multi-tier failover
+            // Case 3: Dynamic on-demand live ad request with 8-second safety timeout
             loadDynamicRewardAd(
                 activity = activity,
                 grantReward = { grantRewardOnce() },
                 onAdDisplayed = onAdDisplayed,
                 onAdClosed = onAdClosed,
-                onAdUnavailable = onAdUnavailable,
-                allowTestFallback = true
+                onAdUnavailable = onAdUnavailable
             )
 
         } catch (e: Exception) {
@@ -379,9 +398,21 @@ object StartIoManager {
         grantReward: () -> Unit,
         onAdDisplayed: () -> Unit,
         onAdClosed: () -> Unit,
-        onAdUnavailable: (String) -> Unit,
-        allowTestFallback: Boolean
+        onAdUnavailable: (String) -> Unit
     ) {
+        var isHandled = false
+        val timeoutRunnable = Runnable {
+            if (!isHandled) {
+                isHandled = true
+                activity.runOnUiThread {
+                    onAdUnavailable("Reklam sunucusundan yanıt alınamadı. Lütfen daha sonra tekrar deneyin.")
+                    onAdClosed()
+                }
+                preloadAds(activity)
+            }
+        }
+        mainHandler.postDelayed(timeoutRunnable, 8_000L)
+
         val freshVideoAd = StartAppAd(activity)
         freshVideoAd.setVideoListener(object : VideoListener {
             override fun onVideoCompleted() {
@@ -391,7 +422,11 @@ object StartIoManager {
 
         freshVideoAd.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
             override fun onReceiveAd(ad: Ad) {
-                Log.d(TAG, "On-demand video received! Showing on device...")
+                if (isHandled) return
+                mainHandler.removeCallbacks(timeoutRunnable)
+                isHandled = true
+
+                Log.d(TAG, "Live on-demand video received! Showing on device...")
                 val displayed = freshVideoAd.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
                         activity.runOnUiThread { onAdDisplayed() }
@@ -415,17 +450,15 @@ object StartIoManager {
                     }
                 })
                 if (!displayed) {
-                    loadFallbackFullscreenAd(
-                        activity, grantReward, onAdDisplayed, onAdClosed, onAdUnavailable, allowTestFallback
-                    )
+                    loadFallbackFullscreenAd(activity, grantReward, onAdDisplayed, onAdClosed, onAdUnavailable)
                 }
             }
 
             override fun onFailedToReceiveAd(ad: Ad?) {
-                Log.w(TAG, "Rewarded video fill not ready (${ad?.errorMessage}), falling back to fullscreen ad...")
-                loadFallbackFullscreenAd(
-                    activity, grantReward, onAdDisplayed, onAdClosed, onAdUnavailable, allowTestFallback
-                )
+                if (isHandled) return
+                mainHandler.removeCallbacks(timeoutRunnable)
+                Log.w(TAG, "Live rewarded video fill not ready (${ad?.errorMessage}), trying fullscreen ad...")
+                loadFallbackFullscreenAd(activity, grantReward, onAdDisplayed, onAdClosed, onAdUnavailable)
             }
         })
     }
@@ -435,13 +468,12 @@ object StartIoManager {
         grantReward: () -> Unit,
         onAdDisplayed: () -> Unit,
         onAdClosed: () -> Unit,
-        onAdUnavailable: (String) -> Unit,
-        allowTestFallback: Boolean
+        onAdUnavailable: (String) -> Unit
     ) {
         val fallbackAd = StartAppAd(activity)
         fallbackAd.loadAd(StartAppAd.AdMode.AUTOMATIC, object : AdEventListener {
             override fun onReceiveAd(ad: Ad) {
-                Log.d(TAG, "Fallback real fullscreen ad received, showing now...")
+                Log.d(TAG, "Fallback live fullscreen ad received, showing now...")
                 val displayed = fallbackAd.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
                         activity.runOnUiThread { onAdDisplayed() }

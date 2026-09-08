@@ -41,6 +41,7 @@ import com.example.model.StrokeTheme
 import com.example.model.ThemeRarity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,7 +82,6 @@ data class EchoUiState(
     val diamonds: Int = 1,
     val coins: Int = 50,
     val isEchoShrinkerActive: Boolean = false,
-    val isAdFree: Boolean = false,
     val totalEchoes: Int = 0,
     val completedLevels: Set<Int> = emptySet(),
     val totalStars: Int = 0,
@@ -155,7 +155,13 @@ data class EchoUiState(
     val userCustomTitle: String = "",
     val hintAdsWatched: Int = 0,
     val isHintPurchaseDialogVisible: Boolean = false,
-    val isKvkkConsentAccepted: Boolean = false
+    val isKvkkConsentAccepted: Boolean = false,
+    // 3-Hour Reward Cooldown System (3 Hours)
+    val rewardCooldownSeconds: Long = 0L, // Main reward (REWARD_DAILY)
+    val diamondRewardCooldownSeconds: Long = 0L,
+    val coinRewardCooldownSeconds: Long = 0L,
+    val breakerRewardCooldownSeconds: Long = 0L,
+    val megaChestRewardCooldownSeconds: Long = 0L
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -226,6 +232,66 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         )
+
+        // 3-Hour Reward Cooldown Ticker
+        startRewardCooldownTicker()
+    }
+
+    private fun startRewardCooldownTicker() {
+        viewModelScope.launch {
+            while (isActive) {
+                updateRewardCooldowns()
+                delay(1000L)
+            }
+        }
+    }
+
+    fun updateRewardCooldowns() {
+        val rewardCd = prefs.getRewardCooldownRemainingSeconds("REWARD_DAILY")
+        val diamondCd = prefs.getRewardCooldownRemainingSeconds("FREE_DIAMOND")
+        val coinCd = prefs.getRewardCooldownRemainingSeconds("FREE_COINS")
+        val breakerCd = prefs.getRewardCooldownRemainingSeconds("FREE_BREAKER")
+        val megaChestCd = prefs.getRewardCooldownRemainingSeconds("WATCH_3_ADS_REWARD")
+
+        _uiState.update {
+            it.copy(
+                rewardCooldownSeconds = rewardCd,
+                diamondRewardCooldownSeconds = diamondCd,
+                coinRewardCooldownSeconds = coinCd,
+                breakerRewardCooldownSeconds = breakerCd,
+                megaChestRewardCooldownSeconds = megaChestCd
+            )
+        }
+    }
+
+    fun isTimedRewardType(type: String): Boolean {
+        return when (type) {
+            "REWARD_DAILY", "FREE_BREAKER", "FREE_DIAMOND", "FREE_COINS", "WATCH_3_ADS_REWARD" -> true
+            else -> false
+        }
+    }
+
+    fun canClaimReward(type: String): Boolean {
+        if (isTimedRewardType(type)) {
+            val cd = prefs.getRewardCooldownRemainingSeconds(type)
+            return cd <= 0L
+        }
+        return true
+    }
+
+    fun notifyRewardOnCooldown(type: String) {
+        val cd = prefs.getRewardCooldownRemainingSeconds(type)
+        val h = cd / 3600
+        val m = (cd % 3600) / 60
+        val s = cd % 60
+        val timeFormatted = if (h > 0) {
+            String.format(Locale.getDefault(), "%d saat %d dakika", h, m)
+        } else if (m > 0) {
+            String.format(Locale.getDefault(), "%d dakika %d saniye", m, s)
+        } else {
+            String.format(Locale.getDefault(), "%d saniye", s)
+        }
+        showToast("Ödülünüz 3 saatte bir yenilenir! Kalan süre: $timeFormatted")
     }
 
     private fun loadSavedPreferences() {
@@ -242,7 +308,6 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 echoBreakers = prefs.echoBreakers,
                 diamonds = prefs.diamonds,
                 coins = prefs.coins,
-                isAdFree = prefs.isAdFree,
                 totalEchoes = prefs.totalEchoes,
                 strokeTheme = stroke,
                 echoTheme = echo,
@@ -1118,8 +1183,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
             }
             "FREE_BREAKER", "REWARD_DAILY" -> {
+                prefs.recordRewardClaimed("REWARD_DAILY")
+                prefs.recordRewardClaimed("FREE_BREAKER")
                 prefs.addBreakers(1)
                 prefs.addTokens(2)
+                updateRewardCooldowns()
                 _uiState.update {
                     it.copy(
                         isRewardedSimulating = false,
@@ -1130,7 +1198,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
                 RewardClaimedInfo(
                     title = "Ödül Başarıyla Kazanıldı!",
-                    subtitle = "+1 Matkap Lazeri & +2 İpucu Jetonu hesabınıza eklendi.",
+                    subtitle = "+1 Matkap Lazeri & +2 İpucu Jetonu hesabınıza eklendi (3 saat sonra tekrar hazır).",
                     rewardType = type,
                     tokensAdded = 2,
                     breakersAdded = 1
@@ -1139,7 +1207,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             "FREE_DIAMOND" -> {
                 val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 prefs.recordFreeDiamondAdWatched(todayStr)
+                prefs.recordRewardClaimed("FREE_DIAMOND")
                 prefs.addDiamonds(1)
+                updateRewardCooldowns()
                 _uiState.update {
                     it.copy(
                         isRewardedSimulating = false,
@@ -1149,14 +1219,18 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
                 RewardClaimedInfo(
                     title = "Nadir Elmas Kazanıldı!",
-                    subtitle = "+1 Nadir Elmas hesabınıza başarıyla eklendi.",
+                    subtitle = "+1 Nadir Elmas hesabınıza başarıyla eklendi (3 saat sonra tekrar hazır).",
                     rewardType = type,
                     diamondsAdded = 1
                 )
             }
             "FREE_COINS" -> {
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                prefs.recordFreeCoinAdWatched(todayStr)
+                prefs.recordRewardClaimed("FREE_COINS")
                 prefs.addTokens(3)
                 prefs.addCoins(30)
+                updateRewardCooldowns()
                 _uiState.update {
                     it.copy(
                         isRewardedSimulating = false,
@@ -1167,7 +1241,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
                 RewardClaimedInfo(
                     title = "Jeton & Altın Paketi!",
-                    subtitle = "+3 İpucu Jetonu ve +30 Altın hesabınıza eklendi.",
+                    subtitle = "+3 İpucu Jetonu ve +30 Altın hesabınıza eklendi (3 saat sonra tekrar hazır).",
                     rewardType = type,
                     tokensAdded = 3,
                     coinsAdded = 30
@@ -1193,6 +1267,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 val currentCount = prefs.multiAdWatchCount + 1
                 if (currentCount >= 3) {
                     prefs.multiAdWatchCount = 0
+                    prefs.recordRewardClaimed("WATCH_3_ADS_REWARD")
+                    updateRewardCooldowns()
                     prefs.addDiamonds(3)
                     prefs.addCoins(500)
                     prefs.addBreakers(3)
@@ -1213,7 +1289,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     }
                     RewardClaimedInfo(
                         title = "🎉 3-REKLAM MEGA ÖDÜLÜ AÇILDI!",
-                        subtitle = "Tebrikler! +3 💎 Elmas, +500 🪙 Altın, +3 ⚡ Matkap, +5 Jeton ve 15 Dk 2x Kupa kazandınız!",
+                        subtitle = "Tebrikler! +3 💎 Elmas, +500 🪙 Altın, +3 ⚡ Matkap, +5 Jeton ve 15 Dk 2x Kupa kazandınız (3 saat sonra tekrar hazır)!",
                         rewardType = type,
                         diamondsAdded = 3,
                         coinsAdded = 500,
@@ -1291,6 +1367,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
                 return
             }
+            "DOUBLE_REWARD" -> {
+                claimVictoryDoubleReward()
+                RewardClaimedInfo(
+                    title = "2X Zafer Ödülü!",
+                    subtitle = "+2 İpucu Jetonu ve +1 Matkap Lazeri hesabınıza tanımlandı.",
+                    rewardType = type,
+                    tokensAdded = 2,
+                    breakersAdded = 1
+                )
+            }
             else -> {
                 prefs.addTokens(1)
                 _uiState.update {
@@ -1366,8 +1452,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun shouldShowInterstitialOnNextLevel(): Boolean {
-        // User rule: "sonraki bölüm butonunna basınca reklam çıkacak sadece oyunun ortasında deyil"
-        return !_uiState.value.isAdFree
+        // "sonraki bölüm ==> reklam"
+        return true
     }
 
     fun checkInternetAndAdHealth(silent: Boolean = false) {

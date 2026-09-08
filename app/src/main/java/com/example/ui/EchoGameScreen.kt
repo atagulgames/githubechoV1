@@ -12,6 +12,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -123,7 +126,13 @@ fun EchoGameScreen(
                         onOpenDailyQuests = { viewModel.setDailyQuestsVisible(true) },
                         onOpenDailyLogin = { viewModel.setDailyLoginVisible(true) },
                         onOpenChest = { viewModel.setChestVisible(true) },
-                        onWatchRewardedAd = { onShowRewardedAd("REWARD_DAILY") },
+                        onWatchRewardedAd = {
+                            if (viewModel.canClaimReward("REWARD_DAILY")) {
+                                onShowRewardedAd("REWARD_DAILY")
+                            } else {
+                                viewModel.notifyRewardOnCooldown("REWARD_DAILY")
+                            }
+                        },
                         onBannerAdLoaded = { viewModel.onBannerAdLoaded() },
                         onBannerAdFailed = { err -> viewModel.onBannerAdFailed(err) }
                     )
@@ -164,17 +173,15 @@ fun EchoGameScreen(
                             }
                         )
 
-                        // Bottom docked Banner Ad - positioned safely below HUD to prevent interference with gameplay
-                        if (!state.isAdFree) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9))
-                                    .padding(vertical = 2.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                com.example.ads.StartAppBannerView()
-                            }
+                        // Bottom docked Banner Ad - always visible
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9))
+                                .padding(vertical = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            com.example.ads.StartAppBannerView()
                         }
                     }
                 }
@@ -190,20 +197,25 @@ fun EchoGameScreen(
 
             // 1. Victory Dialog
             if (state.gameStatus == GameStatus.VICTORY) {
+                var isNextLevelTransitioning by remember(state.level.levelId) { mutableStateOf(false) }
+
                 VictoryDialog(
                     levelId = state.level.levelId,
                     echoCount = state.echoCountForLevel,
                     parEchoes = state.level.parEchoes,
                     trophyBreakdown = state.lastTrophyRewardBreakdown,
                     isDoubleClaimed = state.isDoubleRewardClaimedThisLevel,
-                    onClaimDoubleReward = { viewModel.claimVictoryDoubleReward() },
+                    onClaimDoubleReward = { onShowRewardedAd("DOUBLE_REWARD") },
                     onNextLevel = {
-                        if (viewModel.shouldShowInterstitialOnNextLevel()) {
-                            onShowInterstitialAd {
+                        if (!isNextLevelTransitioning) {
+                            isNextLevelTransitioning = true
+                            if (viewModel.shouldShowInterstitialOnNextLevel()) {
+                                onShowInterstitialAd {
+                                    viewModel.nextLevel()
+                                }
+                            } else {
                                 viewModel.nextLevel()
                             }
-                        } else {
-                            viewModel.nextLevel()
                         }
                     },
                     onReplay = {
@@ -231,8 +243,18 @@ fun EchoGameScreen(
                     doubleTrophiesExpiresAt = state.doubleTrophiesExpiresAt,
                     infiniteBreakersExpiresAt = state.infiniteBreakersExpiresAt,
                     radiusShrinkerExpiresAt = state.radiusShrinkerExpiresAt,
+                    diamondRewardCooldownSeconds = state.diamondRewardCooldownSeconds,
+                    coinRewardCooldownSeconds = state.coinRewardCooldownSeconds,
+                    breakerRewardCooldownSeconds = state.breakerRewardCooldownSeconds,
+                    megaChestRewardCooldownSeconds = state.megaChestRewardCooldownSeconds,
                     isDarkTheme = state.isDarkTheme,
-                    onWatchRewardedAd = { rewardType -> onShowRewardedAd(rewardType) },
+                    onWatchRewardedAd = { rewardType ->
+                        if (viewModel.canClaimReward(rewardType)) {
+                            onShowRewardedAd(rewardType)
+                        } else {
+                            viewModel.notifyRewardOnCooldown(rewardType)
+                        }
+                    },
                     onExchangeDiamondsForTokens = { diamonds, tokens ->
                         viewModel.exchangeDiamondsForTokens(diamonds, tokens)
                     },

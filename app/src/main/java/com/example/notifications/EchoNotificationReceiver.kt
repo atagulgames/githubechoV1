@@ -16,11 +16,6 @@ class EchoNotificationReceiver : BroadcastReceiver() {
     companion object {
         const val CHANNEL_ID = "echo_daily_notifications"
         const val EXTRA_TIME_SLOT = "extra_time_slot"
-
-        const val SLOT_MORNING = "MORNING"
-        const val SLOT_NOON = "NOON"
-        const val SLOT_AFTERNOON = "AFTERNOON"
-        const val SLOT_EVENING = "EVENING"
     }
 
     override fun onReceive(context: Context, intent: Intent?) {
@@ -30,38 +25,12 @@ class EchoNotificationReceiver : BroadcastReceiver() {
             return
         }
 
-        val slot = intent?.getStringExtra(EXTRA_TIME_SLOT) ?: SLOT_MORNING
-        val (title, message, notificationId) = when (slot) {
-            SLOT_MORNING -> Triple(
-                "☀️ Günaydın Yankı Ustası!",
-                "Sabah zihnini açmak için 1 bölüm çöz, günlük bonusunu ve kupalarını kap!",
-                1001
-            )
-            SLOT_NOON -> Triple(
-                "✨ Öğle Molası & Yeni Rekorlar!",
-                "Kısa bir zeka molasına ne dersin? Günlük görevlerin seni bekliyor, kombonu yükselt!",
-                1002
-            )
-            SLOT_AFTERNOON -> Triple(
-                "🎯 İkindi Rezonansı!",
-                "Liderlik tablosunda yükselme zamanı! Rakiplerini geç ve zirvedeki yerini al.",
-                1003
-            )
-            SLOT_EVENING -> Triple(
-                "🌙 Akşam Huzuru & ECHO Melodileri",
-                "Günün stresini minimalist ses dalgaları ve harmonik bulmacalarla geride bırak.",
-                1004
-            )
-            else -> Triple(
-                "🌟 ECHO Seni Bekliyor!",
-                "Yeni seviyeleri keşfet ve eşsiz melodileri tamamla!",
-                1000
-            )
-        }
+        val slotId = intent?.getStringExtra(EXTRA_TIME_SLOT) ?: "SLOT_09_00"
+        val slot = EchoNotificationScheduler.getSlotById(slotId)
 
-        showNotification(context, title, message, notificationId)
+        showNotification(context, slot.title, slot.message, slot.requestCode)
 
-        // Reschedule for next day to guarantee it triggers reliably
+        // Reschedule for next day to guarantee it triggers reliably every day
         EchoNotificationScheduler.scheduleSlot(context, slot)
     }
 

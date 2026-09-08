@@ -52,6 +52,10 @@ fun ShopDialog(
     doubleTrophiesExpiresAt: Long = 0L,
     infiniteBreakersExpiresAt: Long = 0L,
     radiusShrinkerExpiresAt: Long = 0L,
+    diamondRewardCooldownSeconds: Long = 0L,
+    coinRewardCooldownSeconds: Long = 0L,
+    breakerRewardCooldownSeconds: Long = 0L,
+    megaChestRewardCooldownSeconds: Long = 0L,
     isDarkTheme: Boolean = true,
     onWatchRewardedAd: (String) -> Unit = {},
     onExchangeDiamondsForTokens: (Int, Int) -> Unit = { _, _ -> },
@@ -284,17 +288,31 @@ fun ShopDialog(
                             }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
+                        val isMegaCooldown = megaChestRewardCooldownSeconds > 0
+                        val megaCooldownFormatted = if (isMegaCooldown) {
+                            val h = megaChestRewardCooldownSeconds / 3600
+                            val m = (megaChestRewardCooldownSeconds % 3600) / 60
+                            val s = megaChestRewardCooldownSeconds % 60
+                            String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+                        } else ""
+
                         Button(
                             onClick = { onWatchRewardedAd("WATCH_3_ADS_REWARD") },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isMegaCooldown) Color(0xFF475569) else Color(0xFF6366F1)
+                            ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = when (multiAdWatchCount) {
-                                    0 -> "1. Reklamı İzle (1/3)"
-                                    1 -> "2. Reklamı İzle (2/3)"
-                                    else -> "🎉 Son Reklamı İzle & Mega Sandığı Aç! (3/3)"
+                                text = if (isMegaCooldown) {
+                                    "⏳ 3 Saat Bekleme Süresinde ($megaCooldownFormatted)"
+                                } else {
+                                    when (multiAdWatchCount) {
+                                        0 -> "1. Reklamı İzle (1/3)"
+                                        1 -> "2. Reklamı İzle (2/3)"
+                                        else -> "🎉 Son Reklamı İzle & Mega Sandığı Aç! (3/3)"
+                                    }
                                 },
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
@@ -376,6 +394,7 @@ fun ShopDialog(
                     icon = Icons.Default.Diamond,
                     accentColor = Color(0xFF0284C7),
                     isDarkTheme = isDarkTheme,
+                    cooldownSeconds = diamondRewardCooldownSeconds,
                     onClick = { onWatchRewardedAd("FREE_DIAMOND") },
                     testTag = "ad_free_diamond_button"
                 )
@@ -390,6 +409,7 @@ fun ShopDialog(
                     icon = Icons.Default.Lightbulb,
                     accentColor = Color(0xFFD97706),
                     isDarkTheme = isDarkTheme,
+                    cooldownSeconds = coinRewardCooldownSeconds,
                     onClick = { onWatchRewardedAd("FREE_COINS") },
                     testTag = "ad_free_coins_button"
                 )
@@ -404,6 +424,7 @@ fun ShopDialog(
                     icon = Icons.Default.Bolt,
                     accentColor = Color(0xFFDC2626),
                     isDarkTheme = isDarkTheme,
+                    cooldownSeconds = breakerRewardCooldownSeconds,
                     onClick = { onWatchRewardedAd("FREE_BREAKER") },
                     testTag = "ad_free_breaker_button"
                 )
@@ -418,6 +439,7 @@ fun ShopDialog(
                     icon = Icons.Default.Refresh,
                     accentColor = Color(0xFF059669),
                     isDarkTheme = isDarkTheme,
+                    cooldownSeconds = 0L,
                     onClick = { onWatchRewardedAd("CLEAR_ECHOES") },
                     testTag = "ad_clear_echoes_button"
                 )
@@ -481,9 +503,18 @@ private fun AdRewardCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     accentColor: Color,
     isDarkTheme: Boolean,
+    cooldownSeconds: Long = 0L,
     onClick: () -> Unit,
     testTag: String
 ) {
+    val isOnCooldown = cooldownSeconds > 0
+    val formattedCooldown = if (isOnCooldown) {
+        val h = cooldownSeconds / 3600
+        val m = (cooldownSeconds % 3600) / 60
+        val s = cooldownSeconds % 60
+        String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+    } else ""
+
     val cardBg = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF8FAFC)
     val textPrimary = if (isDarkTheme) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
@@ -492,7 +523,7 @@ private fun AdRewardCard(
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = cardBg,
-        border = BorderStroke(1.dp, borderColor),
+        border = BorderStroke(1.dp, if (isOnCooldown) borderColor else accentColor.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -510,13 +541,13 @@ private fun AdRewardCard(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(accentColor.copy(alpha = 0.15f)),
+                        .background(if (isOnCooldown) Color(0xFF475569).copy(alpha = 0.2f) else accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = accentColor,
+                        tint = if (isOnCooldown) Color(0xFF94A3B8) else accentColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -528,12 +559,12 @@ private fun AdRewardCard(
                         text = title,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = textPrimary
+                        color = if (isOnCooldown) textSecondary else textPrimary
                     )
                     Text(
-                        text = description,
+                        text = if (isOnCooldown) "$description • (Kalan: $formattedCooldown)" else description,
                         fontSize = 10.sp,
-                        color = textSecondary,
+                        color = if (isOnCooldown) Color(0xFFEAB308) else textSecondary,
                         lineHeight = 13.sp
                     )
                 }
@@ -545,15 +576,15 @@ private fun AdRewardCard(
                 onClick = onClick,
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = accentColor,
+                    containerColor = if (isOnCooldown) Color(0xFF475569) else accentColor,
                     contentColor = Color.White
                 ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                 modifier = Modifier.testTag(testTag)
             ) {
                 Text(
-                    text = buttonText,
-                    fontSize = 11.sp,
+                    text = if (isOnCooldown) formattedCooldown else buttonText,
+                    fontSize = if (isOnCooldown) 10.sp else 11.sp,
                     fontWeight = FontWeight.Bold
                 )
             }

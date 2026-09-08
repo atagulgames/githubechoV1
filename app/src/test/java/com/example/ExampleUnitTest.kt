@@ -199,28 +199,30 @@ class ExampleUnitTest {
     assertEquals(100, levels.size)
 
     val titles = HashSet<String>()
+    val failures = mutableListOf<String>()
     for (entity in levels) {
       val level = LevelCatalog.entityToLevelData(entity)
       val id = level.levelId
 
       // Title uniqueness check
-      assertFalse("Duplicate title at level $id: ${level.title}", titles.contains(level.title))
+      if (titles.contains(level.title)) {
+        failures.add("Duplicate title at level $id: ${level.title}")
+      }
       titles.add(level.title)
 
       // Node count check (strictly between 3 and 36 nodes)
       val nodes = level.nodes
-      assertTrue("Level $id has too few nodes: ${nodes.size}", nodes.size >= 3)
-      assertTrue("Level $id has too many nodes: ${nodes.size}", nodes.size <= 36)
+      if (nodes.size < 3) failures.add("Level $id has too few nodes: ${nodes.size}")
+      if (nodes.size > 36) failures.add("Level $id has too many nodes: ${nodes.size}")
 
       // Spacing between nodes (scaled smoothly for high node density)
       val minAllowedDist = if (nodes.size >= 25) 10f else if (nodes.size >= 10) 14f else 28f
       for (i in 0 until nodes.size) {
         for (j in i + 1 until nodes.size) {
           val dist = Point(nodes[i].x, nodes[i].y).distanceTo(Point(nodes[j].x, nodes[j].y))
-          assertTrue(
-            "Level $id nodes ${nodes[i].id} and ${nodes[j].id} too close: dist=$dist (min=$minAllowedDist)",
-            dist >= minAllowedDist
-          )
+          if (dist < minAllowedDist) {
+            failures.add("Level $id nodes ${nodes[i].id} and ${nodes[j].id} too close: dist=$dist (min=$minAllowedDist)")
+          }
         }
       }
 
@@ -232,10 +234,17 @@ class ExampleUnitTest {
           val intersect = CollisionEngine.doLinesIntersect(
             s.p1, s.p2, past.p1, past.p2, endpointTolerance = 8f
           )
-          assertFalse("Level $id has self-intersecting solution path between ${s.fromNodeId}->${s.toNodeId} and ${past.fromNodeId}->${past.toNodeId}", intersect)
+          if (intersect) {
+            failures.add("Level $id has self-intersecting solution path between ${s.fromNodeId}->${s.toNodeId} and ${past.fromNodeId}->${past.toNodeId}")
+          }
         }
         segments.add(s)
       }
+    }
+    if (failures.isNotEmpty()) {
+      println("TOTAL FAILURES: ${failures.size}")
+      failures.forEach { println("FAIL: $it") }
+      fail("Failed ${failures.size} checks:\n" + failures.joinToString("\n"))
     }
   }
 }

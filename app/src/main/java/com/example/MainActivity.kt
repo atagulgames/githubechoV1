@@ -20,9 +20,9 @@ class MainActivity : ComponentActivity() {
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     enableEdgeToEdge()
 
-    // Initialize Start.io Ads SDK with App ID: 208838202 (Test Ads Mode in debug/preview)
+    // Initialize Start.io Ads SDK with App ID: 208838202 (Live Production Ads Mode)
     val echoPrefs = com.example.data.EchoPreferences(this)
-    val testMode = echoPrefs.isTestAdsEnabled || BuildConfig.DEBUG
+    val testMode = echoPrefs.isTestAdsEnabled
     StartIoManager.initialize(this, testMode = testMode)
     com.example.audio.HarmonicAudioEngine.init(this)
 
@@ -65,8 +65,13 @@ class MainActivity : ComponentActivity() {
             onShowInterstitialAd = { onAdFinished ->
               StartIoManager.showInterstitialAd(
                 activity = this,
-                onAdDisplayed = { },
-                onAdClosed = { onAdFinished() }
+                onAdDisplayed = {
+                  com.example.audio.HarmonicAudioEngine.pauseBgm()
+                },
+                onAdClosed = {
+                  com.example.audio.HarmonicAudioEngine.resumeBgm()
+                  onAdFinished()
+                }
               )
             }
           )

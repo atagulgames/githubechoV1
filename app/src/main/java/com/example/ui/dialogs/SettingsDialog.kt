@@ -65,7 +65,7 @@ import com.example.localization.Language
 fun SettingsDialog(
     soundEnabled: Boolean,
     hapticsEnabled: Boolean,
-    testAdsEnabled: Boolean = true,
+    testAdsEnabled: Boolean = false,
     isDarkTheme: Boolean = true,
     currentLanguage: Language = Language.EN,
     onSelectLanguage: (Language) -> Unit = {},

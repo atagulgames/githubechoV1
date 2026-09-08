@@ -14,7 +14,6 @@ class EchoPreferences(context: Context) {
         private const val KEY_ECHO_BREAKERS = "echo_breakers"
         private const val KEY_TOTAL_ECHOES = "echo_stats_total_echoes"
         private const val KEY_COMPLETED_LEVELS = "echo_completed_levels"
-        private const val KEY_AD_FREE = "echo_is_ad_free"
         private const val KEY_SOUND = "echo_sound_enabled"
         private const val KEY_HAPTICS = "echo_haptics_enabled"
         private const val KEY_STROKE_THEME = "echo_stroke_theme"
@@ -88,6 +87,10 @@ class EchoPreferences(context: Context) {
         private const val KEY_LOOTLOCKER_PLAYER_IDENTIFIER = "echo_lootlocker_player_identifier"
         private const val KEY_LOOTLOCKER_GAME_KEY = "echo_lootlocker_game_key"
         private const val KEY_LOOTLOCKER_LEADERBOARD_KEY = "echo_lootlocker_leaderboard_key"
+
+        // 3-Hour Reward Cooldown System (3 Hours = 3 * 3600 * 1000L = 10,800,000 ms)
+        private const val KEY_REWARD_LAST_TIME_PREFIX = "echo_reward_last_claim_time_"
+        const val REWARD_COOLDOWN_MILLIS = 3 * 60 * 60 * 1000L // 3 Hours (10800000 ms)
     }
 
     var shownMechanicTiersCsv: String
@@ -329,13 +332,31 @@ class EchoPreferences(context: Context) {
             .putInt(KEY_FREE_DIAMOND_ADS_COUNT, currentCount + 1)
             .putLong(KEY_LAST_DIAMOND_AD_TIME, System.currentTimeMillis())
             .apply()
+        recordRewardClaimed("FREE_DIAMOND")
+    }
+
+    fun getRewardCooldownRemainingSeconds(rewardType: String): Long {
+        val lastTime = prefs.getLong("${KEY_REWARD_LAST_TIME_PREFIX}$rewardType", 0L)
+        if (lastTime <= 0L) return 0L
+        val elapsedMs = System.currentTimeMillis() - lastTime
+        val remainingMs = REWARD_COOLDOWN_MILLIS - elapsedMs
+        return (remainingMs / 1000L).coerceAtLeast(0L)
+    }
+
+    fun isRewardAvailable(rewardType: String): Boolean {
+        return getRewardCooldownRemainingSeconds(rewardType) <= 0L
+    }
+
+    fun recordRewardClaimed(rewardType: String) {
+        val now = System.currentTimeMillis()
+        prefs.edit()
+            .putLong("${KEY_REWARD_LAST_TIME_PREFIX}$rewardType", now)
+            .putLong("${KEY_REWARD_LAST_TIME_PREFIX}GLOBAL", now)
+            .apply()
     }
 
     fun getDiamondAdCooldownSeconds(): Long {
-        val lastTime = prefs.getLong(KEY_LAST_DIAMOND_AD_TIME, 0L)
-        val elapsedSec = (System.currentTimeMillis() - lastTime) / 1000L
-        val cooldownSec = 180L // 3 minutes cooldown
-        return (cooldownSec - elapsedSec).coerceAtLeast(0L)
+        return getRewardCooldownRemainingSeconds("FREE_DIAMOND")
     }
 
     fun getFreeCoinAdsRemaining(todayDate: String): Int {
@@ -356,22 +377,16 @@ class EchoPreferences(context: Context) {
             .putInt(KEY_FREE_COIN_ADS_COUNT, currentCount + 1)
             .putLong(KEY_LAST_COIN_AD_TIME, System.currentTimeMillis())
             .apply()
+        recordRewardClaimed("FREE_COINS")
     }
 
     fun getCoinAdCooldownSeconds(): Long {
-        val lastTime = prefs.getLong(KEY_LAST_COIN_AD_TIME, 0L)
-        val elapsedSec = (System.currentTimeMillis() - lastTime) / 1000L
-        val cooldownSec = 120L // 2 minutes cooldown
-        return (cooldownSec - elapsedSec).coerceAtLeast(0L)
+        return getRewardCooldownRemainingSeconds("FREE_COINS")
     }
 
     var totalEchoes: Int
         get() = prefs.getInt(KEY_TOTAL_ECHOES, 0)
         set(value) = prefs.edit().putInt(KEY_TOTAL_ECHOES, value).apply()
-
-    var isAdFree: Boolean
-        get() = prefs.getBoolean(KEY_AD_FREE, false)
-        set(value) = prefs.edit().putBoolean(KEY_AD_FREE, value).apply()
 
     var soundEnabled: Boolean
         get() = prefs.getBoolean(KEY_SOUND, true)
@@ -394,7 +409,7 @@ class EchoPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_LAST_DAILY, value).apply()
 
     var isTestAdsEnabled: Boolean
-        get() = prefs.getBoolean(KEY_TEST_ADS, com.example.BuildConfig.DEBUG)
+        get() = prefs.getBoolean(KEY_TEST_ADS, false)
         set(value) = prefs.edit().putBoolean(KEY_TEST_ADS, value).apply()
 
     var isDarkTheme: Boolean
