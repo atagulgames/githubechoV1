@@ -38,6 +38,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.audio.HapticEngine
+import com.example.audio.hapticClick
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -107,7 +109,7 @@ fun EchoTopHUD(
                         horizontalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 10.dp)
                     ) {
                         IconButton(
-                            onClick = onBackToMenu,
+                            onClick = hapticClick(action = onBackToMenu),
                             modifier = Modifier
                                 .size(if (isCompact) 36.dp else 40.dp)
                                 .shadow(2.dp, CircleShape)
@@ -543,7 +545,7 @@ fun EchoBottomHUD(
                 ) {
                     // Echo Breaker (Matkap Lazer)
                     FilledTonalButton(
-                        onClick = onUseBreaker,
+                        onClick = hapticClick(isHeavy = true, action = onUseBreaker),
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)
@@ -574,7 +576,7 @@ fun EchoBottomHUD(
 
                     // Echo Shrinker (Esnek Mod) - Valid for 1 level only
                     FilledTonalButton(
-                        onClick = onActivateShrinker,
+                        onClick = hapticClick(isHeavy = true, action = onActivateShrinker),
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)
@@ -618,7 +620,10 @@ fun EchoBottomHUD(
                 ) {
                     // "Yeniden" (Reset)
                     OutlinedButton(
-                        onClick = onReset,
+                        onClick = {
+                            HapticEngine.triggerButtonDoublePulse()
+                            onReset()
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)
@@ -648,7 +653,10 @@ fun EchoBottomHUD(
 
                     // "Yankı Sil" (Clear Echoes)
                     FilledTonalButton(
-                        onClick = onClearEchoes,
+                        onClick = {
+                            HapticEngine.triggerButtonDoublePulse()
+                            onClearEchoes()
+                        },
                         modifier = Modifier
                             .weight(1.3f)
                             .height(btnHeight)
@@ -683,7 +691,7 @@ fun EchoBottomHUD(
 
                     // "İpucu" (Hint)
                     Button(
-                        onClick = onHint,
+                        onClick = hapticClick(action = onHint),
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)

@@ -18,7 +18,7 @@ object LevelCatalog {
     const val TOTAL_LEVELS = 100
 
     private val TIER_NAMES_EN = listOf(
-        "Tutorial",                 // Tier 1 (1..3)
+        "Foundation",                // Tier 1 (1..3)
         "Complex Web",               // Tier 2 (4..10)
         "Floating Nodes",            // Tier 3 (11..20)
         "Invisible Rays",            // Tier 4 (21..30)
@@ -33,7 +33,7 @@ object LevelCatalog {
     )
 
     private val TIER_NAMES_TR = listOf(
-        "Öğretici",                     // Tier 1 (1..3)
+        "Temel Ağ",                     // Tier 1 (1..3)
         "Karmaşık Ağ",                  // Tier 2 (4..10)
         "Hareketli Düğümler",           // Tier 3 (11..20)
         "Görünmez Işınlar",             // Tier 4 (21..30)
@@ -345,7 +345,7 @@ object LevelCatalog {
 
         // Mechanic classification for the 12 evolution tiers per user design
         val mechanicType = when {
-            clampedId in 1..3 -> "TUTORIAL_BASIC"
+            clampedId in 1..3 -> "BASIC_WEB"
             clampedId in 4..10 -> "COMPLEX_WEB"
             clampedId in 11..20 -> "FLOATING_NODES"
             clampedId in 21..30 -> "INVISIBLE_RAYS"
@@ -357,7 +357,7 @@ object LevelCatalog {
             clampedId in 81..90 -> "DUAL_ENTANGLED_WEB"
             clampedId in 91..99 -> "CUMULATIVE_GHOSTS"
             clampedId == 100 -> "OMEGA_SYNTHESIS"
-            else -> "TUTORIAL_BASIC"
+            else -> "BASIC_WEB"
         }
 
         val decayLifetime = when (mechanicType) {

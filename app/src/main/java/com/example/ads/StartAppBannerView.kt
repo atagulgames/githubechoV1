@@ -48,7 +48,7 @@ fun StartAppBannerView(
 
                 override fun onClick(view: View) {}
             }).apply {
-                id = View.generateViewId()
+                id = com.example.R.id.startapp_banner_view
             }
         },
         onRelease = { banner ->

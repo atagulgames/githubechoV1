@@ -29,7 +29,7 @@ class ExampleRobolectricTest {
   @Test
   fun `read string from context`() {
     val appName = context.getString(R.string.app_name)
-    assertEquals("ECHO", appName)
+    assertEquals("ECHO FLUX", appName)
   }
 
   @Test

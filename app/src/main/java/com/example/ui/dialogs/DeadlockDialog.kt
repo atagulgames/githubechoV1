@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.example.audio.hapticClick
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,7 +103,7 @@ fun DeadlockDialog(
                 // User request: "eğer reklam izlersen 15 sn ek süre eklensin."
                 if (isTimeUp && onAddTimeWithAd != null) {
                     Button(
-                        onClick = onAddTimeWithAd,
+                        onClick = hapticClick(isHeavy = true, action = onAddTimeWithAd),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
@@ -134,7 +135,7 @@ fun DeadlockDialog(
 
                 // Option: Tekrar Oyna
                 Button(
-                    onClick = onRestartLevel,
+                    onClick = hapticClick(action = onRestartLevel),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
@@ -166,7 +167,7 @@ fun DeadlockDialog(
                 if (!isTimeUp && onClearWithAd != null) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
-                        onClick = onClearWithAd,
+                        onClick = hapticClick(isHeavy = true, action = onClearWithAd),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)

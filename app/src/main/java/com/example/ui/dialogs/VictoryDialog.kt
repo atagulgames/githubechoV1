@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.example.audio.hapticClick
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -348,7 +349,7 @@ fun VictoryDialog(
                     }
                 } else {
                     OutlinedButton(
-                        onClick = onClaimDoubleReward,
+                        onClick = hapticClick(isHeavy = true, action = onClaimDoubleReward),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
@@ -381,7 +382,7 @@ fun VictoryDialog(
 
                 // Option A: Sonraki Bölüm
                 Button(
-                    onClick = onNextLevel,
+                    onClick = hapticClick(isHeavy = true, action = onNextLevel),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
@@ -414,7 +415,7 @@ fun VictoryDialog(
 
                 // Option B: Tekrar Oyna
                 OutlinedButton(
-                    onClick = onReplay,
+                    onClick = hapticClick(action = onReplay),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)

@@ -29,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import com.example.audio.hapticClick
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,7 +113,7 @@ fun HintDialog(
                         }
                     }
                     IconButton(
-                        onClick = onDismiss,
+                        onClick = hapticClick(action = onDismiss),
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
@@ -191,7 +192,7 @@ fun HintDialog(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Button(
-                            onClick = onWatchAd,
+                            onClick = hapticClick(isHeavy = true, action = onWatchAd),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF0284C7),
@@ -274,7 +275,7 @@ fun HintDialog(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         FilledTonalButton(
-                            onClick = onUseDiamonds,
+                            onClick = hapticClick(isHeavy = true, action = onUseDiamonds),
                             enabled = diamonds >= 5,
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(
@@ -305,7 +306,7 @@ fun HintDialog(
                 if (tokens > 0) {
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
-                        onClick = onUseToken,
+                        onClick = hapticClick(action = onUseToken),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()

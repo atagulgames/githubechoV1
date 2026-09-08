@@ -33,6 +33,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.audio.hapticClick
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -141,7 +142,7 @@ private fun ChestMainView(
             }
 
             IconButton(
-                onClick = onDismiss,
+                onClick = hapticClick(action = onDismiss),
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(
@@ -212,7 +213,7 @@ private fun ChestMainView(
         // Action 1: Ücretsiz Sandık (günde 1)
         if (isFreeAvailable) {
             Button(
-                onClick = onOpenFree,
+                onClick = hapticClick(isHeavy = true, action = onOpenFree),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -252,7 +253,7 @@ private fun ChestMainView(
         // Action 2: Reklamlı Sandık (kalan: X/2)
         if (adRemainingToday > 0) {
             OutlinedButton(
-                onClick = onOpenWithAd,
+                onClick = hapticClick(isHeavy = true, action = onOpenWithAd),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -404,7 +405,7 @@ private fun ChestRewardRevealView(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = onCollect,
+            onClick = hapticClick(isHeavy = true, action = onCollect),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)

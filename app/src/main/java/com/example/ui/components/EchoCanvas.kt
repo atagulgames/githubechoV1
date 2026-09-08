@@ -702,7 +702,12 @@ private fun DrawScope.drawNodes(
         val driftAmp = if (isFloatingTier) 8.5f * scale else 3.2f * scale
         val floatDx = if (!isVisited) sin(timeSec * 1.8f + node.id * 1.5f) * driftAmp else 0f
         val floatDy = if (!isVisited) cos(timeSec * 1.5f + node.id * 1.3f) * driftAmp else 0f
-        val pos = Offset(basePos.x + floatDx, basePos.y + floatDy)
+
+        // Düğümler / Düğmeler titreşsin: Harmonic micro-vibration tremor on nodes awaiting connection
+        val vibAmp = if (!isVisited) 1.6f * scale else 0.4f * scale
+        val vibDx = sin(timeSec * 26f + node.id * 3.7f) * vibAmp
+        val vibDy = cos(timeSec * 30f + node.id * 2.3f) * vibAmp
+        val pos = Offset(basePos.x + floatDx + vibDx, basePos.y + floatDy + vibDy)
 
         val isCharacterStart = node.id == 1
 

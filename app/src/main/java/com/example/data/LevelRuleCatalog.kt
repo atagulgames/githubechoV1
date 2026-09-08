@@ -403,7 +403,7 @@ object LevelRuleCatalog {
                     milestoneId = 1,
                     isMajorMilestone = isMajor,
                     tier = tier,
-                    tierName = "Tutorial: Living Web",
+                    tierName = "Foundation: Living Web",
                     ruleTitle = title,
                     subtitle = sub,
                     icon = icon,

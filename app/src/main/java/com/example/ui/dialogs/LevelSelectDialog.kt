@@ -33,6 +33,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import com.example.audio.HapticEngine
+import com.example.audio.hapticClick
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -197,7 +199,7 @@ fun LevelSelectDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (onOpenRulesGuide != null) {
                             Button(
-                                onClick = onOpenRulesGuide,
+                                onClick = hapticClick(action = onOpenRulesGuide),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9),
                                     contentColor = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)
@@ -225,7 +227,7 @@ fun LevelSelectDialog(
                         }
 
                         IconButton(
-                            onClick = onDismiss,
+                            onClick = hapticClick(action = onDismiss),
                             modifier = Modifier.testTag("close_level_select_button")
                         ) {
                             Icon(
@@ -250,7 +252,10 @@ fun LevelSelectDialog(
                     filterOptions.forEachIndexed { idx, label ->
                         Tab(
                             selected = selectedFilterIndex == idx,
-                            onClick = { selectedFilterIndex = idx },
+                            onClick = {
+                                HapticEngine.triggerButtonClick()
+                                selectedFilterIndex = idx
+                            },
                             text = {
                                 Text(
                                     text = label,
@@ -311,6 +316,7 @@ fun LevelSelectDialog(
                                     shape = RoundedCornerShape(14.dp)
                                 )
                                 .clickable(enabled = isUnlocked) {
+                                    HapticEngine.triggerButtonClick()
                                     onSelectLevel(index)
                                 }
                                 .testTag("level_item_$index"),

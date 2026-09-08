@@ -314,10 +314,10 @@ fun IntroLandscapeScreen(
                     Spacer(modifier = Modifier.height(22.dp))
 
                     Text(
-                        text = "E C H O",
+                        text = "ECHO FLUX",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 10.sp,
+                        letterSpacing = 6.sp,
                         color = Color.White
                     )
 

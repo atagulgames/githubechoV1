@@ -34,33 +34,66 @@ object StartIoManager {
     private var retryInterstitialRunnable: Runnable? = null
 
     fun isEmulator(): Boolean {
-        return (android.os.Build.FINGERPRINT.startsWith("generic")
-                || android.os.Build.FINGERPRINT.startsWith("unknown")
-                || android.os.Build.MODEL.contains("google_sdk")
-                || android.os.Build.MODEL.contains("Emulator")
-                || android.os.Build.MODEL.contains("Android SDK built for x86")
-                || android.os.Build.MANUFACTURER.contains("Genymotion")
-                || (android.os.Build.BRAND.startsWith("generic") && android.os.Build.DEVICE.startsWith("generic"))
-                || "google_sdk" == android.os.Build.PRODUCT)
+        val fingerprint = android.os.Build.FINGERPRINT.lowercase()
+        val model = android.os.Build.MODEL.lowercase()
+        val manufacturer = android.os.Build.MANUFACTURER.lowercase()
+        val brand = android.os.Build.BRAND.lowercase()
+        val device = android.os.Build.DEVICE.lowercase()
+        val product = android.os.Build.PRODUCT.lowercase()
+        val hardware = android.os.Build.HARDWARE.lowercase()
+        val board = android.os.Build.BOARD.lowercase()
+
+        return fingerprint.startsWith("generic")
+                || fingerprint.startsWith("unknown")
+                || fingerprint.contains("google_sdk")
+                || fingerprint.contains("emulator")
+                || fingerprint.contains("test-keys")
+                || fingerprint.contains("vbox")
+                || model.contains("google_sdk")
+                || model.contains("emulator")
+                || model.contains("android sdk")
+                || model.contains("sdk")
+                || model.contains("virtual")
+                || model.contains("gphone")
+                || manufacturer.contains("genymotion")
+                || (manufacturer.contains("google") && (model.contains("sdk") || model.contains("gphone") || product.contains("sdk")))
+                || (brand.startsWith("generic") && device.startsWith("generic"))
+                || product.contains("sdk")
+                || product.contains("google_sdk")
+                || product.contains("emulator")
+                || product.contains("simulator")
+                || product.contains("cuttlefish")
+                || product.contains("cf_")
+                || hardware.contains("goldfish")
+                || hardware.contains("ranchu")
+                || hardware.contains("cutf")
+                || hardware.contains("cuttlefish")
+                || hardware.contains("vsoc")
+                || hardware.contains("virtualbox")
+                || hardware.contains("qemu")
+                || board.contains("goldfish")
+                || board.contains("cutf")
+                || board.contains("vsoc")
+                || (android.os.Build.TAGS?.contains("test-keys") == true)
     }
 
     /**
      * Initializes Start.io SDK.
      */
     fun initialize(activity: Activity, testMode: Boolean = false) {
-        isTestMode = testMode || isEmulator()
+        isTestMode = testMode
         try {
             StartAppSDK.setTestAdsEnabled(isTestMode)
 
             if (!isInitialized) {
-                // Initialize with App ID 208838202, return ads disabled for optimal UX
+                // Initialize with App ID 208838202 in 100% Live Ads Mode
                 StartAppSDK.init(activity, APP_ID, false)
                 StartAppAd.disableSplash()
 
                 // Submit GDPR/Privacy consent for highest fill rate and maximum eCPM on live networks
                 StartAppSDK.setUserConsent(activity, "pas", System.currentTimeMillis(), true)
                 isInitialized = true
-                Log.d(TAG, "Start.io SDK successfully initialized with App ID: $APP_ID (Test Mode=$isTestMode)")
+                Log.d(TAG, "Start.io SDK successfully initialized with App ID: $APP_ID (Live Ads Mode: TestMode=$isTestMode)")
             }
 
             preloadAds(activity)
@@ -124,16 +157,16 @@ object StartIoManager {
                     preloadedRewardedAd = null
                     val errMsg = receivedAd?.errorMessage ?: "NO FILL"
 
-                    if (isEmulator() && !isTestMode) {
-                        Log.d(TAG, "Emulator detected with live NO FILL. Switching to test ads mode.")
-                        setTestModeEnabled(true, activity)
+                    // If video-only ad has NO FILL on live inventory, preload available fullscreen ad automatically
+                    if (errMsg.contains("NO FILL", ignoreCase = true) && preloadedInterstitialAd == null) {
+                        preloadInterstitial(activity)
                         return
                     }
 
                     if (rewardedRetryCount < MAX_RETRY_COUNT) {
                         rewardedRetryCount++
                         val delayMs = 30_000L * rewardedRetryCount
-                        Log.d(TAG, "Start.io Rewarded Video preload failed: $errMsg. Backoff retry $rewardedRetryCount in ${delayMs / 1000}s...")
+                        Log.d(TAG, "Start.io live ad preload retry $rewardedRetryCount in ${delayMs / 1000}s...")
                         if (!activity.isFinishing && !activity.isDestroyed) {
                             retryRewardedRunnable = Runnable {
                                 if (!activity.isFinishing && !activity.isDestroyed) {
@@ -142,8 +175,6 @@ object StartIoManager {
                             }
                             mainHandler.postDelayed(retryRewardedRunnable!!, delayMs)
                         }
-                    } else {
-                        Log.d(TAG, "Start.io Rewarded Video inventory temporarily unavailable ($errMsg). Pausing retries.")
                     }
                 }
             })
@@ -180,15 +211,10 @@ object StartIoManager {
                     preloadedInterstitialAd = null
                     val errMsg = receivedAd?.errorMessage ?: "NO FILL"
 
-                    if (isEmulator() && !isTestMode) {
-                        setTestModeEnabled(true, activity)
-                        return
-                    }
-
                     if (interstitialRetryCount < MAX_RETRY_COUNT) {
                         interstitialRetryCount++
                         val delayMs = 30_000L * interstitialRetryCount
-                        Log.d(TAG, "Start.io Interstitial preload failed: $errMsg. Backoff retry $interstitialRetryCount in ${delayMs / 1000}s...")
+                        Log.d(TAG, "Start.io live Interstitial preload failed: $errMsg. Backoff retry $interstitialRetryCount in ${delayMs / 1000}s...")
                         if (!activity.isFinishing && !activity.isDestroyed) {
                             retryInterstitialRunnable = Runnable {
                                 if (!activity.isFinishing && !activity.isDestroyed) {
@@ -198,7 +224,7 @@ object StartIoManager {
                             mainHandler.postDelayed(retryInterstitialRunnable!!, delayMs)
                         }
                     } else {
-                        Log.d(TAG, "Start.io Interstitial inventory temporarily unavailable ($errMsg). Pausing retries.")
+                        Log.d(TAG, "Start.io live Interstitial inventory temporarily unavailable ($errMsg). Pausing retries.")
                     }
                 }
             })
@@ -548,9 +574,9 @@ object StartIoManager {
 
             override fun onFailedToReceiveAd(ad: Ad?) {
                 val errMsg = ad?.errorMessage ?: "NO FILL"
-                Log.w(TAG, "Start.io live ad returned $errMsg. No reward granted because ad could not be shown.")
+                Log.w(TAG, "Start.io live ad returned $errMsg.")
                 activity.runOnUiThread {
-                    onAdUnavailable("Reklam yüklenemedi. Ödül verilemedi.")
+                    onAdUnavailable("Reklam şu anda yüklenemedi. Lütfen biraz sonra tekrar deneyin.")
                     onAdClosed()
                 }
                 preloadAds(activity)

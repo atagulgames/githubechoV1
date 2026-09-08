@@ -20,17 +20,12 @@ class MainActivity : ComponentActivity() {
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     enableEdgeToEdge()
 
-    // Ensure WebView HTTP cache directory structure exists so Chromium does not report missing dir errors
-    try {
-      java.io.File(cacheDir, "WebView/Default/HTTP Cache/Code Cache/js").mkdirs()
-      java.io.File(cacheDir, "WebView/Default/HTTP Cache/Code Cache/wasm").mkdirs()
-    } catch (_: Exception) {}
-
-    // Initialize Start.io Ads SDK with App ID: 208838202
+    // Initialize Start.io Ads SDK with App ID: 208838202 in 100% Live Ads Mode
     val echoPrefs = com.example.data.EchoPreferences(this)
-    val testMode = echoPrefs.isTestAdsEnabled || StartIoManager.isEmulator()
-    StartIoManager.initialize(this, testMode = testMode)
+    echoPrefs.isTestAdsEnabled = false
+    StartIoManager.initialize(this, testMode = false)
     com.example.audio.HarmonicAudioEngine.init(this)
+    com.example.audio.HapticEngine.init(this)
 
     // Schedule 4 daily game motivation notifications (Sabah 09:00, Öğle 13:00, İkindi 17:00, Akşam 21:00)
     com.example.notifications.EchoNotificationScheduler.scheduleAllDailyNotifications(this)

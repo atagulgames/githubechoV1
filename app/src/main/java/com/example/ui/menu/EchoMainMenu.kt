@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.Image
+import com.example.audio.HapticEngine
+import com.example.audio.hapticClick
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.example.R
@@ -197,7 +199,7 @@ fun EchoMainMenu(
                     ) {
                         // Leaderboard
                         IconButton(
-                            onClick = onOpenLeaderboard,
+                            onClick = hapticClick(action = onOpenLeaderboard),
                             modifier = Modifier
                                 .size(36.dp)
                                 .shadow(2.dp, CircleShape)
@@ -216,7 +218,7 @@ fun EchoMainMenu(
 
                         // Theme Toggle
                         IconButton(
-                            onClick = onToggleDarkTheme,
+                            onClick = hapticClick(action = onToggleDarkTheme),
                             modifier = Modifier
                                 .size(36.dp)
                                 .shadow(2.dp, CircleShape)
@@ -235,7 +237,7 @@ fun EchoMainMenu(
 
                         // Support
                         IconButton(
-                            onClick = onOpenSupport,
+                            onClick = hapticClick(action = onOpenSupport),
                             modifier = Modifier
                                 .size(36.dp)
                                 .shadow(2.dp, CircleShape)
@@ -254,7 +256,7 @@ fun EchoMainMenu(
 
                         // Settings Button - Ample spacing, unconstrained, clean top-right corner
                         IconButton(
-                            onClick = onOpenSettings,
+                            onClick = hapticClick(action = onOpenSettings),
                             modifier = Modifier
                                 .size(36.dp)
                                 .shadow(2.dp, CircleShape)
@@ -401,10 +403,10 @@ fun EchoMainMenu(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "E C H O",
+                    text = "ECHO FLUX",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 8.sp,
+                    letterSpacing = 6.sp,
                     color = textPrimary,
                     textAlign = TextAlign.Center
                 )
@@ -864,7 +866,7 @@ fun EchoMainMenu(
             ) {
                 // Primary "OYNA" Button
                 Button(
-                    onClick = onPlay,
+                    onClick = hapticClick(isHeavy = true, action = onPlay),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(58.dp)
@@ -901,7 +903,7 @@ fun EchoMainMenu(
                 ) {
                     // Level Select
                     Button(
-                        onClick = onOpenLevelSelect,
+                        onClick = hapticClick(action = onOpenLevelSelect),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
@@ -934,7 +936,7 @@ fun EchoMainMenu(
 
                     // Themes / Skins
                     Button(
-                        onClick = onOpenSkins,
+                        onClick = hapticClick(action = onOpenSkins),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
@@ -967,7 +969,7 @@ fun EchoMainMenu(
 
                     // Shop
                     Button(
-                        onClick = onOpenShop,
+                        onClick = hapticClick(action = onOpenShop),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)

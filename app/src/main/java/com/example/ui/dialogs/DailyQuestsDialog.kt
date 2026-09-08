@@ -32,6 +32,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.audio.hapticClick
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -103,7 +104,7 @@ fun DailyQuestsDialog(
                     }
 
                     IconButton(
-                        onClick = onDismiss,
+                        onClick = hapticClick(action = onDismiss),
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
@@ -131,7 +132,7 @@ fun DailyQuestsDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = onDismiss,
+                    onClick = hapticClick(action = onDismiss),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -318,7 +319,7 @@ private fun QuestCard(
                     }
                     quest.isCompleted -> {
                         Button(
-                            onClick = onClaim,
+                            onClick = hapticClick(isHeavy = true, action = onClaim),
                             modifier = Modifier
                                 .height(34.dp)
                                 .shadow(2.dp, RoundedCornerShape(10.dp)),

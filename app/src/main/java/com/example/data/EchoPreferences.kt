@@ -115,7 +115,7 @@ class EchoPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_SHOWN_LEVEL_RULES, value).apply()
 
     var isAutoShowLevelRulesEnabled: Boolean
-        get() = prefs.getBoolean(KEY_AUTO_SHOW_LEVEL_RULES, true)
+        get() = prefs.getBoolean(KEY_AUTO_SHOW_LEVEL_RULES, false)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_SHOW_LEVEL_RULES, value).apply()
 
     fun isLevelRuleShown(levelId: Int): Boolean {

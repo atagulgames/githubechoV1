@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "ECHO"
+rootProject.name = "ECHO FLUX"
 
 include(":app")

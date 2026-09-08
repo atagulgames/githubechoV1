@@ -43,6 +43,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.audio.HapticEngine
+import com.example.audio.hapticClick
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -131,7 +133,7 @@ fun SettingsDialog(
                     }
 
                     IconButton(
-                        onClick = onDismiss,
+                        onClick = hapticClick(action = onDismiss),
                         modifier = Modifier.testTag("close_settings_button")
                     ) {
                         Icon(
@@ -413,7 +415,7 @@ fun SettingsDialog(
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "Düğüm bağlantısı ve titreşim geri bildirimi",
+                                text = "Düğmeler ve bağlantı titreşim geri bildirimi",
                                 color = textSecondary,
                                 fontSize = 11.sp
                             )
@@ -422,7 +424,10 @@ fun SettingsDialog(
 
                     Switch(
                         checked = hapticsEnabled,
-                        onCheckedChange = onToggleHaptics,
+                        onCheckedChange = { enabled ->
+                            if (enabled) HapticEngine.triggerButtonClick()
+                            onToggleHaptics(enabled)
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFFE11D48),
@@ -580,9 +585,7 @@ fun SettingsDialog(
 
                 // Support & Contact Button ("Destek & İletişim")
                 Button(
-                    onClick = {
-                        onOpenSupport()
-                    },
+                    onClick = hapticClick(action = onOpenSupport),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(46.dp)
@@ -610,7 +613,7 @@ fun SettingsDialog(
 
                 // Reset All Progress Button ("Sıfırdan Başla")
                 OutlinedButton(
-                    onClick = {
+                    onClick = hapticClick(isHeavy = true) {
                         onResetAllProgress()
                         onDismiss()
                     },
@@ -640,7 +643,7 @@ fun SettingsDialog(
                 if (onLogout != null) {
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
-                        onClick = {
+                        onClick = hapticClick {
                             onLogout()
                             onDismiss()
                         },

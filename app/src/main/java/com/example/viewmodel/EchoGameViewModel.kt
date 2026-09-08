@@ -224,6 +224,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     init {
         HarmonicAudioEngine.init(application)
+        com.example.audio.HapticEngine.init(application)
         HarmonicAudioEngine.isSoundEnabled = prefs.soundEnabled
 
         viewModelScope.launch {
@@ -407,10 +408,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val isTurkish = prefs.languageCode == "tr"
         val activeRule = com.example.data.LevelRuleCatalog.getRuleForLevel(levelData.levelId, isTurkish)
         val isTierIntroLevel = com.example.data.LevelRuleCatalog.isMilestone(levelData.levelId)
-        val shouldShowIntro = prefs.isAutoShowLevelRulesEnabled && (
-            (isTierIntroLevel && !prefs.isMechanicIntroShown(activeRule.tier)) ||
-            !prefs.isLevelRuleShown(levelData.levelId)
-        )
+        val shouldShowIntro = false
         val introInfo = if (shouldShowIntro) activeRule.toMechanicInfo() else null
         val insight = prefs.getBehaviorInsight()
         val tendency = prefs.getAdaptiveTendencyQuadrant()
@@ -819,7 +817,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
 
             HarmonicAudioEngine.playNodeTone(0)
-            triggerHapticClick()
+            triggerNodeTouch()
 
             val newCollectedKeys = if (hitNode.type == NodeType.KEY) {
                 showToast("Anahtar toplandı! Kilitli kapı açıldı.")
@@ -935,7 +933,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             if (newVisited.size >= 4) {
                 HarmonicAudioEngine.playComboCrush(newVisited.size)
             }
-            triggerHapticClick()
+            triggerNodeTouch()
 
             // Candy Crush style explosion & combo callouts!
             val (calloutText, calloutColor) = com.example.model.CandyEffectsFactory.getCalloutText(newVisited.size, state.language)
@@ -2498,52 +2496,35 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun triggerHapticClick() {
-        if (!_uiState.value.hapticsEnabled) return
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(20)
-            }
-        } catch (_: Exception) {}
+    fun triggerHapticClick() {
+        com.example.audio.HapticEngine.triggerButtonClick()
+    }
+
+    fun triggerNodeTouch() {
+        com.example.audio.HapticEngine.triggerNodeTouch()
+    }
+
+    fun triggerButtonHeavyClick() {
+        com.example.audio.HapticEngine.triggerButtonHeavyClick()
+    }
+
+    fun triggerButtonDoublePulse() {
+        com.example.audio.HapticEngine.triggerButtonDoublePulse()
     }
 
     private fun triggerProximityHaptic() {
         if (!_uiState.value.hapticsEnabled) return
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(VibrationEffect.createOneShot(12, 100))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(12)
-            }
-        } catch (_: Exception) {}
+        com.example.audio.HapticEngine.triggerProximityPulse()
     }
 
     private fun triggerCollisionFeedback() {
         if (!_uiState.value.hapticsEnabled) return
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 50, 40, 60), -1))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(120)
-            }
-        } catch (_: Exception) {}
+        com.example.audio.HapticEngine.triggerErrorFeedback()
     }
 
     private fun triggerHapticVictory() {
         if (!_uiState.value.hapticsEnabled) return
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 40, 60, 40, 60, 80), -1))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(200)
-            }
-        } catch (_: Exception) {}
+        com.example.audio.HapticEngine.triggerVictoryRhythm()
     }
 
     // --- Leaderboard & Player Profile Systems ---

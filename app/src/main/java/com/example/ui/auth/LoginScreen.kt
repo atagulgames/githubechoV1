@@ -241,8 +241,8 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "ECHO",
-                fontSize = 32.sp,
+                text = "ECHO FLUX",
+                fontSize = 30.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 4.sp,
                 color = Color.White

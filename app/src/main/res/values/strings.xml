@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ECHO</string>
+    <string name="app_name">ECHO FLUX</string>
     <string name="action_play">OYNA</string>
     <string name="action_levels">Bölümler</string>
     <string name="action_themes">Temalar</string>
@@ -10,6 +10,6 @@
     <string name="adblock_recheck">Tekrar Kontrol Et</string>
     <string name="adblock_exit">Oyundan Çık</string>
     <string name="portrait_required_title">Lütfen Cihazınızı Dikey Tutun</string>
-    <string name="portrait_required_desc">ECHO sadece dikey modda oynanabilir. Devam etmek için cihazınızı dikey konuma getirin.</string>
+    <string name="portrait_required_desc">ECHO FLUX sadece dikey modda oynanabilir. Devam etmek için cihazınızı dikey konuma getirin.</string>
     <string name="portrait_required_action">Dikey Moda Çevir</string>
 </resources>
