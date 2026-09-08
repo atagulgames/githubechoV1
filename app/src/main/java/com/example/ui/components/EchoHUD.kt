@@ -388,23 +388,23 @@ fun EchoTopHUD(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(start = 4.dp)
                     ) {
-                        val tier = (((state.level.levelId - 1) / 10) + 1).coerceIn(1, 10)
-                        val tierInfo = MechanicCatalog.getMechanicInfoForLevel(state.level.levelId)
+                        val levelRule = com.example.data.LevelRuleCatalog.getRuleForLevel(state.level.levelId, isTurkish = true)
+                        val badgeColor = Color(levelRule.badgeColor)
 
-                        // 1. Tier Mechanic & Tutorial Pill
+                        // 1. Dynamic Level Rule & Onboarding Guide Pill
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(tierInfo.badgeColor).copy(alpha = if (state.isDarkTheme) 0.25f else 0.15f))
-                                .border(1.dp, Color(tierInfo.badgeColor).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .background(badgeColor.copy(alpha = if (state.isDarkTheme) 0.25f else 0.15f))
+                                .border(1.dp, badgeColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                                 .clickable(enabled = onOpenMechanicGuide != null) { onOpenMechanicGuide?.invoke() }
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                                 .testTag("tier_mechanic_badge")
                         ) {
                             Text(
-                                text = "${tierInfo.icon} K$tier: ${tierInfo.title.removePrefix("Öğretici: ")}",
-                                color = Color(tierInfo.badgeColor),
+                                text = "${levelRule.icon} Kural: ${levelRule.ruleTitle}",
+                                color = badgeColor,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -423,14 +423,14 @@ fun EchoTopHUD(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(state.echoBeastState.accentColor).copy(alpha = if (state.isDarkTheme) 0.35f else 0.18f))
-                                    .border(1.dp, Color(state.echoBeastState.accentColor).copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                                    .background(state.echoBeastState.color.copy(alpha = if (state.isDarkTheme) 0.35f else 0.18f))
+                                    .border(1.dp, state.echoBeastState.color.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                                     .testTag("echo_beast_chip")
                             ) {
                                 Text(
                                     text = "${state.echoBeastState.icon} ${state.echoBeastState.title}",
-                                    color = Color(state.echoBeastState.accentColor),
+                                    color = state.echoBeastState.color,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Black,
                                     maxLines = 1,

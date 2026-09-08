@@ -27,7 +27,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ScrollableTabRow
@@ -68,6 +71,7 @@ fun LevelSelectDialog(
     completedLevels: Set<Int>,
     isDarkTheme: Boolean = false,
     onSelectLevel: (Int) -> Unit,
+    onOpenRulesGuide: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     // 0 = All 100 levels, 1 = Tier 1 (1-10), ..., 10 = Tier 10 (91-100)
@@ -190,15 +194,46 @@ fun LevelSelectDialog(
                         }
                     }
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.testTag("close_level_select_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
-                            tint = textSecondary
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (onOpenRulesGuide != null) {
+                            Button(
+                                onClick = onOpenRulesGuide,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+                                    contentColor = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier
+                                    .padding(end = 4.dp)
+                                    .testTag("open_rules_from_level_select_btn")
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.MenuBook,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Kurallar",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.testTag("close_level_select_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Kapat",
+                                tint = textSecondary
+                            )
+                        }
                     }
                 }
 

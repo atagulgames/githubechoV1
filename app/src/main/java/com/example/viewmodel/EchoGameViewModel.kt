@@ -182,11 +182,14 @@ data class EchoUiState(
     val ghostRacePlayerWon: Boolean = false,
     // Behavioral Intelligence (Oyuncu Davranış Analizi)
     val playerBehaviorInsight: String = "Analiz: Kusursuz Yolculuk",
+    val adaptiveTendencyQuadrant: Int? = null,
     // Echo Beast Corruption System (Yankı Canavarı)
     val echoBeastState: com.example.model.EchoBeastState = com.example.model.EchoBeastState.CALM,
     // 10 Evolution Tiers Tutorial Dialog System (Her kademenin ilk bölümü tutorial)
     val isLevelMechanicIntroVisible: Boolean = false,
-    val activeMechanicInfo: com.example.ui.dialogs.LevelMechanicInfo? = null
+    val activeMechanicInfo: com.example.ui.dialogs.LevelMechanicInfo? = null,
+    val activeLevelRule: com.example.model.LevelRule? = null,
+    val isRuleEncyclopediaOpen: Boolean = false
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -401,11 +404,31 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val hasPerf = perfRun != null
         val perfPts = perfRun?.first?.map { Point(it.first, it.second) } ?: emptyList()
         val perfDur = perfRun?.second ?: 0L
-        val tier = (((levelData.levelId - 1) / 10) + 1).coerceIn(1, 10)
-        val isTierIntroLevel = levelData.levelId in listOf(1, 11, 21, 31, 41, 51, 61, 71, 81, 91)
-        val shouldShowIntro = isTierIntroLevel && !prefs.isMechanicIntroShown(tier)
-        val introInfo = if (shouldShowIntro) MechanicCatalog.getMechanicInfoForLevel(levelData.levelId) else null
+        val isTurkish = prefs.languageCode == "tr"
+        val activeRule = com.example.data.LevelRuleCatalog.getRuleForLevel(levelData.levelId, isTurkish)
+        val isTierIntroLevel = com.example.data.LevelRuleCatalog.isMilestone(levelData.levelId)
+        val shouldShowIntro = prefs.isAutoShowLevelRulesEnabled && (
+            (isTierIntroLevel && !prefs.isMechanicIntroShown(activeRule.tier)) ||
+            !prefs.isLevelRuleShown(levelData.levelId)
+        )
+        val introInfo = if (shouldShowIntro) activeRule.toMechanicInfo() else null
         val insight = prefs.getBehaviorInsight()
+        val tendency = prefs.getAdaptiveTendencyQuadrant()
+
+        // In cumulative ghosts tier (91-99), ensure living ghosts form a rich maze
+        val finalGhosts = if (levelData.mechanicType == "CUMULATIVE_GHOSTS" && ghostStrokes.isEmpty()) {
+            val synthetic = ArrayList<List<Point>>()
+            if (levelData.nodes.size >= 4) {
+                for (i in 0 until levelData.nodes.size - 2 step 2) {
+                    val n1 = levelData.nodes[i]
+                    val n2 = levelData.nodes[i + 2]
+                    synthetic.add(listOf(Point(n1.x, n1.y), Point((n1.x + n2.x) / 2f + 14f, (n1.y + n2.y) / 2f - 14f), Point(n2.x, n2.y)))
+                }
+            }
+            synthetic
+        } else {
+            ghostStrokes
+        }
 
         _uiState.update {
             it.copy(
@@ -437,16 +460,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 candyCallout = null,
                 levelStartTimeMs = System.currentTimeMillis(),
                 isDoubleRewardClaimedThisLevel = false,
-                pastGhostStrokes = ghostStrokes,
+                pastGhostStrokes = finalGhosts,
                 isGhostRaceAvailable = hasPerf,
                 ghostReplayPoints = perfPts,
                 ghostReplayDurationMs = perfDur,
                 ghostRunnerCurrentPoint = null,
                 ghostRacePlayerWon = false,
                 playerBehaviorInsight = insight,
+                adaptiveTendencyQuadrant = tendency,
                 echoBeastState = EchoBeastState.CALM,
                 isLevelMechanicIntroVisible = shouldShowIntro,
-                activeMechanicInfo = introInfo
+                activeMechanicInfo = introInfo,
+                activeLevelRule = if (shouldShowIntro) activeRule else null,
+                isRuleEncyclopediaOpen = false
             )
         }
         startLevelSequence(levelData.levelId, isRestart = false)
@@ -848,6 +874,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         // Check if reaching a target node
         val hitNode = findTargetNodeForDrag(point, lastNode, state.nodes, state.visitedNodeIds, expectedNextId)
         if (hitNode != null && hitNode.id != lastVisitedId) {
+            val attemptedSeg = Segment(lastNode.toPoint(), hitNode.toPoint(), lastVisitedId, hitNode.id)
             // Already visited node? (User request: "örneğin önceki düğüme geri dönmesi bir yankı sayılsın")
             if (state.visitedNodeIds.contains(hitNode.id)) {
                 val isPrevNode = state.visitedNodeIds.size >= 2 && hitNode.id == state.visitedNodeIds[state.visitedNodeIds.size - 2]
@@ -857,7 +884,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     "Ziyaret edilen düğüme geri dönülemez! (+1 Yankı)"
                 }
                 showToast(msg)
-                commitStrokeAsEcho(msg)
+                commitStrokeAsEcho(msg, attemptedSeg)
                 return
             }
 
@@ -868,14 +895,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             if (illegalDirected) {
                 val msg = "Bu kenar tek yönlü! (+1 Yankı)"
                 showToast(msg)
-                commitStrokeAsEcho(msg)
+                commitStrokeAsEcho(msg, attemptedSeg)
                 return
             }
 
             if (hitNode.id != expectedNextId) {
                 val msg = "Sıradaki hedef: $expectedNextId numaralı nokta! (+1 Yankı)"
                 showToast(msg)
-                commitStrokeAsEcho(msg)
+                commitStrokeAsEcho(msg, attemptedSeg)
                 return
             }
 
@@ -887,7 +914,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 if (!isUnlocked) {
                     val msg = "Kapı kilitli! Önce anahtarı topla (+1 Yankı)"
                     showToast(msg)
-                    commitStrokeAsEcho(msg)
+                    commitStrokeAsEcho(msg, attemptedSeg)
                     return
                 }
             }
@@ -1149,17 +1176,28 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         commitStrokeAsEcho("Yarım Hamle")
     }
 
-    private fun commitStrokeAsEcho(reason: String) {
+    private fun commitStrokeAsEcho(reason: String, attemptedSegment: Segment? = null) {
         HarmonicAudioEngine.playHataSound()
         triggerCollisionFeedback()
         ghostRunnerJob?.cancel()
 
         val state = _uiState.value
-        val newEchoSegments = state.currentStrokeSegments.toList()
+        val newEchoSegments = if (attemptedSegment != null) {
+            state.currentStrokeSegments + attemptedSegment
+        } else if (state.currentPointerPos != null && state.visitedNodeIds.isNotEmpty()) {
+            val lastNode = state.nodes.firstOrNull { it.id == state.visitedNodeIds.last() }
+            if (lastNode != null) {
+                state.currentStrokeSegments + Segment(lastNode.toPoint(), state.currentPointerPos, lastNode.id, -1)
+            } else {
+                state.currentStrokeSegments.toList()
+            }
+        } else {
+            state.currentStrokeSegments.toList()
+        }
         prefs.incrementTotalEchoes()
 
         // Decaying Echoes logic
-        val isDecaying = state.level.mechanicType == "DECAYING"
+        val isDecaying = state.level.mechanicType in listOf("DECAYING_NODES", "OMEGA_SYNTHESIS")
         val isGhost = state.level.isGhostEchoes
 
         val newEchoStroke = if (newEchoSegments.isNotEmpty()) {
@@ -1202,6 +1240,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val updatedGhosts = prefs.getGhostStrokes(state.level.levelId).map { pts -> pts.map { Point(it.first, it.second) } }
         val updatedBeast = EchoBeastState.fromEchoCount(newEchoCount)
         val updatedInsight = prefs.getBehaviorInsight()
+        val updatedTendency = prefs.getAdaptiveTendencyQuadrant()
 
         prefs.recordCombo(0)
 
@@ -1222,6 +1261,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 pastGhostStrokes = updatedGhosts,
                 echoBeastState = updatedBeast,
                 playerBehaviorInsight = updatedInsight,
+                adaptiveTendencyQuadrant = updatedTendency,
                 ghostRunnerCurrentPoint = null
             )
         }
@@ -1235,19 +1275,42 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun showMechanicGuide(levelId: Int? = null) {
         val targetId = levelId ?: _uiState.value.level.levelId
-        val info = MechanicCatalog.getMechanicInfoForLevel(targetId)
+        val isTurkish = prefs.languageCode == "tr"
+        val rule = com.example.data.LevelRuleCatalog.getRuleForLevel(targetId, isTurkish)
         _uiState.update {
             it.copy(
                 isLevelMechanicIntroVisible = true,
-                activeMechanicInfo = info
+                activeLevelRule = rule,
+                activeMechanicInfo = rule.toMechanicInfo(),
+                isRuleEncyclopediaOpen = false
+            )
+        }
+    }
+
+    fun openRuleEncyclopedia() {
+        val currentId = _uiState.value.level.levelId
+        val isTurkish = prefs.languageCode == "tr"
+        val rule = com.example.data.LevelRuleCatalog.getRuleForLevel(currentId, isTurkish)
+        _uiState.update {
+            it.copy(
+                isLevelMechanicIntroVisible = true,
+                activeLevelRule = rule,
+                activeMechanicInfo = rule.toMechanicInfo(),
+                isRuleEncyclopediaOpen = true
             )
         }
     }
 
     fun dismissMechanicGuide() {
-        val tier = (((_uiState.value.level.levelId - 1) / 10) + 1).coerceIn(1, 10)
+        val lvl = _uiState.value.level.levelId
+        val tier = com.example.data.LevelRuleCatalog.getTierForLevel(lvl)
         prefs.markMechanicIntroShown(tier)
-        _uiState.update { it.copy(isLevelMechanicIntroVisible = false) }
+        prefs.markLevelRuleShown(lvl)
+        _uiState.update { it.copy(isLevelMechanicIntroVisible = false, isRuleEncyclopediaOpen = false) }
+    }
+
+    fun setAutoShowLevelRules(enabled: Boolean) {
+        prefs.isAutoShowLevelRulesEnabled = enabled
     }
 
     fun toggleGhostRace() {

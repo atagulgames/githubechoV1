@@ -80,6 +80,8 @@ class EchoPreferences(context: Context) {
         private const val KEY_KVKK_CONSENT_ACCEPTED = "echo_user_agreement_v2_accepted"
         private const val KEY_HINT_ADS_WATCHED = "echo_hint_ads_watched"
         private const val KEY_SHOWN_MECHANIC_TIERS = "echo_shown_mechanic_tiers"
+        private const val KEY_SHOWN_LEVEL_RULES = "echo_shown_level_rules"
+        private const val KEY_AUTO_SHOW_LEVEL_RULES = "echo_auto_show_level_rules"
 
         // LootLocker Global Leaderboard
         private const val KEY_LOOTLOCKER_SESSION_TOKEN = "echo_lootlocker_session_token"
@@ -106,6 +108,25 @@ class EchoPreferences(context: Context) {
         val tiers = shownMechanicTiersCsv.split(",").mapNotNull { it.trim().toIntOrNull() }.toMutableSet()
         tiers.add(tier)
         shownMechanicTiersCsv = tiers.joinToString(",")
+    }
+
+    var shownLevelRulesCsv: String
+        get() = prefs.getString(KEY_SHOWN_LEVEL_RULES, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_SHOWN_LEVEL_RULES, value).apply()
+
+    var isAutoShowLevelRulesEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_SHOW_LEVEL_RULES, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_SHOW_LEVEL_RULES, value).apply()
+
+    fun isLevelRuleShown(levelId: Int): Boolean {
+        val rules = shownLevelRulesCsv.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+        return rules.contains(levelId)
+    }
+
+    fun markLevelRuleShown(levelId: Int) {
+        val rules = shownLevelRulesCsv.split(",").mapNotNull { it.trim().toIntOrNull() }.toMutableSet()
+        rules.add(levelId)
+        shownLevelRulesCsv = rules.joinToString(",")
     }
 
     var isKvkkConsentAccepted: Boolean
@@ -673,9 +694,9 @@ class EchoPreferences(context: Context) {
         if (points.isEmpty()) return
         val currentRaw = prefs.getString("echo_ghost_strokes_$levelId", "") ?: ""
         val newStrokeStr = points.joinToString(";") { "${it.first.toInt()},${it.second.toInt()}" }
-        // Keep up to 4 historical ghost strokes so screen turns into a rich living labyrinth of memories
+        // Keep up to 6 historical ghost strokes so screen turns into a rich living labyrinth of memories
         val list = currentRaw.split("|").filter { it.isNotBlank() }.toMutableList()
-        if (list.size >= 4) list.removeAt(0)
+        if (list.size >= 6) list.removeAt(0)
         list.add(newStrokeStr)
         prefs.edit().putString("echo_ghost_strokes_$levelId", list.joinToString("|")).apply()
     }
@@ -766,6 +787,20 @@ class EchoPreferences(context: Context) {
             retreats >= 3 -> "Analiz: Geri Çekilme & İkilem Eğilimi"
             fastMoves >= 4 -> "Analiz: Yüksek Hızlı Refleks Oyuncusu"
             else -> "Analiz: Zihinsel Rota Hesaplaması Aktif"
+        }
+    }
+
+    fun getAdaptiveTendencyQuadrant(): Int? {
+        val tl = prefs.getInt("echo_behavior_quad_top_left", 0)
+        val tr = prefs.getInt("echo_behavior_quad_top_right", 0)
+        val bl = prefs.getInt("echo_behavior_quad_bottom_left", 0)
+        val br = prefs.getInt("echo_behavior_quad_bottom_right", 0)
+        return when {
+            tr > tl && tr > bl && tr > br && tr >= 2 -> 1 // top-right
+            tl > tr && tl > bl && tl > br && tl >= 2 -> 2 // top-left
+            bl > tr && bl > tl && bl > br && bl >= 2 -> 3 // bottom-left
+            br > tr && br > tl && br > bl && br >= 2 -> 4 // bottom-right
+            else -> null
         }
     }
 

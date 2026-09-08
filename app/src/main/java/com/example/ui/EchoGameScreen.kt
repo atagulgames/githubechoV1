@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.dialogs.LevelMechanicIntroDialog
+import com.example.ui.dialogs.LevelRuleOnboardingOverlay
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.model.GameStatus
 import com.example.model.ScreenState
@@ -258,11 +259,17 @@ fun EchoGameScreen(
                 )
             }
 
-            // 2.5. Level Mechanic Tutorial & Evolution Intro Dialog
-            if (state.isLevelMechanicIntroVisible && state.activeMechanicInfo != null) {
-                LevelMechanicIntroDialog(
-                    mechanicInfo = state.activeMechanicInfo,
+            // 2.5. Level Rule Onboarding Overlay & Milestone System (100 Level Rules)
+            if (state.isLevelMechanicIntroVisible) {
+                val targetLevelId = state.activeLevelRule?.levelId ?: state.level.levelId
+                LevelRuleOnboardingOverlay(
+                    currentLevelId = targetLevelId,
                     isDarkTheme = state.isDarkTheme,
+                    isTurkish = true,
+                    initialEncyclopediaMode = state.isRuleEncyclopediaOpen,
+                    onToggleAutoShowForTier = { enabled ->
+                        viewModel.setAutoShowLevelRules(enabled)
+                    },
                     onDismiss = { viewModel.dismissMechanicGuide() }
                 )
             }
@@ -309,6 +316,10 @@ fun EchoGameScreen(
                     onSelectLevel = { idx ->
                         viewModel.setLevelSelectVisible(false)
                         viewModel.startPlayingLevel(idx)
+                    },
+                    onOpenRulesGuide = {
+                        viewModel.setLevelSelectVisible(false)
+                        viewModel.openRuleEncyclopedia()
                     },
                     onDismiss = { viewModel.setLevelSelectVisible(false) }
                 )

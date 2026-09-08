@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -47,6 +48,7 @@ import com.example.model.StrokeTheme
 import com.example.viewmodel.EchoUiState
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
@@ -161,15 +163,30 @@ fun EchoCanvas(
             }
         }
 
+        val isRotatingTier = state.level.mechanicType in listOf("ROTATING_WEB", "OMEGA_SYNTHESIS")
+        val rotationAngle = if (isRotatingTier) sin(timeSec * 0.75f) * 12f else 0f
+
+        fun unrotate(pos: Offset): Offset {
+            if (rotationAngle == 0f) return pos
+            val rad = Math.toRadians((-rotationAngle).toDouble())
+            val cosA = cos(rad).toFloat()
+            val sinA = sin(rad).toFloat()
+            val cx = canvasWidth / 2f
+            val cy = canvasHeight / 2f
+            val dx = pos.x - cx
+            val dy = pos.y - cy
+            return Offset(cx + dx * cosA - dy * sinA, cy + dx * sinA + dy * cosA)
+        }
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .testTag("echo_canvas")
-                .pointerInput(state.gameStatus, scale, offsetX, offsetY) {
+                .pointerInput(state.gameStatus, scale, offsetX, offsetY, rotationAngle, canvasWidth, canvasHeight) {
                     if (state.gameStatus == GameStatus.PLAYING) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
-                            onPointerDown(toVirtual(down.position))
+                            onPointerDown(toVirtual(unrotate(down.position)))
                             down.consume()
 
                             do {
@@ -177,7 +194,7 @@ fun EchoCanvas(
                                 val current = event.changes.firstOrNull()
                                 if (current != null) {
                                     if (current.pressed) {
-                                        onPointerMove(toVirtual(current.position))
+                                        onPointerMove(toVirtual(unrotate(current.position)))
                                         current.consume()
                                     }
                                 }
@@ -188,103 +205,119 @@ fun EchoCanvas(
                     }
                 }
         ) {
-            // 1. Grid Background (Single GPU drawPoints instruction for buttery 60+ FPS)
-            drawGridBackground(size.width, size.height, state.isDarkTheme, gridPoints)
+            withTransform({
+                if (rotationAngle != 0f) {
+                    rotate(degrees = rotationAngle, pivot = center)
+                }
+            }) {
+                // 1. Grid Background (Single GPU drawPoints instruction for buttery 60+ FPS)
+                drawGridBackground(size.width, size.height, state.isDarkTheme, gridPoints)
 
-            // 1.5. Living Web (Yaşayan Ağ) - harmonic breathing connective threads
-            drawLivingWebMesh(
-                nodes = state.nodes,
-                timeSec = timeSec,
-                isDarkTheme = state.isDarkTheme,
-                toScreen = ::toScreen,
-                scale = scale
-            )
+                // 1.5. Living Web (Yaşayan Ağ) - harmonic breathing connective threads & player tension
+                drawLivingWebMesh(
+                    nodes = state.nodes,
+                    visitedNodeIds = state.visitedNodeIds,
+                    currentPointerPos = state.currentPointerPos,
+                    adaptiveTendencyQuadrant = state.adaptiveTendencyQuadrant,
+                    timeSec = timeSec,
+                    isDarkTheme = state.isDarkTheme,
+                    toScreen = ::toScreen,
+                    scale = scale
+                )
 
-            // 1.8. Past Ghost Stroke Labyrinth (Geçmişin Hayaletleri - Yaşayan Labirent)
-            drawPastGhostLabyrinth(
-                ghosts = state.pastGhostStrokes,
-                timeSec = timeSec,
-                toScreen = ::toScreen,
-                scale = scale
-            )
-
-            // 1.9. Perfect Echo Ghost Race (Kusursuz Hayaletle Canlı Yarış)
-            if (state.isGhostRaceAvailable && state.isGhostRaceActive && state.ghostReplayPoints.isNotEmpty()) {
-                drawPerfectGhostRace(
-                    replayPoints = state.ghostReplayPoints,
-                    runnerPoint = state.ghostRunnerCurrentPoint,
+                // 1.8. Past Ghost Stroke Labyrinth (Geçmişin Hayaletleri - Yaşayan Labirent)
+                drawPastGhostLabyrinth(
+                    ghosts = state.pastGhostStrokes,
+                    mechanicType = state.level.mechanicType,
                     timeSec = timeSec,
                     toScreen = ::toScreen,
                     scale = scale
                 )
-            }
 
-            // 2. Directed edge arrows (if level has one-way edges)
-            drawDirectedEdgeArrows(
-                edges = state.level.directedEdges,
-                nodes = state.nodes,
-                toScreen = ::toScreen,
-                scale = scale
-            )
+                // 1.9. Perfect Echo Ghost Race (Kusursuz Hayaletle Canlı Yarış)
+                if (state.isGhostRaceAvailable && state.isGhostRaceActive && state.ghostReplayPoints.isNotEmpty()) {
+                    drawPerfectGhostRace(
+                        replayPoints = state.ghostReplayPoints,
+                        runnerPoint = state.ghostRunnerCurrentPoint,
+                        timeSec = timeSec,
+                        toScreen = ::toScreen,
+                        scale = scale
+                    )
+                }
 
-            // 3. Hint path
-            if (state.isHintActive && state.level.hintOrder.isNotEmpty()) {
-                drawHintPath(
-                    hintOrder = state.level.hintOrder,
+                // 2. Directed edge arrows (if level has one-way edges)
+                drawDirectedEdgeArrows(
+                    edges = state.level.directedEdges,
                     nodes = state.nodes,
                     toScreen = ::toScreen,
                     scale = scale
                 )
-            }
 
-            // 4. Past Echo Barriers (Collision Obstacles with Echo Theme & Decaying opacity)
-            drawEchoBarriers(
-                echoes = state.echoes,
-                echoTheme = state.echoTheme,
-                isShrinkerActive = state.isEchoShrinkerActive,
-                pulseAlpha = pulseAlpha,
-                toScreen = ::toScreen,
-                scale = scale
-            )
+                // 3. Hint path
+                if (state.isHintActive && state.level.hintOrder.isNotEmpty()) {
+                    drawHintPath(
+                        hintOrder = state.level.hintOrder,
+                        nodes = state.nodes,
+                        toScreen = ::toScreen,
+                        scale = scale
+                    )
+                }
 
-            // 5. Active Player Stroke with Stroke Theme (and invisible ray oscillations)
-            drawPlayerStroke(
-                segments = state.currentStrokeSegments,
-                currentPointerPos = state.currentPointerPos,
-                visitedNodeIds = state.visitedNodeIds,
-                nodes = state.nodes,
-                strokeTheme = state.strokeTheme,
-                mechanicType = state.level.mechanicType,
-                timeSec = timeSec,
-                toScreen = ::toScreen,
-                scale = scale
-            )
+                // 4. Past Echo Barriers (Collision Obstacles with sway on 3-5 errors & wandering echoes)
+                drawEchoBarriers(
+                    echoes = state.echoes,
+                    echoTheme = state.echoTheme,
+                    isShrinkerActive = state.isEchoShrinkerActive,
+                    beastState = state.echoBeastState,
+                    timeSec = timeSec,
+                    mechanicType = state.level.mechanicType,
+                    pulseAlpha = pulseAlpha,
+                    toScreen = ::toScreen,
+                    scale = scale
+                )
 
-            // 6. Game Nodes (with Normal, Key, Gate styles, Character Node 1, Floating Nodes & Decaying outer rings)
-            drawNodes(
-                nodes = state.nodes,
-                visitedNodeIds = state.visitedNodeIds,
-                collectedKeyIds = state.collectedKeyIds,
-                strokeTheme = state.strokeTheme,
-                isHintActive = state.isHintActive,
-                hintOrder = state.level.hintOrder,
-                pulseAlpha = pulseAlpha,
-                isDrawing = state.isDrawing,
-                isDarkTheme = state.isDarkTheme,
-                mechanicType = state.level.mechanicType,
-                remainingSec = state.levelRemainingTimeSec,
-                timeSec = timeSec,
-                toScreen = ::toScreen,
-                scale = scale,
-                textPaint = nodeTextPaint
-            )
+                // 5. Active Player Stroke with Stroke Theme (and vibrating older rays)
+                drawPlayerStroke(
+                    segments = state.currentStrokeSegments,
+                    currentPointerPos = state.currentPointerPos,
+                    visitedNodeIds = state.visitedNodeIds,
+                    nodes = state.nodes,
+                    strokeTheme = state.strokeTheme,
+                    mechanicType = state.level.mechanicType,
+                    timeSec = timeSec,
+                    toScreen = ::toScreen,
+                    scale = scale
+                )
 
-            // 6.5. Echo Beast Corruption Aura (Yankı Canavarı Atmosferi)
-            drawEchoBeastAtmosphere(
-                beastState = state.echoBeastState,
-                timeSec = timeSec,
-                size = size
-            )
+                // 6. Game Nodes (with Normal, Key, Gate styles, Character Node 1, Floating Nodes & Dual Entangled)
+                drawNodes(
+                    nodes = state.nodes,
+                    visitedNodeIds = state.visitedNodeIds,
+                    collectedKeyIds = state.collectedKeyIds,
+                    strokeTheme = state.strokeTheme,
+                    isHintActive = state.isHintActive,
+                    hintOrder = state.level.hintOrder,
+                    pulseAlpha = pulseAlpha,
+                    isDrawing = state.isDrawing,
+                    isDarkTheme = state.isDarkTheme,
+                    mechanicType = state.level.mechanicType,
+                    remainingSec = state.levelRemainingTimeSec,
+                    timeSec = timeSec,
+                    toScreen = ::toScreen,
+                    scale = scale,
+                    textPaint = nodeTextPaint
+                )
+
+                // 6.5. Echo Beast Corruption Aura & DOMINION Mimicry (Yankı Canavarı Atmosferi)
+                drawEchoBeastAtmosphere(
+                    beastState = state.echoBeastState,
+                    timeSec = timeSec,
+                    size = size,
+                    isDrawing = state.isDrawing,
+                    segments = state.currentStrokeSegments,
+                    toScreen = ::toScreen,
+                    scale = scale
+                )
 
             // 7. Proximity Warning / Electric Glitch
             if (state.isProximityAlertActive) {
@@ -393,6 +426,7 @@ fun EchoCanvas(
         }
     }
 }
+}
 
 private fun DrawScope.drawGridBackground(
     w: Float,
@@ -454,11 +488,15 @@ private fun DrawScope.drawEchoBarriers(
     echoes: List<EchoStroke>,
     echoTheme: EchoTheme,
     isShrinkerActive: Boolean,
+    beastState: EchoBeastState,
+    timeSec: Float,
+    mechanicType: String,
     pulseAlpha: Float,
     toScreen: (Point) -> Offset,
     scale: Float
 ) {
     val widthFactor = if (isShrinkerActive) 0.5f else 1.0f
+    val isSwaying = beastState.level >= 2 || mechanicType in listOf("WANDERING_ECHOES", "OMEGA_SYNTHESIS")
 
     for (echo in echoes) {
         val lifeRatio = (echo.remainingAttempts.toFloat() / echo.maxLifetime).coerceIn(0.2f, 1f)
@@ -470,9 +508,19 @@ private fun DrawScope.drawEchoBarriers(
         val glowWidth = 14f * widthFactor * (scale / 1.5f).coerceAtLeast(1f)
         val coreWidth = 5f * widthFactor * (scale / 1.5f).coerceAtLeast(1f)
 
+        // 3-5 errors (ENRAGED) or WANDERING_ECHOES: beams undulate and sway
+        val swaySpeed = if (beastState.level >= 3) 3.2f else 2.0f
+        val swayAmp = (if (beastState.level >= 3) 8.5f else 5.0f) * scale
+
         for (seg in echo.segments) {
-            val start = toScreen(seg.p1)
-            val end = toScreen(seg.p2)
+            val rawStart = toScreen(seg.p1)
+            val rawEnd = toScreen(seg.p2)
+
+            val swayX = if (isSwaying) sin(timeSec * swaySpeed + echo.id * 1.4f) * swayAmp else 0f
+            val swayY = if (isSwaying) cos(timeSec * (swaySpeed * 0.9f) + echo.id * 1.7f) * swayAmp else 0f
+
+            val start = Offset(rawStart.x + swayX, rawStart.y + swayY)
+            val end = Offset(rawEnd.x - swayX * 0.8f, rawEnd.y + swayY * 0.8f)
 
             // Neon glow aura
             drawLine(
@@ -527,23 +575,33 @@ private fun DrawScope.drawPlayerStroke(
     val currentGlowColor = strokeTheme.glowColor.copy(alpha = strokeTheme.glowColor.alpha * rayAlpha)
     val currentPrimaryColor = strokeTheme.primaryColor.copy(alpha = strokeTheme.primaryColor.alpha * rayAlpha)
 
-    for (seg in segments) {
+    // Older rays vibrate under cosmic tension ("Eski ışınlar titreşsin")
+    for ((idx, seg) in segments.withIndex()) {
         val start = toScreen(seg.p1)
         val end = toScreen(seg.p2)
 
-        drawLine(
+        val ageRatio = ((segments.size - idx).toFloat() / segments.size.coerceAtLeast(1)).coerceIn(0.15f, 1f)
+        val vibOffset = sin(timeSec * 28f + idx * 4.2f) * (ageRatio * 2.4f * scale)
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+        val len = hypot(dx, dy).coerceAtLeast(1f)
+        val midX = (start.x + end.x) * 0.5f + (-dy / len) * vibOffset
+        val midY = (start.y + end.y) * 0.5f + (dx / len) * vibOffset
+
+        val segPath = Path().apply {
+            moveTo(start.x, start.y)
+            quadraticBezierTo(midX, midY, end.x, end.y)
+        }
+
+        drawPath(
+            path = segPath,
             color = currentGlowColor,
-            start = start,
-            end = end,
-            strokeWidth = glowWidth,
-            cap = StrokeCap.Round
+            style = Stroke(width = glowWidth, cap = StrokeCap.Round)
         )
-        drawLine(
+        drawPath(
+            path = segPath,
             color = currentPrimaryColor,
-            start = start,
-            end = end,
-            strokeWidth = coreWidth,
-            cap = StrokeCap.Round
+            style = Stroke(width = coreWidth, cap = StrokeCap.Round)
         )
     }
 
@@ -634,15 +692,18 @@ private fun DrawScope.drawNodes(
     val isFloatingTier = mechanicType in listOf("FLOATING_NODES", "OMEGA_SYNTHESIS")
     val isDecayingTier = mechanicType in listOf("DECAYING_NODES", "OMEGA_SYNTHESIS")
     val isDecoyTier = mechanicType in listOf("DECOY_TARGETS", "OMEGA_SYNTHESIS")
+    val isDualEntangledTier = mechanicType in listOf("DUAL_ENTANGLED_WEB", "OMEGA_SYNTHESIS")
 
     for (node in nodes) {
         val basePos = toScreen(node.toPoint())
-        // Floating Nodes mechanic: harmonic subtle orbital drift
-        val floatDx = if (isFloatingTier) sin(timeSec * 2f + node.id * 1.5f) * (4.5f * scale) else 0f
-        val floatDy = if (isFloatingTier) cos(timeSec * 1.8f + node.id * 1.2f) * (4.5f * scale) else 0f
+        val isVisited = visitedNodeIds.contains(node.id)
+
+        // Living Web node shifting ("Bazı düğümler yer değiştirsin")
+        val driftAmp = if (isFloatingTier) 8.5f * scale else 3.2f * scale
+        val floatDx = if (!isVisited) sin(timeSec * 1.8f + node.id * 1.5f) * driftAmp else 0f
+        val floatDy = if (!isVisited) cos(timeSec * 1.5f + node.id * 1.3f) * driftAmp else 0f
         val pos = Offset(basePos.x + floatDx, basePos.y + floatDy)
 
-        val isVisited = visitedNodeIds.contains(node.id)
         val isCharacterStart = node.id == 1
 
         // Character starting node special glowing pulse & beacon
@@ -794,8 +855,21 @@ private fun DrawScope.drawNodes(
                         style = Stroke(width = 3.5f)
                     )
                 } else {
+                    val isAlphaDimension = node.id % 2 == 1
+                    val dimColor = if (isDualEntangledTier) {
+                        if (isAlphaDimension) Color(0xFF00E5FF) else Color(0xFFD946EF)
+                    } else null
+
+                    if (dimColor != null) {
+                        drawCircle(
+                            color = dimColor.copy(alpha = 0.25f),
+                            radius = baseRadius * 1.55f,
+                            center = pos
+                        )
+                    }
+
                     val unvisitedNodeBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
-                    val unvisitedNodeBorder = if (isDarkTheme) Color(0xFF475569) else Color(0xFFCBD5E1)
+                    val unvisitedNodeBorder = dimColor ?: if (isDarkTheme) Color(0xFF475569) else Color(0xFFCBD5E1)
                     drawCircle(
                         color = unvisitedNodeBg,
                         radius = baseRadius,
@@ -805,7 +879,7 @@ private fun DrawScope.drawNodes(
                         color = unvisitedNodeBorder,
                         radius = baseRadius,
                         center = pos,
-                        style = Stroke(width = 2.5f)
+                        style = Stroke(width = if (dimColor != null) 3.5f else 2.5f)
                     )
                 }
             }
@@ -872,6 +946,9 @@ private fun DrawScope.drawNodes(
 
 private fun DrawScope.drawLivingWebMesh(
     nodes: List<Node>,
+    visitedNodeIds: List<Int>,
+    currentPointerPos: Point?,
+    adaptiveTendencyQuadrant: Int?,
     timeSec: Float,
     isDarkTheme: Boolean,
     toScreen: (Point) -> Offset,
@@ -879,20 +956,75 @@ private fun DrawScope.drawLivingWebMesh(
 ) {
     if (nodes.size < 2) return
     val baseColor = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
+    // Quadrant cognitive resonance aura reflecting player's past hesitation tendency
+    val quadCenter = when (adaptiveTendencyQuadrant) {
+        1 -> Offset(size.width * 0.72f, size.height * 0.28f) // top-right
+        2 -> Offset(size.width * 0.28f, size.height * 0.28f) // top-left
+        3 -> Offset(size.width * 0.28f, size.height * 0.72f) // bottom-left
+        4 -> Offset(size.width * 0.72f, size.height * 0.72f) // bottom-right
+        else -> null
+    }
+    if (quadCenter != null) {
+        val quadGlow = (sin(timeSec * 2.2f) * 0.04f + 0.06f).coerceIn(0.02f, 0.12f)
+        drawCircle(
+            color = Color(0xFFA855F7).copy(alpha = quadGlow),
+            radius = size.width * 0.38f,
+            center = quadCenter
+        )
+    }
+
+    val dragPos = currentPointerPos?.let { toScreen(it) }
+
     for (i in 0 until nodes.size - 1) {
         val n1 = nodes[i]
         val n2 = nodes[i + 1]
-        val p1 = toScreen(n1.toPoint())
-        val p2 = toScreen(n2.toPoint())
-        val distSq = (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y)
-        if (distSq < (320f * scale) * (320f * scale)) {
+        val rawP1 = toScreen(n1.toPoint())
+        val rawP2 = toScreen(n2.toPoint())
+        val distSq = (rawP1.x - rawP2.x) * (rawP1.x - rawP2.x) + (rawP1.y - rawP2.y) * (rawP1.y - rawP2.y)
+        if (distSq < (340f * scale) * (340f * scale)) {
+            // Living web: slow harmonic undulation of beams
+            val slowPhase = timeSec * 1.6f + (i * 0.75f)
+            val beamShiftX = sin(slowPhase) * (2.8f * scale)
+            val beamShiftY = cos(slowPhase * 0.85f) * (2.8f * scale)
+            val p1 = Offset(rawP1.x + beamShiftX, rawP1.y + beamShiftY)
+            val p2 = Offset(rawP2.x - beamShiftX * 0.7f, rawP2.y + beamShiftY * 0.7f)
+
+            // Dynamic tension stretch towards active drag cursor ("Ağ oyuncunun hamlelerine göre yeniden şekillensin")
+            val midX: Float
+            val midY: Float
+            if (dragPos != null) {
+                val baseMidX = (p1.x + p2.x) * 0.5f
+                val baseMidY = (p1.y + p2.y) * 0.5f
+                val dCursorX = dragPos.x - baseMidX
+                val dCursorY = dragPos.y - baseMidY
+                val curDist = hypot(dCursorX, dCursorY)
+                val pullRadius = 160f * scale
+                if (curDist < pullRadius && curDist > 1f) {
+                    val pullRatio = (1f - (curDist / pullRadius)) * 14f * scale
+                    midX = baseMidX + (dCursorX / curDist) * pullRatio
+                    midY = baseMidY + (dCursorY / curDist) * pullRatio
+                } else {
+                    midX = baseMidX
+                    midY = baseMidY
+                }
+            } else {
+                midX = (p1.x + p2.x) * 0.5f
+                midY = (p1.y + p2.y) * 0.5f
+            }
+
             val ripple = (sin(timeSec * 2.5f + i * 0.8f) * 0.04f + 0.07f).coerceIn(0.02f, 0.14f)
-            drawLine(
+            val path = Path().apply {
+                moveTo(p1.x, p1.y)
+                quadraticBezierTo(midX, midY, p2.x, p2.y)
+            }
+            drawPath(
+                path = path,
                 color = baseColor.copy(alpha = ripple),
-                start = p1,
-                end = p2,
-                strokeWidth = 1.2f * scale,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f * scale, 6f * scale), timeSec * 10f)
+                style = Stroke(
+                    width = 1.3f * scale,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f * scale, 6f * scale), timeSec * 10f)
+                )
             )
         }
     }
@@ -900,11 +1032,14 @@ private fun DrawScope.drawLivingWebMesh(
 
 private fun DrawScope.drawPastGhostLabyrinth(
     ghosts: List<List<Point>>,
+    mechanicType: String,
     timeSec: Float,
     toScreen: (Point) -> Offset,
     scale: Float
 ) {
     if (ghosts.isEmpty()) return
+    val isCumulativeGhosts = mechanicType in listOf("CUMULATIVE_GHOSTS", "OMEGA_SYNTHESIS")
+
     ghosts.forEachIndexed { strokeIdx, strokePts ->
         if (strokePts.size < 2) return@forEachIndexed
         val path = Path()
@@ -915,30 +1050,42 @@ private fun DrawScope.drawPastGhostLabyrinth(
             path.lineTo(pi.x, pi.y)
         }
 
-        // Translucent ethereal ghost path
+        // Wide ethereal outer purple glow
         drawPath(
             path = path,
-            color = Color(0x38A855F7),
+            color = Color(0x22A855F7),
+            style = Stroke(
+                width = 12f * scale,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+
+        // Translucent semi-transparent ghost ray (Ghost Labyrinth)
+        val rayAlpha = if (isCumulativeGhosts) 0.50f else 0.35f
+        drawPath(
+            path = path,
+            color = Color(0xFFC084FC).copy(alpha = rayAlpha),
             style = Stroke(
                 width = 4.5f * scale,
                 cap = StrokeCap.Round,
                 join = StrokeJoin.Round,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f * scale, 10f * scale), (timeSec * 18f))
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f * scale, 10f * scale), timeSec * 20f + strokeIdx * 8f)
             )
         )
 
-        // Memory wisp wandering along the ghost trail
-        val t = ((timeSec * 0.35f + strokeIdx * 0.3f) % 1f)
+        // Memory wisps wandering along the ghost labyrinth
+        val t = ((timeSec * 0.38f + strokeIdx * 0.25f) % 1f)
         val sampleIdx = (t * (strokePts.size - 1)).toInt().coerceIn(0, strokePts.size - 1)
         val spiritPt = toScreen(strokePts[sampleIdx])
         drawCircle(
-            color = Color(0x55C4B5FD),
-            radius = 6f * scale,
+            color = Color(0x66C4B5FD),
+            radius = 7.5f * scale,
             center = spiritPt
         )
         drawCircle(
-            color = Color(0x88EDE9FE),
-            radius = 2.8f * scale,
+            color = Color(0xCCEDE9FE),
+            radius = 3.2f * scale,
             center = spiritPt
         )
     }
@@ -998,7 +1145,11 @@ private fun DrawScope.drawPerfectGhostRace(
 private fun DrawScope.drawEchoBeastAtmosphere(
     beastState: EchoBeastState,
     timeSec: Float,
-    size: Size
+    size: Size,
+    isDrawing: Boolean,
+    segments: List<Segment>,
+    toScreen: (Point) -> Offset,
+    scale: Float
 ) {
     if (beastState.level == 0) return
     when (beastState) {
@@ -1048,6 +1199,23 @@ private fun DrawScope.drawEchoBeastAtmosphere(
                 strokeWidth = 3f,
                 cap = StrokeCap.Round
             )
+
+            // Beast DOMINION mimicry: corrupted crimson shadow trail mimicking player's active path
+            if (isDrawing && segments.isNotEmpty()) {
+                val mimicAlpha = (sin(timeSec * 7f) * 0.15f + 0.35f).coerceIn(0.15f, 0.55f)
+                val mimicShift = sin(timeSec * 4f) * 8f * scale
+                for (seg in segments) {
+                    val s = toScreen(seg.p1)
+                    val e = toScreen(seg.p2)
+                    drawLine(
+                        color = Color(0xFFDC2626).copy(alpha = mimicAlpha),
+                        start = Offset(s.x + mimicShift, s.y - mimicShift),
+                        end = Offset(e.x + mimicShift, e.y - mimicShift),
+                        strokeWidth = 3.5f * scale,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f * scale, 6f * scale), timeSec * 30f)
+                    )
+                }
+            }
         }
         else -> {}
     }

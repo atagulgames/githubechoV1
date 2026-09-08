@@ -18,30 +18,49 @@ object LevelCatalog {
     const val TOTAL_LEVELS = 100
 
     private val TIER_NAMES_EN = listOf(
-        "Harmonic Genesis", // Tier 1 (1..10)
-        "Vector Flow",       // Tier 2 (11..20)
-        "Lock & Key",        // Tier 3 (21..30)
-        "Decaying Echoes",   // Tier 4 (31..40)
-        "Ghost Resonance",   // Tier 5 (41..50)
-        "Fractal Matrix",    // Tier 6 (51..60)
-        "Quantum Gates",     // Tier 7 (61..70)
-        "Temporal Drift",    // Tier 8 (71..80)
-        "Master Lattice",    // Tier 9 (81..90)
-        "Omega Peak"         // Tier 10 (91..100)
+        "Tutorial",                 // Tier 1 (1..3)
+        "Complex Web",               // Tier 2 (4..10)
+        "Floating Nodes",            // Tier 3 (11..20)
+        "Invisible Rays",            // Tier 4 (21..30)
+        "Decaying Nodes",            // Tier 5 (31..40)
+        "Wandering Echoes",          // Tier 6 (41..50)
+        "Decoy Targets",             // Tier 7 (51..60)
+        "Reverse Flow",              // Tier 8 (61..70)
+        "Rotating Web",              // Tier 9 (71..80)
+        "Dual Entangled Web",        // Tier 10 (81..90)
+        "Cumulative Ghost Maze",     // Tier 11 (91..99)
+        "Omega Final: Grand Nexus"   // Tier 12 (100)
     )
 
     private val TIER_NAMES_TR = listOf(
-        "Harmonik Başlangıç", // Tier 1 (1..10)
-        "Vektör Akışı",       // Tier 2 (11..20)
-        "Kilit & Anahtar",    // Tier 3 (21..30)
-        "Sönen Dalgalar",     // Tier 4 (31..40)
-        "Gölge Rezonansı",    // Tier 5 (41..50)
-        "Fraktal Matris",     // Tier 6 (51..60)
-        "Kuantum Kapıları",   // Tier 7 (61..70)
-        "Zamansal Akış",      // Tier 8 (71..80)
-        "Usta Ağları",        // Tier 9 (81..90)
-        "Omega Zirvesi"       // Tier 10 (91..100)
+        "Öğretici",                     // Tier 1 (1..3)
+        "Karmaşık Ağ",                  // Tier 2 (4..10)
+        "Hareketli Düğümler",           // Tier 3 (11..20)
+        "Görünmez Işınlar",             // Tier 4 (21..30)
+        "Zamanla Kaybolan Düğümler",    // Tier 5 (31..40)
+        "Yankıların Hareketi",          // Tier 6 (41..50)
+        "Sahte Hedefler",               // Tier 7 (51..60)
+        "Ters Yönler",                  // Tier 8 (61..70)
+        "Ekranın Dönmesi",              // Tier 9 (71..80)
+        "İki Ağ Aynı Anda",             // Tier 10 (81..90)
+        "Önceki Hataların Birleşmesi",  // Tier 11 (91..99)
+        "Büyük Final: Omega Zirvesi"    // Tier 12 (100)
     )
+
+    fun getTierIndex(levelId: Int): Int = when (levelId) {
+        in 1..3 -> 0
+        in 4..10 -> 1
+        in 11..20 -> 2
+        in 21..30 -> 3
+        in 31..40 -> 4
+        in 41..50 -> 5
+        in 51..60 -> 6
+        in 61..70 -> 7
+        in 71..80 -> 8
+        in 81..90 -> 9
+        in 91..99 -> 10
+        else -> 11
+    }
 
     private val UNIQUE_NAMES_EN = listOf(
         // Tier 1 (1..10)
@@ -111,7 +130,7 @@ object LevelCatalog {
 
     fun getLevelTitle(id: Int, language: Language = Language.EN): String {
         val clampedId = id.coerceIn(1, TOTAL_LEVELS)
-        val tierIndex = ((clampedId - 1) / 10).coerceIn(0, 9)
+        val tierIndex = getTierIndex(clampedId)
         return if (language == Language.TR) {
             val name = UNIQUE_NAMES_TR.getOrNull(clampedId - 1) ?: "Seviye $clampedId"
             val tier = TIER_NAMES_TR[tierIndex]
@@ -324,31 +343,33 @@ object LevelCatalog {
             nodes.add(LevelNode(i, pt.first, pt.second, type, keyForGate))
         }
 
-        // Mechanic classification for the 10 evolution tiers
-        val mechanicType = when (tierIndex) {
-            0 -> "TUTORIAL_BASIC"
-            1 -> "FLOATING_NODES"
-            2 -> "INVISIBLE_RAYS"
-            3 -> "DECAYING_NODES"
-            4 -> "WANDERING_ECHOES"
-            5 -> "DECOY_TARGETS"
-            6 -> "REVERSE_FLOW"
-            7 -> "ROTATING_WEB"
-            8 -> "DUAL_ENTANGLED_WEB"
-            9 -> "OMEGA_SYNTHESIS"
+        // Mechanic classification for the 12 evolution tiers per user design
+        val mechanicType = when {
+            clampedId in 1..3 -> "TUTORIAL_BASIC"
+            clampedId in 4..10 -> "COMPLEX_WEB"
+            clampedId in 11..20 -> "FLOATING_NODES"
+            clampedId in 21..30 -> "INVISIBLE_RAYS"
+            clampedId in 31..40 -> "DECAYING_NODES"
+            clampedId in 41..50 -> "WANDERING_ECHOES"
+            clampedId in 51..60 -> "DECOY_TARGETS"
+            clampedId in 61..70 -> "REVERSE_FLOW"
+            clampedId in 71..80 -> "ROTATING_WEB"
+            clampedId in 81..90 -> "DUAL_ENTANGLED_WEB"
+            clampedId in 91..99 -> "CUMULATIVE_GHOSTS"
+            clampedId == 100 -> "OMEGA_SYNTHESIS"
             else -> "TUTORIAL_BASIC"
         }
 
         val decayLifetime = when (mechanicType) {
-            "DECAYING_ECHO" -> 5 + (clampedId % 3)
-            "OMEGA" -> 6
+            "DECAYING_NODES" -> 5 + (clampedId % 3)
+            "OMEGA_SYNTHESIS" -> 6
             else -> 0
         }
 
-        val isGhostEchoes = mechanicType == "GHOST_ECHO" || (tierIndex >= 7 && clampedId % 3 == 0)
+        val isGhostEchoes = mechanicType in listOf("CUMULATIVE_GHOSTS", "WANDERING_ECHOES", "OMEGA_SYNTHESIS")
 
         // Directed edges always follow forward solution order: from i to i+1
-        val directedEdges = if (mechanicType == "ONE_WAY" || tierIndex == 6) {
+        val directedEdges = if (mechanicType == "REVERSE_FLOW" || (mechanicType == "OMEGA_SYNTHESIS" && clampedId % 2 == 0)) {
             val edges = ArrayList<DirectedEdge>()
             for (i in 1 until nodeCount) {
                 if (i % 2 == 1) {
