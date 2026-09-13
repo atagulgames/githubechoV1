@@ -125,6 +125,12 @@ fun IntroVideoScreen(
         checkingComplete = true
     }
 
+    // Watchdog timer: Automatically advance after 18 seconds if VideoView completion stalls
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(18_000L)
+        onIntroFinished()
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()

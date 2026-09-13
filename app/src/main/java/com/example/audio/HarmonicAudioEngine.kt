@@ -659,6 +659,10 @@ object HarmonicAudioEngine {
         }
     }
 
+    fun playNodeVisited() {
+        playNodeTone(0)
+    }
+
     private fun playSynthTone(freq: Float, durationMs: Int, volume: Float) {
         val sampleRate = 22050
         val numSamples = (sampleRate * (durationMs / 1000.0)).toInt()

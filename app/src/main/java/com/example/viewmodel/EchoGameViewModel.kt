@@ -2682,6 +2682,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         com.example.audio.HapticEngine.triggerButtonClick()
     }
 
+    fun triggerHapticLight() {
+        com.example.audio.HapticEngine.triggerButtonClick()
+    }
+
     fun triggerNodeTouch() {
         com.example.audio.HapticEngine.triggerNodeTouch()
     }
