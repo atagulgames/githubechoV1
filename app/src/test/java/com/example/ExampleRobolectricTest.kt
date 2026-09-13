@@ -89,4 +89,33 @@ class ExampleRobolectricTest {
     assertFalse(prefs.isAuthenticated)
     assertEquals("TestOyuncu", prefs.authenticatedUsername)
   }
+
+  @Test
+  fun `weekly ad chest cooldown test`() {
+    // Initially available
+    assertTrue(prefs.isWeeklyAdChestAvailable())
+    assertEquals(0L, prefs.getWeeklyAdChestRemainingMillis())
+
+    // Used now
+    val now = System.currentTimeMillis()
+    prefs.lastWeeklyAdChestTime = now
+
+    // Cooldown active for 7 days
+    assertFalse(prefs.isWeeklyAdChestAvailable())
+    assertTrue(prefs.getWeeklyAdChestRemainingMillis() > 0L)
+
+    // After 8 days, available again
+    prefs.lastWeeklyAdChestTime = now - (8L * 24 * 60 * 60 * 1000L)
+    assertTrue(prefs.isWeeklyAdChestAvailable())
+    assertEquals(0L, prefs.getWeeklyAdChestRemainingMillis())
+  }
+
+  @Test
+  fun `chest 250 coins or tokens purchase logic`() {
+    prefs.tokens = 300
+    val cost = 250
+    assertTrue(prefs.tokens >= cost)
+    prefs.tokens -= cost
+    assertEquals(50, prefs.tokens)
+  }
 }

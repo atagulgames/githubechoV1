@@ -55,6 +55,7 @@ import com.example.ui.dialogs.DeadlockDialog
 import com.example.ui.dialogs.LeaderboardDialog
 import com.example.ui.dialogs.LevelSelectDialog
 import com.example.ui.dialogs.PlayerProfileDialog
+import com.example.ui.dialogs.RateAppDialog
 import com.example.ui.dialogs.RewardClaimedDialog
 import com.example.ui.dialogs.Season2WelcomeDialog
 import com.example.ui.dialogs.SettingsDialog
@@ -232,6 +233,10 @@ fun EchoGameScreen(
                     onClaimDoubleReward = { onShowRewardedAd("DOUBLE_REWARD") },
                     onNextLevel = {
                         if (!isNextLevelTransitioning) {
+                            if (state.level.levelId == 3 && !viewModel.hasRatedOrDismissedLevel3Prompt()) {
+                                viewModel.showRateAppDialog()
+                                return@VictoryDialog
+                            }
                             isNextLevelTransitioning = true
                             if (viewModel.shouldShowInterstitialOnNextLevel()) {
                                 onShowInterstitialAd {
@@ -246,6 +251,18 @@ fun EchoGameScreen(
                     },
                     onReplay = {
                         viewModel.restartLevel(clearEchoes = true)
+                    }
+                )
+            }
+
+            // 1.5. Rate App Dialog (Sadece 3. bölüm bitince çıkar)
+            if (state.isRateAppDialogVisible) {
+                RateAppDialog(
+                    onRateClicked = {
+                        viewModel.onRateAppClicked()
+                    },
+                    onDismiss = {
+                        viewModel.dismissRateAppDialog()
                     }
                 )
             }
@@ -389,6 +406,9 @@ fun EchoGameScreen(
             if (state.isChestDialogVisible || state.lastOpenedChestReward != null) {
                 ChestDialog(
                     isFreeAvailable = state.isFreeChestAvailable,
+                    isWeeklyAdAvailable = state.isWeeklyAdChestAvailable,
+                    weeklyAdRemainingTimeText = state.weeklyAdChestRemainingTimeText,
+                    userTokens = maxOf(state.tokens, state.coins),
                     adRemainingToday = state.adChestsRemainingToday,
                     reward = state.lastOpenedChestReward,
                     onOpenFree = { viewModel.openEchoChest(isAd = false) },
@@ -396,6 +416,7 @@ fun EchoGameScreen(
                         onShowRewardedAd("OPEN_CHEST")
                         viewModel.openEchoChest(isAd = true)
                     },
+                    onOpenWithCoins = { viewModel.openEchoChestWithCoins() },
                     onDismissReward = { viewModel.dismissChestReward() },
                     onDismiss = { viewModel.setChestVisible(false) }
                 )

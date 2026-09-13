@@ -51,6 +51,8 @@ import androidx.compose.ui.layout.ContentScale
 import com.example.R
 import com.example.localization.EchoStrings
 import com.example.ui.components.Season2BackgroundPatternCanvas
+import com.example.ui.components.MeteorStoneButton
+import com.example.ui.components.MeteorStoneTheme
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
@@ -1023,141 +1025,55 @@ fun EchoMainMenu(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Primary "OYNA" Button
-                Button(
-                    onClick = hapticClick(isHeavy = true, action = onPlay),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(58.dp)
-                        .shadow(6.dp, RoundedCornerShape(18.dp))
-                        .testTag("play_button"),
-                    shape = RoundedCornerShape(18.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0284C7),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Oyna",
-                        modifier = Modifier.size(26.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "${EchoStrings.get("play", state.language)} (${EchoStrings.get("level", state.language)} ${state.currentLevelIndex + 1})",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        letterSpacing = 0.5.sp,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                }
+                // Primary "OYNA" Meteor Stone Button
+                MeteorStoneButton(
+                    text = "${EchoStrings.get("play", state.language).uppercase()} (${EchoStrings.get("level", state.language).uppercase()} ${state.currentLevelIndex + 1})",
+                    subtitle = "Tek Çizgi Strateji & Kozmik Bulmaca",
+                    icon = Icons.Default.PlayArrow,
+                    stoneTheme = MeteorStoneTheme.CYAN_PULSE,
+                    height = 62.dp,
+                    onClick = onPlay,
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "play_button"
+                )
 
-                // Row: Bölümler (100 Seviye), Temalar, Mağaza
+                // Row: Bölümler (100 Seviye), Temalar, Mağaza (Meteor Stone Styling)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Level Select
-                    Button(
-                        onClick = hapticClick(action = onOpenLevelSelect),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .shadow(2.dp, RoundedCornerShape(14.dp))
-                            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
-                            .testTag("main_levels_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = cardBg,
-                            contentColor = textPrimary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.GridOn,
-                            contentDescription = null,
-                            tint = Color(0xFF0284C7),
-                            modifier = Modifier.size(17.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "100 ${EchoStrings.get("levels", state.language)}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
+                    MeteorStoneButton(
+                        text = "BÖLÜMLER",
+                        subtitle = "100 Seviye",
+                        icon = Icons.Default.GridOn,
+                        stoneTheme = MeteorStoneTheme.OBSIDIAN_SLATE,
+                        height = 54.dp,
+                        onClick = onOpenLevelSelect,
+                        modifier = Modifier.weight(1f),
+                        testTag = "main_levels_button"
+                    )
 
-                    // Themes / Skins
-                    Button(
-                        onClick = hapticClick(action = onOpenSkins),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .shadow(2.dp, RoundedCornerShape(14.dp))
-                            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
-                            .testTag("main_skins_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = cardBg,
-                            contentColor = textPrimary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = null,
-                            tint = Color(0xFF8B5CF6),
-                            modifier = Modifier.size(17.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = EchoStrings.get("themes", state.language),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
+                    MeteorStoneButton(
+                        text = "TEMALAR",
+                        subtitle = "Görünümler",
+                        icon = Icons.Default.Palette,
+                        stoneTheme = MeteorStoneTheme.COSMIC_PURPLE,
+                        height = 54.dp,
+                        onClick = onOpenSkins,
+                        modifier = Modifier.weight(1f),
+                        testTag = "main_skins_button"
+                    )
 
-                    // Shop
-                    Button(
-                        onClick = hapticClick(action = onOpenShop),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .shadow(2.dp, RoundedCornerShape(14.dp))
-                            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
-                            .testTag("main_shop_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = cardBg,
-                            contentColor = textPrimary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            tint = Color(0xFFD97706),
-                            modifier = Modifier.size(17.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = EchoStrings.get("shop", state.language),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
+                    MeteorStoneButton(
+                        text = "MAĞAZA",
+                        subtitle = "Jeton & Güç",
+                        icon = Icons.Default.ShoppingCart,
+                        stoneTheme = MeteorStoneTheme.SOLAR_AMBER,
+                        height = 54.dp,
+                        onClick = onOpenShop,
+                        modifier = Modifier.weight(1f),
+                        testTag = "main_shop_button"
+                    )
                 }
 
                 // Start.io Banner Ad - always visible

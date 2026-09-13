@@ -51,6 +51,9 @@ class EchoPreferences(context: Context) {
         private const val KEY_FREE_COIN_ADS_COUNT = "echo_free_coin_ads_count"
         private const val KEY_LAST_COIN_AD_TIME = "echo_last_coin_ad_time"
 
+        // Mystery Chest Weekly Ad Cooldown
+        private const val KEY_LAST_WEEKLY_AD_CHEST_TIME = "echo_last_weekly_ad_chest_time"
+
         // Unlocked themes
         private const val KEY_UNLOCKED_THEMES = "echo_unlocked_themes"
 
@@ -132,6 +135,10 @@ class EchoPreferences(context: Context) {
     var isKvkkConsentAccepted: Boolean
         get() = prefs.getBoolean(KEY_KVKK_CONSENT_ACCEPTED, false)
         set(value) = prefs.edit().putBoolean(KEY_KVKK_CONSENT_ACCEPTED, value).apply()
+
+    var hasRatedOrDismissedLevel3Prompt: Boolean
+        get() = prefs.getBoolean("has_rated_or_dismissed_lvl3", false)
+        set(value) = prefs.edit().putBoolean("has_rated_or_dismissed_lvl3", value).apply()
 
     var hintAdsWatched: Int
         get() = prefs.getInt(KEY_HINT_ADS_WATCHED, 0)
@@ -614,26 +621,49 @@ class EchoPreferences(context: Context) {
         return lastFreeChestDate != todayDate
     }
 
-    fun getAdChestsOpenedToday(todayDate: String): Int {
-        val savedDate = prefs.getString(KEY_CHESTS_DATE, "")
-        return if (savedDate == todayDate) {
-            prefs.getInt(KEY_AD_CHESTS_TODAY, 0)
-        } else {
-            0
+    // Weekly Ad Chest: Sandık 1 hafta içerisinde sadece bir kere reklam ile açılabilecek
+    var lastWeeklyAdChestTime: Long
+        get() = prefs.getLong(KEY_LAST_WEEKLY_AD_CHEST_TIME, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_WEEKLY_AD_CHEST_TIME, value).apply()
+
+    fun isWeeklyAdChestAvailable(): Boolean {
+        val last = lastWeeklyAdChestTime
+        if (last == 0L) return true
+        val elapsed = System.currentTimeMillis() - last
+        val oneWeekMillis = 7L * 24 * 60 * 60 * 1000L // 7 days (604,800,000 ms)
+        return elapsed >= oneWeekMillis
+    }
+
+    fun getWeeklyAdChestRemainingMillis(): Long {
+        val last = lastWeeklyAdChestTime
+        if (last == 0L) return 0L
+        val elapsed = System.currentTimeMillis() - last
+        val oneWeekMillis = 7L * 24 * 60 * 60 * 1000L
+        return maxOf(0L, oneWeekMillis - elapsed)
+    }
+
+    fun formatWeeklyAdRemaining(millis: Long): String {
+        if (millis <= 0L) return "Hazır"
+        val days = millis / (24 * 60 * 60 * 1000L)
+        val hours = (millis % (24 * 60 * 60 * 1000L)) / (60 * 60 * 1000L)
+        val minutes = (millis % (60 * 60 * 1000L)) / (60 * 1000L)
+        return when {
+            days > 0 -> "$days gün $hours sa"
+            hours > 0 -> "$hours sa $minutes dk"
+            else -> "$minutes dk"
         }
     }
 
+    fun recordWeeklyAdChestOpened() {
+        lastWeeklyAdChestTime = System.currentTimeMillis()
+    }
+
+    fun getAdChestsOpenedToday(todayDate: String): Int {
+        return if (isWeeklyAdChestAvailable()) 0 else 1
+    }
+
     fun incrementAdChestOpened(todayDate: String) {
-        val savedDate = prefs.getString(KEY_CHESTS_DATE, "")
-        if (savedDate == todayDate) {
-            val count = prefs.getInt(KEY_AD_CHESTS_TODAY, 0)
-            prefs.edit().putInt(KEY_AD_CHESTS_TODAY, count + 1).apply()
-        } else {
-            prefs.edit()
-                .putString(KEY_CHESTS_DATE, todayDate)
-                .putInt(KEY_AD_CHESTS_TODAY, 1)
-                .apply()
-        }
+        recordWeeklyAdChestOpened()
     }
 
     // --- Unlocked Themes ---

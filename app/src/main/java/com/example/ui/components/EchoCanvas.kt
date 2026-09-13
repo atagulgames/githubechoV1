@@ -779,34 +779,6 @@ private fun DrawScope.drawNodes(
 
         val isCharacterStart = node.id == 1
 
-        // Character starting node special glowing pulse & beacon
-        if (isCharacterStart) {
-            drawCircle(
-                color = Color(0xFF00E5FF).copy(alpha = 0.28f * pulseAlpha),
-                radius = baseRadius * (1.75f + 0.25f * (1f - pulseAlpha)),
-                center = pos
-            )
-            drawCircle(
-                color = Color(0xFF00E5FF).copy(alpha = 0.85f),
-                radius = baseRadius * 1.35f,
-                center = pos,
-                style = Stroke(width = 3.5f)
-            )
-
-            // When idle before drawing, show "KARAKTER" tag above Node 1
-            if (visitedNodeIds.isEmpty() && !isDrawing) {
-                drawContext.canvas.nativeCanvas.apply {
-                    val labelPaint = android.graphics.Paint().apply {
-                        color = android.graphics.Color.parseColor("#0284C7")
-                        textSize = baseRadius * 0.75f
-                        isFakeBoldText = true
-                        textAlign = android.graphics.Paint.Align.CENTER
-                    }
-                    drawText("KARAKTER", pos.x, pos.y - baseRadius * 1.6f, labelPaint)
-                }
-            }
-        }
-
         // Highlight next target node in the sequence (sıra numarası ve hedef rehberi)
         val lastVisited = visitedNodeIds.lastOrNull()
         val nextExpectedId = if (lastVisited == null) {
@@ -817,148 +789,52 @@ private fun DrawScope.drawNodes(
         } else {
             lastVisited + 1
         }
-        // In levels 1..3, show the glowing target guide to teach the user.
-        // In levels 4..100 ("düşün oyuncu"), hide the guide so the player must think and search for the number, unless Hint booster is activated!
         val isNextTarget = (levelId <= 3 || isHintActive) && isDrawing && node.id == nextExpectedId
-        if (isNextTarget) {
-            drawCircle(
-                color = Color(0xFF0284C7).copy(alpha = 0.30f * pulseAlpha),
-                radius = baseRadius * (1.6f + 0.25f * (1f - pulseAlpha)),
-                center = pos
-            )
-            drawCircle(
-                color = Color(0xFF0284C7),
-                radius = baseRadius * 1.25f,
-                center = pos,
-                style = Stroke(width = 2.5f)
-            )
+
+        // When idle before drawing, show "KARAKTER" tag above Node 1
+        if (isCharacterStart && visitedNodeIds.isEmpty() && !isDrawing) {
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.parseColor("#0284C7")
+                    textSize = baseRadius * 0.75f
+                    isFakeBoldText = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText("KARAKTER", pos.x, pos.y - baseRadius * 1.65f, labelPaint)
+            }
         }
 
-        when (node.type) {
-            NodeType.KEY -> {
-                // Key Node: Golden Amber styling with Diamond shape
-                val isCollected = collectedKeyIds.contains(node.keyForGateId)
-                val keyColor = if (isCollected) strokeTheme.primaryColor else ColorKeyGold
+        val isAlphaDimension = node.id % 2 == 1
+        val dimColor = if (isDualEntangledTier) {
+            if (isAlphaDimension) Color(0xFF00E5FF) else Color(0xFFD946EF)
+        } else null
 
-                drawCircle(
-                    color = keyColor.copy(alpha = 0.35f),
-                    radius = baseRadius * 1.5f,
-                    center = pos
-                )
-                drawCircle(
-                    color = Color(0xFF1E293B),
-                    radius = baseRadius,
-                    center = pos
-                )
-                drawCircle(
-                    color = keyColor,
-                    radius = baseRadius,
-                    center = pos,
-                    style = Stroke(width = 3.5f)
-                )
-
-                // Diamond icon in center
-                val path = Path().apply {
-                    moveTo(pos.x, pos.y - baseRadius * 0.55f)
-                    lineTo(pos.x + baseRadius * 0.55f, pos.y)
-                    lineTo(pos.x, pos.y + baseRadius * 0.55f)
-                    lineTo(pos.x - baseRadius * 0.55f, pos.y)
-                    close()
-                }
-                drawPath(path, color = keyColor.copy(alpha = 0.4f))
-            }
-
-            NodeType.GATE -> {
-                // Gate Node: Locked Red border until key gathered
-                val isUnlocked = collectedKeyIds.contains(node.keyForGateId) ||
-                        collectedKeyIds.contains(node.id) ||
-                        (node.keyForGateId == -1 && collectedKeyIds.isNotEmpty())
-                val gateColor = if (isUnlocked) ColorGateUnlocked else ColorGateLocked
-
-                drawCircle(
-                    color = gateColor.copy(alpha = 0.25f),
-                    radius = baseRadius * 1.5f,
-                    center = pos
-                )
-                drawCircle(
-                    color = Color(0xFF131A2A),
-                    radius = baseRadius,
-                    center = pos
-                )
-                drawCircle(
-                    color = gateColor,
-                    radius = baseRadius,
-                    center = pos,
-                    style = Stroke(width = 3.5f)
-                )
-
-                // Lock core symbol
-                drawCircle(
-                    color = gateColor.copy(alpha = 0.35f),
-                    radius = baseRadius * 0.45f,
-                    center = pos
-                )
-            }
-
-            NodeType.NORMAL -> {
-                if (isVisited) {
-                    drawCircle(
-                        color = strokeTheme.glowColor,
-                        radius = baseRadius * 1.5f,
-                        center = pos
-                    )
-                    drawCircle(
-                        color = strokeTheme.primaryColor,
-                        radius = baseRadius,
-                        center = pos
-                    )
-                    drawCircle(
-                        color = Color.White,
-                        radius = baseRadius * 0.35f,
-                        center = pos
-                    )
-                } else if (isCharacterStart) {
-                    drawCircle(
-                        color = Color.White,
-                        radius = baseRadius,
-                        center = pos
-                    )
-                    drawCircle(
-                        color = Color(0xFF0284C7),
-                        radius = baseRadius,
-                        center = pos,
-                        style = Stroke(width = 3.5f)
-                    )
-                } else {
-                    val isAlphaDimension = node.id % 2 == 1
-                    val dimColor = if (isDualEntangledTier) {
-                        if (isAlphaDimension) Color(0xFF00E5FF) else Color(0xFFD946EF)
-                    } else null
-
-                    if (dimColor != null) {
-                        drawCircle(
-                            color = dimColor.copy(alpha = 0.25f),
-                            radius = baseRadius * 1.55f,
-                            center = pos
-                        )
-                    }
-
-                    val unvisitedNodeBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
-                    val unvisitedNodeBorder = dimColor ?: if (isDarkTheme) Color(0xFF475569) else Color(0xFFCBD5E1)
-                    drawCircle(
-                        color = unvisitedNodeBg,
-                        radius = baseRadius,
-                        center = pos
-                    )
-                    drawCircle(
-                        color = unvisitedNodeBorder,
-                        radius = baseRadius,
-                        center = pos,
-                        style = Stroke(width = if (dimColor != null) 3.5f else 2.5f)
-                    )
-                }
-            }
+        // Draw node number (1, 2, 3... N) or hint step
+        val displayText = if (isHintActive) {
+            val stepIndex = hintOrder.indexOf(node.id)
+            if (stepIndex != -1) (stepIndex + 1).toString() else node.id.toString()
+        } else {
+            node.id.toString()
         }
+
+        // Draw Meteor-shaped node button
+        drawMeteorNode(
+            pos = pos,
+            node = node,
+            baseRadius = baseRadius,
+            isVisited = isVisited,
+            isCharacterStart = isCharacterStart,
+            isNextTarget = isNextTarget,
+            pulseAlpha = pulseAlpha,
+            timeSec = timeSec,
+            strokeTheme = strokeTheme,
+            isDarkTheme = isDarkTheme,
+            collectedKeyIds = collectedKeyIds,
+            dimColor = dimColor,
+            scale = scale,
+            displayText = displayText,
+            textPaint = textPaint
+        )
 
         // Decaying Nodes mechanic: remaining time circle outline
         if (isDecayingTier && !isVisited) {
@@ -987,32 +863,281 @@ private fun DrawScope.drawNodes(
                 )
             )
         }
-
-        // Draw node number (1, 2, 3... N) or hint step
-        val displayText = if (isHintActive) {
-            val stepIndex = hintOrder.indexOf(node.id)
-            if (stepIndex != -1) (stepIndex + 1).toString() else node.id.toString()
-        } else {
-            node.id.toString()
-        }
-
-        val textColor = when {
-            isVisited -> android.graphics.Color.WHITE
-            isCharacterStart -> android.graphics.Color.parseColor("#0284C7")
-            node.type == NodeType.KEY -> android.graphics.Color.parseColor("#D97706")
-            node.type == NodeType.GATE -> {
-                val isUnlocked = collectedKeyIds.contains(node.keyForGateId) ||
-                        collectedKeyIds.contains(node.id) ||
-                        (node.keyForGateId == -1 && collectedKeyIds.isNotEmpty())
-                if (isUnlocked) android.graphics.Color.parseColor("#059669") else android.graphics.Color.parseColor("#E11D48")
-            }
-            else -> if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#0F172A")
-        }
-        textPaint.color = textColor
-        textPaint.textSize = baseRadius * 1.05f
-        val textY = pos.y - ((textPaint.descent() + textPaint.ascent()) / 2f)
-        drawContext.canvas.nativeCanvas.drawText(displayText, pos.x, textY, textPaint)
     }
+}
+
+private val METEOR_UNIT_FACETS: Array<FloatArray> = Array(64) { id ->
+    val arr = FloatArray(16)
+    for (i in 0 until 8) {
+        val angle = (i.toFloat() / 8f) * (2f * Math.PI.toFloat()) - 0.25f
+        val irregularity = sin(id * 7.7f + i * 2.1f) * 0.16f + cos(id * 3.3f + i * 4.3f) * 0.08f
+        val mult = (1f + irregularity)
+        arr[i * 2] = (cos(angle) * mult)
+        arr[i * 2 + 1] = (sin(angle) * mult)
+    }
+    arr
+}
+
+/**
+ * Meteor şeklinde düğme/düğüm çizimi (Meteor Stone Node).
+ * 1 2 3 diye sürükleyip birleştirdiğimiz düğmeler için kraterli,
+ * lav çatlaklı, fasetli asteroid/meteor gövdesi ve net okunur numara.
+ */
+private fun DrawScope.drawMeteorNode(
+    pos: Offset,
+    node: Node,
+    baseRadius: Float,
+    isVisited: Boolean,
+    isCharacterStart: Boolean,
+    isNextTarget: Boolean,
+    pulseAlpha: Float,
+    timeSec: Float,
+    strokeTheme: StrokeTheme,
+    isDarkTheme: Boolean,
+    collectedKeyIds: Set<Int>,
+    dimColor: Color?,
+    scale: Float,
+    displayText: String,
+    textPaint: android.graphics.Paint
+) {
+    val rBase = baseRadius * 1.12f
+    val facets = METEOR_UNIT_FACETS[node.id.coerceIn(0, 63)]
+    val meteorPath = Path()
+
+    // Her düğümün ID'sine özel önceden hesaplanmış fasetli meteor silüeti (0 ms CPU)
+    for (i in 0 until 8) {
+        val vx = pos.x + facets[i * 2] * rBase
+        val vy = pos.y + facets[i * 2 + 1] * rBase
+        if (i == 0) meteorPath.moveTo(vx, vy) else meteorPath.lineTo(vx, vy)
+    }
+    meteorPath.close()
+
+    // 1. Dış Atmosferik Giriş & Termal Korona Işıltısı
+    if (isVisited) {
+        // Ateşlenmiş ve bağlanmış yıldız meteoru
+        drawPath(
+            path = meteorPath,
+            color = strokeTheme.glowColor.copy(alpha = 0.45f),
+            style = Stroke(width = baseRadius * 0.50f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        drawCircle(
+            color = strokeTheme.glowColor.copy(alpha = 0.25f * pulseAlpha),
+            radius = baseRadius * 1.6f,
+            center = pos
+        )
+    } else if (isCharacterStart) {
+        // Node 1 (Karakter başlangıcı) parlayan kozmik mavi korona
+        drawCircle(
+            color = Color(0xFF00E5FF).copy(alpha = 0.32f * pulseAlpha),
+            radius = baseRadius * (1.75f + 0.25f * (1f - pulseAlpha)),
+            center = pos
+        )
+        drawPath(
+            path = meteorPath,
+            color = Color(0xFF00E5FF).copy(alpha = 0.85f),
+            style = Stroke(width = 3.5f, join = StrokeJoin.Round)
+        )
+    } else if (isNextTarget) {
+        // Sıradaki hedef meteor için uyarı/rehber plazma aurası
+        drawCircle(
+            color = Color(0xFFF59E0B).copy(alpha = 0.35f * pulseAlpha),
+            radius = baseRadius * (1.65f + 0.25f * (1f - pulseAlpha)),
+            center = pos
+        )
+        drawPath(
+            path = meteorPath,
+            color = Color(0xFFF59E0B).copy(alpha = 0.90f),
+            style = Stroke(width = 3.2f, join = StrokeJoin.Round)
+        )
+    } else if (dimColor != null) {
+        // Çift boyut (Dual Entangled) aurası
+        drawCircle(
+            color = dimColor.copy(alpha = 0.25f),
+            radius = baseRadius * 1.55f,
+            center = pos
+        )
+    } else {
+        // Doğal uzay tozu ve hafif termal sis
+        val hazeAlpha = (sin(timeSec * 2f + node.id) * 0.04f + 0.07f).coerceIn(0.02f, 0.15f)
+        drawCircle(
+            color = Color(0xFF38BDF8).copy(alpha = hazeAlpha),
+            radius = baseRadius * 1.35f,
+            center = pos
+        )
+    }
+
+    // 2. Meteorit Taş Gövdesi Renklendirmesi (Bazalt / Obsidiyen / Plazma Çekirdek)
+    val isUnlockedGate = node.type == NodeType.GATE && (
+        collectedKeyIds.contains(node.keyForGateId) ||
+        collectedKeyIds.contains(node.id) ||
+        (node.keyForGateId == -1 && collectedKeyIds.isNotEmpty())
+    )
+
+    val bodyBrush = when {
+        isVisited -> Brush.radialGradient(
+            colors = listOf(
+                Color.White,
+                strokeTheme.primaryColor,
+                strokeTheme.glowColor.copy(alpha = 0.90f),
+                Color(0xFF0F172A)
+            ),
+            center = pos,
+            radius = rBase * 1.25f
+        )
+        node.type == NodeType.KEY -> {
+            val isCollected = collectedKeyIds.contains(node.keyForGateId)
+            if (isCollected) {
+                Brush.radialGradient(
+                    colors = listOf(Color.White, strokeTheme.primaryColor, Color(0xFF1E293B)),
+                    center = pos,
+                    radius = rBase * 1.2f
+                )
+            } else {
+                Brush.linearGradient(
+                    colors = listOf(Color(0xFFFEF08A), Color(0xFFF59E0B), Color(0xFF78350F)),
+                    start = Offset(pos.x - rBase, pos.y - rBase),
+                    end = Offset(pos.x + rBase, pos.y + rBase)
+                )
+            }
+        }
+        node.type == NodeType.GATE -> {
+            val gateColor1 = if (isUnlockedGate) Color(0xFF065F46) else Color(0xFF450A0A)
+            val gateColor2 = if (isUnlockedGate) Color(0xFF047857) else Color(0xFF1E1015)
+            Brush.linearGradient(
+                colors = listOf(gateColor2, gateColor1, Color(0xFF0F0A0C)),
+                start = Offset(pos.x - rBase, pos.y - rBase),
+                end = Offset(pos.x + rBase, pos.y + rBase)
+            )
+        }
+        isCharacterStart -> Brush.linearGradient(
+            colors = listOf(Color(0xFFE0F2FE), Color(0xFF0284C7), Color(0xFF0369A1)),
+            start = Offset(pos.x - rBase, pos.y - rBase),
+            end = Offset(pos.x + rBase, pos.y + rBase)
+        )
+        else -> {
+            if (isDarkTheme) {
+                Brush.linearGradient(
+                    colors = listOf(Color(0xFF334155), Color(0xFF1E293B), Color(0xFF0F172A)),
+                    start = Offset(pos.x - rBase, pos.y - rBase),
+                    end = Offset(pos.x + rBase, pos.y + rBase)
+                )
+            } else {
+                Brush.linearGradient(
+                    colors = listOf(Color(0xFFF1F5F9), Color(0xFFCBD5E1), Color(0xFF64748B)),
+                    start = Offset(pos.x - rBase, pos.y - rBase),
+                    end = Offset(pos.x + rBase, pos.y + rBase)
+                )
+            }
+        }
+    }
+
+    // Meteorit gövdesini çiz
+    drawPath(path = meteorPath, brush = bodyBrush)
+
+    // 3. Kraterler (Göktaşı üzerindeki çukurlar ve ışık yansımaları)
+    val c1 = Offset(pos.x - rBase * 0.35f, pos.y - rBase * 0.30f)
+    val cr1 = rBase * 0.20f
+    val c2 = Offset(pos.x + rBase * 0.36f, pos.y + rBase * 0.32f)
+    val cr2 = rBase * 0.16f
+
+    val craterShadow = Color.Black.copy(alpha = if (isVisited) 0.18f else 0.45f)
+    val craterRim = (if (isVisited) Color.White else Color(0xFF94A3B8)).copy(alpha = 0.35f)
+
+    drawCircle(color = craterShadow, radius = cr1, center = c1)
+    drawArc(
+        color = craterRim,
+        startAngle = 120f,
+        sweepAngle = 140f,
+        useCenter = false,
+        topLeft = Offset(c1.x - cr1, c1.y - cr1),
+        size = Size(cr1 * 2f, cr1 * 2f),
+        style = Stroke(width = 1.4f)
+    )
+
+    drawCircle(color = craterShadow, radius = cr2, center = c2)
+    drawArc(
+        color = craterRim,
+        startAngle = 120f,
+        sweepAngle = 140f,
+        useCenter = false,
+        topLeft = Offset(c2.x - cr2, c2.y - cr2),
+        size = Size(cr2 * 2f, cr2 * 2f),
+        style = Stroke(width = 1.4f)
+    )
+
+    // 4. Lav / Plazma Enerji Çatlağı (Meteor damarları)
+    val fissurePath = Path().apply {
+        moveTo(pos.x - rBase * 0.68f, pos.y + rBase * 0.15f)
+        lineTo(pos.x - rBase * 0.20f, pos.y + rBase * 0.05f)
+        lineTo(pos.x + rBase * 0.12f, pos.y - rBase * 0.28f)
+        lineTo(pos.x + rBase * 0.58f, pos.y - rBase * 0.35f)
+    }
+    val fissureColor = when {
+        isVisited -> Color.White.copy(alpha = 0.90f)
+        isCharacterStart -> Color(0xFFE0F2FE).copy(alpha = 0.85f)
+        node.type == NodeType.KEY -> Color(0xFFFEF3C7).copy(alpha = 0.90f)
+        node.type == NodeType.GATE -> if (isUnlockedGate) Color(0xFF34D399).copy(alpha = 0.80f) else Color(0xFFEF4444).copy(alpha = 0.80f)
+        else -> (dimColor ?: strokeTheme.glowColor).copy(alpha = if (isDarkTheme) 0.60f else 0.40f)
+    }
+    drawPath(
+        path = fissurePath,
+        color = fissureColor,
+        style = Stroke(width = 1.8f * (scale / 1.5f).coerceAtLeast(1f), cap = StrokeCap.Round)
+    )
+
+    // 5. Fasetli Dış Kenarlık & Taş Kesimi Vurgusu
+    val rimColor = when {
+        isVisited -> Color.White.copy(alpha = 0.95f)
+        isCharacterStart -> Color(0xFF38BDF8)
+        node.type == NodeType.KEY -> ColorKeyGold
+        node.type == NodeType.GATE -> if (isUnlockedGate) ColorGateUnlocked else ColorGateLocked
+        else -> dimColor ?: if (isDarkTheme) Color(0xFF64748B) else Color(0xFF94A3B8)
+    }
+    drawPath(
+        path = meteorPath,
+        color = rimColor,
+        style = Stroke(width = if (isVisited || isCharacterStart) 3.2f else 2.2f, join = StrokeJoin.Round)
+    )
+
+    // Anahtar / Kapı simgeleri
+    if (node.type == NodeType.KEY) {
+        val diamondPath = Path().apply {
+            moveTo(pos.x, pos.y - baseRadius * 0.50f)
+            lineTo(pos.x + baseRadius * 0.50f, pos.y)
+            lineTo(pos.x, pos.y + baseRadius * 0.50f)
+            lineTo(pos.x - baseRadius * 0.50f, pos.y)
+            close()
+        }
+        drawPath(diamondPath, color = Color(0xFFFEF3C7).copy(alpha = 0.45f))
+    } else if (node.type == NodeType.GATE) {
+        val gateSymbolColor = if (isUnlockedGate) ColorGateUnlocked else ColorGateLocked
+        drawCircle(
+            color = gateSymbolColor.copy(alpha = 0.35f),
+            radius = baseRadius * 0.42f,
+            center = pos
+        )
+    }
+
+    // 6. Meteor Üzerindeki Numara (1, 2, 3...) - Net ve Yüksek Kontrastlı
+    val textColor = when {
+        isVisited -> android.graphics.Color.WHITE
+        isCharacterStart -> android.graphics.Color.WHITE
+        node.type == NodeType.KEY -> android.graphics.Color.parseColor("#FFFBEB")
+        node.type == NodeType.GATE -> if (isUnlockedGate) android.graphics.Color.parseColor("#D1FAE5") else android.graphics.Color.parseColor("#FEE2E2")
+        else -> if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#0F172A")
+    }
+
+    textPaint.textSize = baseRadius * 1.05f
+    val textY = pos.y - ((textPaint.descent() + textPaint.ascent()) / 2f)
+
+    // Taş dokusu üzerinde net okunabilirlik için gölge
+    val shadowPaint = android.graphics.Paint(textPaint).apply {
+        color = android.graphics.Color.argb(170, 0, 0, 0)
+    }
+    drawContext.canvas.nativeCanvas.drawText(displayText, pos.x + 1f, textY + 1.2f, shadowPaint)
+
+    textPaint.color = textColor
+    drawContext.canvas.nativeCanvas.drawText(displayText, pos.x, textY, textPaint)
 }
 
 // -------------------------------------------------------------

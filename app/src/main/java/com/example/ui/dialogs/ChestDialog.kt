@@ -19,17 +19,15 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LockReset
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Stars
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,14 +45,20 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.model.ChestReward
 import com.example.model.ThemeRarity
+import com.example.ui.components.MeteorStoneButton
+import com.example.ui.components.MeteorStoneTheme
 
 @Composable
 fun ChestDialog(
     isFreeAvailable: Boolean,
-    adRemainingToday: Int,
+    isWeeklyAdAvailable: Boolean = true,
+    weeklyAdRemainingTimeText: String = "",
+    userTokens: Int = 0,
+    adRemainingToday: Int = 1,
     reward: ChestReward?,
     onOpenFree: () -> Unit,
     onOpenWithAd: () -> Unit,
+    onOpenWithCoins: () -> Unit = {},
     onDismissReward: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -67,8 +71,8 @@ fun ChestDialog(
                 .shadow(16.dp, RoundedCornerShape(24.dp))
                 .testTag("chest_dialog"),
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+            color = Color(0xFF0F172A),
+            border = BorderStroke(1.5.dp, Color(0xFF334155))
         ) {
             if (reward != null) {
                 // Reward Reveal View
@@ -80,9 +84,12 @@ fun ChestDialog(
                 // Main Chest View with Transparent Odds
                 ChestMainView(
                     isFreeAvailable = isFreeAvailable,
-                    adRemainingToday = adRemainingToday,
+                    isWeeklyAdAvailable = isWeeklyAdAvailable,
+                    weeklyAdRemainingTimeText = weeklyAdRemainingTimeText,
+                    userTokens = userTokens,
                     onOpenFree = onOpenFree,
                     onOpenWithAd = onOpenWithAd,
+                    onOpenWithCoins = onOpenWithCoins,
                     onDismiss = onDismiss
                 )
             }
@@ -93,9 +100,12 @@ fun ChestDialog(
 @Composable
 private fun ChestMainView(
     isFreeAvailable: Boolean,
-    adRemainingToday: Int,
+    isWeeklyAdAvailable: Boolean,
+    weeklyAdRemainingTimeText: String,
+    userTokens: Int,
     onOpenFree: () -> Unit,
     onOpenWithAd: () -> Unit,
+    onOpenWithCoins: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Column(
@@ -115,28 +125,28 @@ private fun ChestMainView(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFF3E8FF)),
+                        .background(Color(0xFF312E81)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Redeem,
                         contentDescription = null,
-                        tint = Color(0xFF9333EA),
+                        tint = Color(0xFFA5B4FC),
                         modifier = Modifier.size(24.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Gizemli Yankı Sandığı",
+                        text = "Gizemli Kozmik Sandık",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
+                        color = Color.White
                     )
                     Text(
-                        text = "Gerçek Olasılıklar & Adil Dağılım",
+                        text = "Adil Dağılım & Garantili Kristal",
                         fontSize = 12.sp,
-                        color = Color(0xFF64748B)
+                        color = Color(0xFF94A3B8)
                     )
                 }
             }
@@ -148,45 +158,46 @@ private fun ChestMainView(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Kapat",
-                    tint = Color(0xFF64748B)
+                    tint = Color(0xFF94A3B8)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Big Chest Graphic badge
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(68.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFFAF5FF)),
+                .background(Color(0xFF1E1B4B)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Stars,
                 contentDescription = null,
-                tint = Color(0xFF9333EA),
-                modifier = Modifier.size(44.dp)
+                tint = Color(0xFFF59E0B),
+                modifier = Modifier.size(42.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Her sandıkta garanti ödül bulunur!",
+            text = "Mevcut Bakiyeniz: $userTokens Jeton",
             fontSize = 13.sp,
-            color = Color(0xFF475569),
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF38BDF8),
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Transparent Odds Table
         Card(
             shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            border = BorderStroke(1.dp, Color(0xFF334155)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -199,39 +210,32 @@ private fun ChestMainView(
                     text = "Düşme Olasılıkları:",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF64748B)
+                    color = Color(0xFF94A3B8)
                 )
-                RarityOddRow("Yaygın (%60)", "2-3 İpucu Jetonu", ThemeRarity.COMMON)
-                RarityOddRow("Nadir (%25)", "1 Matkap Lazeri & 1 Jeton", ThemeRarity.RARE)
-                RarityOddRow("Epik (%12)", "5 Jeton, 2 Matkap & Zümrüt Teması", ThemeRarity.EPIC)
-                RarityOddRow("Efsanevi (%3)", "10 Jeton, 4 Matkap & Altın Teması", ThemeRarity.LEGENDARY)
+                RarityOddRow("Yaygın (%50)", "10-20 Jeton & 2-5 Elmas", ThemeRarity.COMMON)
+                RarityOddRow("Nadir (%30)", "25-40 Jeton, 2 Matkap, 6-10 Elmas", ThemeRarity.RARE)
+                RarityOddRow("Epik (%15)", "60 Jeton, 4 Matkap, Kutup Zümrüdü", ThemeRarity.EPIC)
+                RarityOddRow("Efsanevi (%5)", "150 Jeton, 8 Matkap, Altın Lazer", ThemeRarity.LEGENDARY)
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Action 1: Ücretsiz Sandık (günde 1)
         if (isFreeAvailable) {
-            Button(
-                onClick = hapticClick(isHeavy = true, action = onOpenFree),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .shadow(4.dp, RoundedCornerShape(12.dp)),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF10B981),
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(imageVector = Icons.Default.Redeem, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Ücretsiz Sandığı Aç (Günde 1)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
+            MeteorStoneButton(
+                text = "GÜNLÜK ÜCRETSİZ SANDIK",
+                subtitle = "Her gün 1 kez ücretsiz hak",
+                icon = Icons.Default.Redeem,
+                stoneTheme = MeteorStoneTheme.EMERALD_CRYSTAL,
+                onClick = onOpenFree,
+                modifier = Modifier.fillMaxWidth(),
+                testTag = "open_free_chest_button"
+            )
         } else {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFF1F5F9),
+                color = Color(0xFF1E293B),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
@@ -241,7 +245,7 @@ private fun ChestMainView(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(imageVector = Icons.Default.LockReset, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(16.dp))
+                    Icon(imageVector = Icons.Default.LockReset, contentDescription = null, tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = "Ücretsiz sandık yarın 00:00'da açılır", fontSize = 12.sp, color = Color(0xFF94A3B8))
                 }
@@ -250,22 +254,31 @@ private fun ChestMainView(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Action 2: Reklamlı Sandık (kalan: X/2)
-        if (adRemainingToday > 0) {
-            OutlinedButton(
-                onClick = hapticClick(isHeavy = true, action = onOpenWithAd),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color(0xFF9333EA)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9333EA))
-            ) {
-                Icon(imageVector = Icons.Default.OndemandVideo, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Reklam İzle & Aç (Kalan: $adRemainingToday/2)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
+        // Action 2: 250 Jeton ile Sandık Aç (User request: "250 jeton ile de sandık açılabilsin")
+        MeteorStoneButton(
+            text = "250 JETON İLE SANDIK AÇ",
+            subtitle = if (userTokens >= 250) "Limitsiz Açılabilir (Mevcut: $userTokens)" else "Yetersiz Jeton ($userTokens/250)",
+            icon = Icons.Default.MonetizationOn,
+            stoneTheme = MeteorStoneTheme.SOLAR_AMBER,
+            enabled = userTokens >= 250,
+            onClick = onOpenWithCoins,
+            modifier = Modifier.fillMaxWidth(),
+            testTag = "open_coin_chest_button"
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Action 3: Reklamlı Sandık (User request: "sandık 1 hafta içerisinde sadece birkere reklam ile açılabilecek")
+        MeteorStoneButton(
+            text = if (isWeeklyAdAvailable) "HAFTALIK REKLAM İLE AÇ" else "HAFTALIK REKLAM KULLANILDI",
+            subtitle = if (isWeeklyAdAvailable) "Haftada 1 kez reklamla açma hakkı" else "Kalan süre: $weeklyAdRemainingTimeText (Haftada 1)",
+            icon = Icons.Default.OndemandVideo,
+            stoneTheme = MeteorStoneTheme.COSMIC_PURPLE,
+            enabled = isWeeklyAdAvailable,
+            onClick = onOpenWithAd,
+            modifier = Modifier.fillMaxWidth(),
+            testTag = "open_ad_chest_button"
+        )
     }
 }
 
@@ -290,9 +303,9 @@ private fun RarityOddRow(label: String, rewardDesc: String, rarity: ThemeRarity)
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }
-            Text(text = label, fontSize = 11.sp, color = Color(0xFF334155))
+            Text(text = label, fontSize = 11.sp, color = Color(0xFFCBD5E1))
         }
-        Text(text = rewardDesc, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF0F172A))
+        Text(text = rewardDesc, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.White)
     }
 }
 
@@ -326,7 +339,7 @@ private fun ChestRewardRevealView(
             text = reward.title,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF0F172A),
+            color = Color.White,
             textAlign = TextAlign.Center
         )
 
@@ -335,7 +348,7 @@ private fun ChestRewardRevealView(
         Text(
             text = reward.subtitle,
             fontSize = 13.sp,
-            color = Color(0xFF64748B),
+            color = Color(0xFF94A3B8),
             textAlign = TextAlign.Center
         )
 
@@ -350,17 +363,17 @@ private fun ChestRewardRevealView(
             if (reward.tokens > 0) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFFEF3C7),
-                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                    color = Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, Color(0xFFF59E0B)),
                     modifier = Modifier.padding(4.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(imageVector = Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(24.dp))
+                        Icon(imageVector = Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "+${reward.tokens} Jeton", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                        Text(text = "+${reward.tokens} Jeton", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFDE68A))
                     }
                 }
             }
@@ -368,17 +381,17 @@ private fun ChestRewardRevealView(
             if (reward.breakers > 0) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFFEE2E2),
-                    border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                    color = Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, Color(0xFFEF4444)),
                     modifier = Modifier.padding(4.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(imageVector = Icons.Default.ElectricBolt, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(24.dp))
+                        Icon(imageVector = Icons.Default.ElectricBolt, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "+${reward.breakers} Matkap", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB91C1C))
+                        Text(text = "+${reward.breakers} Matkap", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5))
                     }
                 }
             }
@@ -386,17 +399,17 @@ private fun ChestRewardRevealView(
             if (reward.unlockedThemeName != null) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF3E8FF),
-                    border = BorderStroke(1.dp, Color(0xFFE9D5FF)),
+                    color = Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, Color(0xFFA855F7)),
                     modifier = Modifier.padding(4.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = Color(0xFF9333EA), modifier = Modifier.size(24.dp))
+                        Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = reward.unlockedThemeName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF9333EA))
+                        Text(text = reward.unlockedThemeName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE9D5FF))
                     }
                 }
             }
@@ -404,19 +417,12 @@ private fun ChestRewardRevealView(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = hapticClick(isHeavy = true, action = onCollect),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .shadow(4.dp, RoundedCornerShape(12.dp)),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF0F172A),
-                contentColor = Color.White
-            )
-        ) {
-            Text(text = "Cüzdana Ekle & Devam Et", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        }
+        MeteorStoneButton(
+            text = "CÜZDANA EKLE & DEVAM ET",
+            stoneTheme = MeteorStoneTheme.CYAN_PULSE,
+            onClick = onCollect,
+            modifier = Modifier.fillMaxWidth(),
+            testTag = "chest_collect_reward_button"
+        )
     }
 }

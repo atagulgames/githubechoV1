@@ -123,7 +123,9 @@ data class EchoUiState(
     val isLoginRewardAvailableToday: Boolean = true,
     val loginDays: List<DailyLoginDay> = emptyList(),
     val isFreeChestAvailable: Boolean = true,
-    val adChestsRemainingToday: Int = 2,
+    val isWeeklyAdChestAvailable: Boolean = true,
+    val weeklyAdChestRemainingTimeText: String = "",
+    val adChestsRemainingToday: Int = 1,
     val unlockedThemes: Set<String> = emptySet(),
     val isDailyQuestsDialogVisible: Boolean = false,
     val isDailyLoginDialogVisible: Boolean = false,
@@ -154,6 +156,7 @@ data class EchoUiState(
     val candyParticles: List<com.example.model.CandyParticle> = emptyList(),
     val candyCallout: com.example.model.CandyCallout? = null,
     val isSupportDialogVisible: Boolean = false,
+    val isRateAppDialogVisible: Boolean = false,
     val shrinkerAdsWatched: Int = 0,
     val userAvatarUri: String = "",
     val userCustomTitle: String = "",
@@ -1290,6 +1293,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         refreshDailySystems()
 
+        val isLevel3JustCompleted = state.level.levelId == 3 && !prefs.hasRatedOrDismissedLevel3Prompt
+
         _uiState.update {
             it.copy(
                 isDrawing = false,
@@ -1303,7 +1308,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 currentCombo = newCombo,
                 lastTrophyRewardBreakdown = trophyBreakdown,
                 isDailyCompletedToday = if (state.isDailyChallenge) true else it.isDailyCompletedToday,
-                isDoubleRewardClaimedThisLevel = false
+                isDoubleRewardClaimedThisLevel = false,
+                isRateAppDialogVisible = isLevel3JustCompleted
             )
         }
     }
@@ -2414,10 +2420,12 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             )
         }
 
-        // 3. Mystery Echo Chest
+        // 3. Mystery Echo Chest (Günde 1 Ücretsiz, Haftada 1 Reklamlı, 250 Jeton ile Limitsiz)
         val freeChestAvail = prefs.isFreeChestAvailable(todayStr)
-        val adChestsOpened = prefs.getAdChestsOpenedToday(todayStr)
-        val adRemaining = (2 - adChestsOpened).coerceAtLeast(0)
+        val weeklyAdAvail = prefs.isWeeklyAdChestAvailable()
+        val remainingMillis = prefs.getWeeklyAdChestRemainingMillis()
+        val remainingText = prefs.formatWeeklyAdRemaining(remainingMillis)
+        val adRemaining = if (weeklyAdAvail) 1 else 0
 
         val unlocked = prefs.getUnlockedThemes()
 
@@ -2429,6 +2437,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isLoginRewardAvailableToday = !isClaimedToday,
                 loginDays = loginDays,
                 isFreeChestAvailable = freeChestAvail,
+                isWeeklyAdChestAvailable = weeklyAdAvail,
+                weeklyAdChestRemainingTimeText = remainingText,
                 adChestsRemainingToday = adRemaining,
                 unlockedThemes = unlocked
             )
@@ -2508,14 +2518,55 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             prefs.lastFreeChestDate = todayStr
         } else {
-            val opened = prefs.getAdChestsOpenedToday(todayStr)
-            if (opened >= 2) {
-                showToast("Bugünkü reklamlı sandık limiti doldu!")
+            // User request: "sandık 1 hafta içerisinde sadece birkere reklam ile açılabilecek"
+            if (!prefs.isWeeklyAdChestAvailable()) {
+                val rem = prefs.getWeeklyAdChestRemainingMillis()
+                val remText = prefs.formatWeeklyAdRemaining(rem)
+                showToast("Haftalık reklamlı sandık sadece haftada 1 kez açılabilir! (Kalan: $remText)")
                 return
             }
-            prefs.incrementAdChestOpened(todayStr)
+            prefs.recordWeeklyAdChestOpened()
         }
 
+        grantChestReward(if (isAd) "Haftalık Reklam Sandığı" else "Günlük Ücretsiz Sandık")
+    }
+
+    /**
+     * User request: "250 jeton ile de sandık açılabilsin"
+     */
+    fun openEchoChestWithCoins() {
+        val cost = 250
+        val hasTokens = prefs.tokens >= cost
+        val hasCoins = prefs.coins >= cost
+
+        if (!hasTokens && !hasCoins) {
+            val balance = maxOf(prefs.tokens, prefs.coins)
+            showToast("Yetersiz jeton! Sandık için 250 jeton gerekiyor. (Mevcut: $balance)")
+            return
+        }
+
+        if (hasTokens) {
+            prefs.tokens -= cost
+        } else {
+            prefs.coins -= cost
+        }
+
+        grantChestReward("250 Jetonluk Kozmik Sandık")
+        syncSaveToCloud()
+    }
+
+    private fun syncSaveToCloud() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val app = getApplication<Application>()
+                com.example.data.CloudSaveSyncManager(app).pushLocalToCloud()
+            } catch (e: Exception) {
+                // Fail-safe: Cloud save sync failure doesn't disrupt game flow
+            }
+        }
+    }
+
+    private fun grantChestReward(sourceTitle: String) {
         val roll = (1..100).random()
         val reward: ChestReward = when {
             roll <= 50 -> {
@@ -2525,7 +2576,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.addDiamonds(d)
                 ChestReward(
                     rarity = ThemeRarity.COMMON,
-                    title = "Sezon 2 Yankı Sandığı",
+                    title = sourceTitle,
                     subtitle = "$t Jeton ve $d Elmas kazandınız!",
                     tokens = t,
                     breakers = 0,
@@ -2540,8 +2591,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.addDiamonds(d)
                 ChestReward(
                     rarity = ThemeRarity.RARE,
-                    title = "Nadir Sezon Kristali",
-                    subtitle = "$t Jeton, 2 Kırıcı ve $d Elmas kazandınız!",
+                    title = "Nadir $sourceTitle",
+                    subtitle = "$t Jeton, 2 Matkap ve $d Elmas kazandınız!",
                     tokens = t,
                     breakers = 2,
                     diamonds = d
@@ -2556,8 +2607,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.unlockTheme("AURORA_EMERALD")
                 ChestReward(
                     rarity = ThemeRarity.EPIC,
-                    title = "Epik Sezon Matrisi",
-                    subtitle = "$t Jeton, 4 Kırıcı, $d Elmas ve 'Kutup Zümrüdü' Teması açıldı!",
+                    title = "Epik $sourceTitle",
+                    subtitle = "$t Jeton, 4 Matkap, $d Elmas ve 'Kutup Zümrüdü' Teması açıldı!",
                     tokens = t,
                     breakers = 4,
                     diamonds = d,
@@ -2573,8 +2624,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.unlockTheme("GOLDEN_PULSE")
                 ChestReward(
                     rarity = ThemeRarity.LEGENDARY,
-                    title = "Efsanevi Sezon 2 Zirvesi!",
-                    subtitle = "$t Jeton, 8 Kırıcı, $d Elmas ve Efsanevi 'Altın Lazer' Teması açıldı!",
+                    title = "Efsanevi $sourceTitle",
+                    subtitle = "$t Jeton, 8 Matkap, $d Elmas ve Efsanevi 'Altın Lazer' Teması açıldı!",
                     tokens = t,
                     breakers = 8,
                     diamonds = d,
@@ -2591,6 +2642,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 tokens = prefs.tokens,
                 echoBreakers = prefs.echoBreakers,
+                diamonds = prefs.diamonds,
+                coins = prefs.coins,
                 lastOpenedChestReward = reward
             )
         }
@@ -2620,7 +2673,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     private fun findNodeAtPoint(point: Point, nodes: List<Node>): Node? {
         return nodes
-            .filter { it.toPoint().distanceTo(point) <= nodeHitRadius }
+            .filter { it.toPoint().distanceTo(point) <= nodeHitRadius * 1.30f }
             .minByOrNull { it.toPoint().distanceTo(point) }
     }
 
@@ -2633,18 +2686,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     ): Node? {
         val distToLast = point.distanceTo(lastNode.toPoint())
 
-        // 1. Expected next target node in sequence
+        // 1. Expected next target node in sequence (smooth tactile snapping)
         val expectedNode = nodes.firstOrNull { it.id == expectedNextId }
+        var distToExpected = Float.MAX_VALUE
         if (expectedNode != null) {
-            val distToExpected = point.distanceTo(expectedNode.toPoint())
+            distToExpected = point.distanceTo(expectedNode.toPoint())
             val segLen = lastNode.toPoint().distanceTo(expectedNode.toPoint())
-            val captureRadius = (segLen * 0.50f).coerceIn(16f, 38f)
+            val captureRadius = (segLen * 0.58f).coerceIn(24f, 44f)
             if (distToExpected <= captureRadius && distToExpected < distToLast) {
                 return expectedNode
             }
         }
 
-        // 2. Returning specifically to previous node (User request: "örneğin önceki düğüme geri dönmesi bir yankı sayılsın")
+        // 2. Returning specifically to previous node
         if (visitedNodeIds.size >= 2) {
             val prevId = visitedNodeIds[visitedNodeIds.size - 2]
             val prevNode = nodes.firstOrNull { it.id == prevId }
@@ -2656,11 +2710,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
         }
 
-        // 3. User requirement: "düşün oyuncu" - Player cannot blindly drag through arbitrary nodes.
-        // If the pointer enters the vicinity of another node (wrong sequence or wrong target),
-        // capture that node so the game validates it and issues the correct feedback / echo penalty.
+        // 3. Sensitive check for incorrect node contact without triggering during clean paths
         val otherNode = nodes.firstOrNull { n ->
-            n.id != lastNode.id && point.distanceTo(n.toPoint()) <= 22f && point.distanceTo(n.toPoint()) < distToLast
+            if (n.id == lastNode.id || n.id == expectedNextId) return@firstOrNull false
+            val d = point.distanceTo(n.toPoint())
+            d <= 18f && d < distToLast && d < (distToExpected * 0.70f)
         }
         if (otherNode != null) {
             return otherNode
@@ -2848,6 +2902,24 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun setSupportVisible(visible: Boolean) {
         _uiState.update { it.copy(isSupportDialogVisible = visible) }
+    }
+
+    fun hasRatedOrDismissedLevel3Prompt(): Boolean {
+        return prefs.hasRatedOrDismissedLevel3Prompt
+    }
+
+    fun showRateAppDialog() {
+        _uiState.update { it.copy(isRateAppDialogVisible = true) }
+    }
+
+    fun dismissRateAppDialog() {
+        prefs.hasRatedOrDismissedLevel3Prompt = true
+        _uiState.update { it.copy(isRateAppDialogVisible = false) }
+    }
+
+    fun onRateAppClicked() {
+        prefs.hasRatedOrDismissedLevel3Prompt = true
+        _uiState.update { it.copy(isRateAppDialogVisible = false) }
     }
 
     fun updateProfile(avatarUri: String, customTitle: String) {

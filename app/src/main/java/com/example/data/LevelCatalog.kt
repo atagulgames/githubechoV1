@@ -142,14 +142,10 @@ object LevelCatalog {
         }
     }
 
-    /**
-     * Generates a complete set of 100 unique, guaranteed playable puzzle levels.
-     * Every level has mathematically distinct geometry, non-crossing solution path,
-     * and generous node spacing.
-     */
-    fun create100Levels(): List<LevelEntity> {
-        val list = ArrayList<LevelEntity>(TOTAL_LEVELS)
+    private val cachedLevelDataMap = java.util.concurrent.ConcurrentHashMap<Int, LevelData>()
 
+    private val cachedEntities: List<LevelEntity> by lazy {
+        val list = ArrayList<LevelEntity>(TOTAL_LEVELS)
         for (id in 1..TOTAL_LEVELS) {
             val levelData = buildLevelData(id)
             list.add(
@@ -172,11 +168,16 @@ object LevelCatalog {
                 )
             )
         }
-
-        return list
+        list
     }
 
-    fun create250Levels(): List<LevelEntity> = create100Levels()
+    /**
+     * Generates a complete set of 100 unique, guaranteed playable puzzle levels.
+     * Cached in memory for instant 0ms access without GC pressure.
+     */
+    fun create100Levels(): List<LevelEntity> = cachedEntities
+
+    fun create250Levels(): List<LevelEntity> = cachedEntities
 
     private fun serializeNodes(nodes: List<LevelNode>): String {
         return nodes.joinToString(";") {
@@ -308,6 +309,10 @@ object LevelCatalog {
 
     fun buildLevelData(id: Int): LevelData {
         val clampedId = id.coerceIn(1, TOTAL_LEVELS)
+        return cachedLevelDataMap.computeIfAbsent(clampedId) { computeLevelData(it) }
+    }
+
+    private fun computeLevelData(clampedId: Int): LevelData {
         val tierIndex = ((clampedId - 1) / 10).coerceIn(0, 9)
 
         // Default title in English (as requested: "Herşey başlangıçta ingilizce olacak")
