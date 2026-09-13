@@ -269,42 +269,41 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         checkInternetAndAdHealth()
         registerNetworkCallback()
 
-        // Ensure active authenticated session for user (connected to Render server & local vault)
+        // Check if user has an active, remembered authenticated session
         val currentToken = com.example.data.security.SecureTokenManager.getToken(application)
-        if (currentToken.isNullOrBlank() || !prefs.isAuthenticated || prefs.authenticatedUsername.isBlank()) {
-            val defaultUser = if (prefs.authenticatedUsername.isNotBlank()) prefs.authenticatedUsername else "EchofluxHero"
-            val defaultEmail = if (prefs.authenticatedEmail.isNotBlank()) prefs.authenticatedEmail else "f2jesteiletisim@gmail.com"
-            val defaultToken = "render_jwt_${System.currentTimeMillis()}_session"
-            com.example.data.security.SecureTokenManager.saveToken(application, defaultToken)
-            prefs.setAuthenticatedUser(
-                username = defaultUser,
-                remember = true,
-                passwordHash = "session_secured_hash",
-                email = defaultEmail,
-                fullName = defaultUser
-            )
-            prefs.rememberMe = true
-            prefs.isAuthenticated = true
+        val hasValidSavedSession = prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank() && !currentToken.isNullOrBlank()
+        if (hasValidSavedSession) {
+            val user = prefs.authenticatedUsername
             _uiState.update {
                 it.copy(
                     isAuthenticated = true,
-                    authenticatedUser = defaultUser,
+                    authenticatedUser = user,
                     rememberMe = true
                 )
             }
             viewModelScope.launch {
-                authRepo.registerOrUpdateExternalUser(defaultUser, defaultEmail, defaultUser)
-                try {
-                    renderLeaderboard.submitScore(defaultUser, prefs.trophies)
-                } catch (_: Exception) {}
+                authRepo.registerOrUpdateExternalUser(user, prefs.authenticatedEmail, user)
+                if (prefs.trophies > 0) {
+                    try {
+                        renderLeaderboard.submitScore(user, prefs.trophies)
+                    } catch (_: Exception) {}
+                }
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    isAuthenticated = false,
+                    authenticatedUser = "",
+                    rememberMe = prefs.rememberMe
+                )
             }
         }
 
         // Initialize LootLocker session and sync player score
         lootLocker.loginGuest(
             onSuccess = { _, _ ->
-                if (prefs.trophies > 0) {
-                    val user = prefs.authenticatedUsername.ifBlank { "Oyuncu" }
+                if (prefs.trophies > 0 && prefs.authenticatedUsername.isNotBlank()) {
+                    val user = prefs.authenticatedUsername
                     lootLocker.submitScore(user, prefs.trophies)
                 }
             }
@@ -698,7 +697,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         val app = getApplication<android.app.Application>()
         val token = com.example.data.security.SecureTokenManager.getToken(app)
-        val hasSavedSession = prefs.rememberMe && prefs.authenticatedUsername.isNotBlank() && !token.isNullOrBlank()
+        val hasSavedSession = prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank() && !token.isNullOrBlank()
 
         if (hasSavedSession) {
             _uiState.update {
@@ -788,6 +787,29 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 )
             }
             checkSeason2Status()
+        }
+    }
+
+    fun onLogout() {
+        prefs.clearAuthentication()
+        com.example.data.security.SecureTokenManager.clearToken(getApplication())
+        _uiState.update {
+            it.copy(
+                isAuthenticated = false,
+                authenticatedUser = "",
+                rememberMe = false,
+                screenState = ScreenState.LOGIN
+            )
+        }
+    }
+
+    fun requireAuthentication() {
+        _uiState.update {
+            it.copy(
+                isAuthenticated = false,
+                authenticatedUser = "",
+                screenState = ScreenState.LOGIN
+            )
         }
     }
 
@@ -1257,16 +1279,20 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         // Automatically submit score to Render PostgreSQL Leaderboard (and keep LootLocker sync)
         val currentTrophies = prefs.trophies
-        val currentUsername = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername.ifBlank { "Oyuncu" } }
-        lootLocker.submitScore(currentUsername, currentTrophies)
+        val currentUsername = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername }
+        if (currentUsername.isNotBlank()) {
+            lootLocker.submitScore(currentUsername, currentTrophies)
+        }
 
         if (lastSubmittedLevelIdForLeaderboard != state.level.levelId) {
             lastSubmittedLevelIdForLeaderboard = state.level.levelId
             viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    renderLeaderboard.submitScore(currentUsername, currentTrophies)
-                } catch (e: Exception) {
-                    // Fail-safe: Game continues seamlessly without error
+                if (currentUsername.isNotBlank()) {
+                    try {
+                        renderLeaderboard.submitScore(currentUsername, currentTrophies)
+                    } catch (e: Exception) {
+                        // Fail-safe: Game continues seamlessly without error
+                    }
                 }
                 try {
                     val app = getApplication<android.app.Application>()
@@ -2172,7 +2198,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isKvkkConsentAccepted = true
         val app = getApplication<android.app.Application>()
         val token = com.example.data.security.SecureTokenManager.getToken(app)
-        val hasSavedSession = prefs.rememberMe && prefs.authenticatedUsername.isNotBlank() && !token.isNullOrBlank()
+        val hasSavedSession = prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank() && !token.isNullOrBlank()
         _uiState.update {
             it.copy(
                 isKvkkConsentAccepted = true,
@@ -2835,10 +2861,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private fun loadLeaderboardData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLeaderboardRefreshing = true) }
-            val username = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername.ifBlank { "Oyuncu" } }
+            val username = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername }
 
             // Submit current trophies if any
-            if (prefs.trophies > 0) {
+            if (username.isNotBlank() && prefs.trophies > 0) {
                 renderLeaderboard.submitScore(username, prefs.trophies)
                 lootLocker.submitScore(username, prefs.trophies)
             }
@@ -2846,9 +2872,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             // Fetch live scores from Render PostgreSQL Leaderboard
             val renderResult = renderLeaderboard.fetchLeaderboard(currentUsername = username)
             val finalPlayers = if (renderResult.isSuccess && !renderResult.getOrNull().isNullOrEmpty()) {
-                val list = renderResult.getOrNull()!!
+                val list = renderResult.getOrNull()!!.filter { it.trophies > 0 }
                 val hasMe = list.any { it.isCurrentUser }
-                if (!hasMe) {
+                // Yalnızca kupa kasan (> 0) kullanıcılar liderlik tablosuna dahil edilir
+                if (!hasMe && prefs.trophies > 0) {
                     val me = com.example.model.LeaderboardPlayer(
                         id = "current_user",
                         rank = list.size + 1,
@@ -2865,15 +2892,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                     (list + me).sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
                 } else {
-                    list
+                    list.sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
                 }
             } else {
                 // Secondary fallback: Try LootLocker or curated local players if Render is offline
                 val remoteResult = lootLocker.fetchLeaderboard(count = 50, currentUsername = username)
                 if (remoteResult.isSuccess && !remoteResult.getOrNull().isNullOrEmpty()) {
-                    val remoteList = remoteResult.getOrNull()!!
+                    val remoteList = remoteResult.getOrNull()!!.filter { it.trophies > 0 }
                     val hasMe = remoteList.any { it.isCurrentUser }
-                    if (!hasMe) {
+                    if (!hasMe && prefs.trophies > 0) {
                         val me = com.example.model.LeaderboardPlayer(
                             id = "current_user",
                             rank = remoteList.size + 1,
@@ -2890,7 +2917,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         )
                         (remoteList + me).sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
                     } else {
-                        remoteList
+                        remoteList.sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
                     }
                 } else {
                     authRepo.getLeaderboardPlayers()
@@ -2934,7 +2961,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             val me = list.find { it.isCurrentUser } ?: com.example.model.LeaderboardPlayer(
                 id = "current_user",
                 rank = 1,
-                username = _uiState.value.authenticatedUser.ifBlank { "Oyuncu" },
+                username = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername },
                 avatarEmoji = "⚡",
                 title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
                 trophies = prefs.trophies,

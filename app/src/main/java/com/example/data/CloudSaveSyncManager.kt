@@ -70,8 +70,8 @@ class CloudSaveSyncManager(private val context: Context) {
             }
 
             // Sync with Render Global Leaderboard
-            val username = prefs.authenticatedUsername.ifBlank { "Oyuncu" }
-            if (merged.trophies > 0) {
+            val username = prefs.authenticatedUsername
+            if (username.isNotBlank() && merged.trophies > 0) {
                 try {
                     leaderboardService.submitScore(username, merged.trophies)
                 } catch (e: Exception) {
@@ -103,8 +103,8 @@ class CloudSaveSyncManager(private val context: Context) {
 
             val result = cloudService.postCloudSave(token, localSave)
 
-            val username = prefs.authenticatedUsername.ifBlank { "Oyuncu" }
-            if (prefs.trophies > 0) {
+            val username = prefs.authenticatedUsername
+            if (username.isNotBlank() && prefs.trophies > 0) {
                 leaderboardService.submitScore(username, prefs.trophies)
             }
 

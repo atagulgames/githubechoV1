@@ -201,7 +201,7 @@ fun EchoMainMenu(
                         Spacer(modifier = Modifier.width(6.dp))
                         Column {
                             Text(
-                                text = state.authenticatedUser.ifBlank { "Oyuncu" },
+                                text = state.authenticatedUser,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary,

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,17 @@ fun EchoGameScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // Strict gatekeeper: Anyone not authenticated is immediately routed to registration/login
+    LaunchedEffect(state.isAuthenticated, state.screenState) {
+        if (!state.isAuthenticated &&
+            state.screenState != ScreenState.INTRO &&
+            state.screenState != ScreenState.LEGAL_CONSENT &&
+            state.screenState != ScreenState.LOGIN
+        ) {
+            viewModel.requireAuthentication()
+        }
+    }
 
     // Handle system back button to return to Main Menu from game (disabled during Intro, Legal Consent and Login)
     BackHandler(

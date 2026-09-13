@@ -33,13 +33,13 @@ class AuthRepository(context: Context) {
         val existingUserByName = userDao.getUserByUsername(username)
             ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.username.equals(username, ignoreCase = true) }
         if (existingUserByName != null) {
-            return@withContext Result.failure(IllegalStateException("Zaten bu kullanıcı adı kullanılıyor!"))
+            return@withContext Result.failure(IllegalStateException("Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."))
         }
 
         val existingUserByEmailAsName = userDao.getUserByEmail(username)
             ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.email.isNotBlank() && it.email.equals(username, ignoreCase = true) }
         if (existingUserByEmailAsName != null) {
-            return@withContext Result.failure(IllegalStateException("Zaten böyle bir hesap var veya zaten bu kullanıcı adı kullanılıyor!"))
+            return@withContext Result.failure(IllegalStateException("Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."))
         }
 
         // If email provided, check if email is already taken
@@ -48,7 +48,7 @@ class AuthRepository(context: Context) {
                 ?: userDao.getUserByUsername(email)
                 ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.email.equals(email, ignoreCase = true) || it.username.equals(email, ignoreCase = true) }
             if (existingEmail != null) {
-                return@withContext Result.failure(IllegalStateException("Zaten böyle bir hesap var!"))
+                return@withContext Result.failure(IllegalStateException("Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."))
             }
         }
 
@@ -212,36 +212,39 @@ class AuthRepository(context: Context) {
     }
 
     suspend fun getLeaderboardPlayers(): List<com.example.model.LeaderboardPlayer> = withContext(Dispatchers.IO) {
-        val activeUsername = preferences.authenticatedUsername.ifBlank { "Oyuncu" }
+        val activeUsername = preferences.authenticatedUsername
         val dbUsers = userDao.getAllUsers()
 
         val playersList = ArrayList<com.example.model.LeaderboardPlayer>()
 
-        // 1. Add active local user
+        // 1. Add active local user only if authenticated and has earned trophies (> 0)
         val myRecords = preferences.getLevelRecords()
         val myCompletedCount = preferences.getCompletedLevels().size
-        val myPlayer = com.example.model.LeaderboardPlayer(
-            id = "current_user",
-            rank = 1,
-            username = activeUsername,
-            avatarEmoji = "⚡",
-            avatarUri = preferences.userAvatarUri,
-            title = preferences.userCustomTitle.ifBlank {
-                if (preferences.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi"
-            },
-            trophies = preferences.trophies,
-            totalEchoes = preferences.totalEchoes,
-            totalPlayTimeSec = preferences.totalPlayTimeSec,
-            maxCombo = preferences.maxCombo,
-            completedLevelsCount = myCompletedCount,
-            isCurrentUser = true,
-            levelRecords = myRecords
-        )
-        playersList.add(myPlayer)
+        if (activeUsername.isNotBlank() && preferences.trophies > 0) {
+            val myPlayer = com.example.model.LeaderboardPlayer(
+                id = "current_user",
+                rank = 1,
+                username = activeUsername,
+                avatarEmoji = "⚡",
+                avatarUri = preferences.userAvatarUri,
+                title = preferences.userCustomTitle.ifBlank {
+                    if (preferences.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi"
+                },
+                trophies = preferences.trophies,
+                totalEchoes = preferences.totalEchoes,
+                totalPlayTimeSec = preferences.totalPlayTimeSec,
+                maxCombo = preferences.maxCombo,
+                completedLevelsCount = myCompletedCount,
+                isCurrentUser = true,
+                levelRecords = myRecords
+            )
+            playersList.add(myPlayer)
+        }
 
-        // 2. Add other registered users from Room
+        // 2. Add other registered users from Room only if they have earned trophies (> 0)
         for (u in dbUsers) {
             if (u.username.equals(activeUsername, ignoreCase = true)) continue
+            if (u.trophies <= 0) continue
             val completedCount = if (u.completedLevelsCsv.isNotBlank()) u.completedLevelsCsv.split(",").size else 0
             val uRecords = parseLevelStatsCsv(u.levelStatsCsv)
             playersList.add(
@@ -263,69 +266,12 @@ class AuthRepository(context: Context) {
             )
         }
 
-        // 3. Global rival champions to ensure rich global competition
-        val globalRivals = listOf(
-            GlobalRivalTemplate("👑 Can_Echo", "🇹🇷", "Küresel Büyükusta", 3420, 10, 18200L, 25, 99),
-            GlobalRivalTemplate("⚡ AlexVortex", "🇺🇸", "Kusursuz Gölge", 3180, 8, 15400L, 22, 94),
-            GlobalRivalTemplate("🚀 Lucas_M", "🇩🇪", "Yıldızlararası Rehber", 2940, 14, 13650L, 20, 89),
-            GlobalRivalTemplate("🎯 Kenji_Lines", "🇯🇵", "Hızlı Hat Ustası", 2710, 12, 11980L, 19, 85),
-            GlobalRivalTemplate("🧘 Oliver_99", "🇬🇧", "Zen Çizgici", 2520, 7, 10500L, 18, 79),
-            GlobalRivalTemplate("✨ Minho_Star", "🇰🇷", "Fotonik Virtüöz", 2350, 19, 9400L, 16, 74),
-            GlobalRivalTemplate("🎨 Camille_Art", "🇫🇷", "Geometri Kraliçesi", 2180, 22, 8600L, 15, 69),
-            GlobalRivalTemplate("⚽ Gabriel_R", "🇧🇷", "Samba Refleks", 2010, 18, 7900L, 14, 64),
-            GlobalRivalTemplate("🔥 Mehmet_Pro", "🇹🇷", "Anadolu Fatihi", 1880, 26, 7150L, 13, 59),
-            GlobalRivalTemplate("🛡️ Mateo_Arg", "🇦🇷", "Çelik Muhafız", 1720, 31, 6450L, 12, 54),
-            GlobalRivalTemplate("🌟 Sofia_Milano", "🇮🇹", "Zarif Çizgici", 1580, 24, 5800L, 11, 49),
-            GlobalRivalTemplate("🏔️ Elena_Nordic", "🇳🇴", "Buz Kaşifi", 1430, 29, 5100L, 10, 44),
-            GlobalRivalTemplate("🌀 Zeynep_Echo", "🇹🇷", "Boyut Bükücü", 1290, 33, 4450L, 9, 39),
-            GlobalRivalTemplate("🦅 Liam_Canada", "🇨🇦", "Kutup Kartalı", 1120, 38, 3800L, 8, 34),
-            GlobalRivalTemplate("💫 Arda_Yıldız", "🇹🇷", "Genç Yetenek", 950, 42, 3100L, 7, 28)
-        )
-
-        for (rival in globalRivals) {
-            // Generate realistic level-by-level performance history for this global player
-            val records = ArrayList<com.example.model.LevelRecord>()
-            for (lvl in 1..rival.levelsCleared) {
-                val lvlTitle = LevelCatalog.buildLevelData(lvl).title
-                val echoes = if (lvl % 4 == 0) 1 else 0 // mostly 0-echo clears for top players
-                val timeSec = 5.2f + ((lvl * 7) % 9) + ((lvl % 5) * 0.3f)
-                val tr = 30 + 30 + (if (echoes == 0) 50 else 0) + 10
-                records.add(
-                    com.example.model.LevelRecord(
-                        levelId = lvl,
-                        levelTitle = lvlTitle,
-                        echoesUsed = echoes,
-                        timeTakenSec = timeSec,
-                        stars = 3,
-                        trophiesEarned = tr
-                    )
-                )
-            }
-
-            playersList.add(
-                com.example.model.LeaderboardPlayer(
-                    id = "global_${rival.name}",
-                    rank = 1,
-                    username = rival.name,
-                    avatarEmoji = rival.avatar,
-                    title = rival.title,
-                    trophies = rival.trophies,
-                    totalEchoes = rival.echoes,
-                    totalPlayTimeSec = rival.playTimeSec,
-                    maxCombo = rival.maxCombo,
-                    completedLevelsCount = rival.levelsCleared,
-                    isCurrentUser = false,
-                    levelRecords = records
-                )
-            )
-        }
-
         // Sort descending by trophies, then ascending by totalEchoes
         playersList.sortWith(compareByDescending<com.example.model.LeaderboardPlayer> { it.trophies }
             .thenBy { it.totalEchoes })
 
         // Assign ranked indices 1, 2, 3...
-        playersList.mapIndexed { index, player ->
+        return@withContext playersList.mapIndexed { index, player ->
             player.copy(rank = index + 1)
         }
     }
@@ -355,17 +301,6 @@ class AuthRepository(context: Context) {
         }
         return list.sortedBy { it.levelId }
     }
-
-    private data class GlobalRivalTemplate(
-        val name: String,
-        val avatar: String,
-        val title: String,
-        val trophies: Int,
-        val echoes: Int,
-        val playTimeSec: Long,
-        val maxCombo: Int,
-        val levelsCleared: Int
-    )
 
     suspend fun saveActiveUserTheme(isDark: Boolean) = withContext(Dispatchers.IO) {
         val activeUsername = preferences.authenticatedUsername

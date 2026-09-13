@@ -364,44 +364,37 @@ app.post('/leaderboard', async (req, res) => {
 // (fullName, email, password -> id, fullName, email, token)
 // -------------------------------------------------------------
 app.post(['/auth/register', '/register', '/api/auth/register', '/api/register'], authRateLimiter, async (req, res) => {
-  const { fullName, email, password } = req.body || {};
+  const { fullName, email, password, username } = req.body || {};
 
-  // Validate fullName
-  if (typeof fullName !== 'string' || fullName.trim().length < 2) {
+  const cleanFullName = (username || fullName || '').trim();
+  if (!cleanFullName || cleanFullName.length < 2) {
     return res.status(400).json({
       success: false,
-      error: 'Ad Soyad en az 2 karakter olmalıdır'
+      error: 'Kullanıcı adı en az 2 karakter olmalıdır'
     });
   }
-  const cleanFullName = fullName.trim();
   if (cleanFullName.length > 100) {
     return res.status(400).json({
       success: false,
-      error: 'Ad Soyad en fazla 100 karakter olabilir'
+      error: 'Kullanıcı adı en fazla 100 karakter olabilir'
     });
   }
 
-  // Validate email
-  if (typeof email !== 'string' || email.trim().length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'Geçerli bir e-posta adresi giriniz'
-    });
+  // Validate or synthesize email
+  let cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) {
+    cleanEmail = `${cleanFullName.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}@echoflux.game`;
   }
-  const cleanEmail = email.trim().toLowerCase();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(cleanEmail) || cleanEmail.length > 255) {
-    return res.status(400).json({
-      success: false,
-      error: 'Lütfen geçerli bir e-posta adresi giriniz'
-    });
+    cleanEmail = `${cleanFullName.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}@echoflux.game`;
   }
 
-  // Validate password (min 8 characters)
-  if (typeof password !== 'string' || password.length < 8) {
+  // Validate password (min 4 characters)
+  if (typeof password !== 'string' || password.length < 4) {
     return res.status(400).json({
       success: false,
-      error: 'Şifre en az 8 karakter olmalıdır'
+      error: 'Şifre en az 4 karakter olmalıdır'
     });
   }
   if (password.length > 128) {
@@ -415,12 +408,15 @@ app.post(['/auth/register', '/register', '/api/auth/register', '/api/register'],
     const passwordHash = await bcrypt.hash(password, 12);
 
     if (pool) {
-      // Check existing email
-      const checkUser = await pool.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
+      // Check existing username or email
+      const checkUser = await pool.query(
+        'SELECT id FROM users WHERE LOWER(full_name) = LOWER($1) OR LOWER(email) = LOWER($2)',
+        [cleanFullName, cleanEmail]
+      );
       if (checkUser.rows.length > 0) {
         return res.status(409).json({
           success: false,
-          error: 'Bu e-posta adresi zaten bir hesaba kayıtlı'
+          error: 'Bu kullanıcı adı zaten kullanılıyor'
         });
       }
 
@@ -460,10 +456,11 @@ app.post(['/auth/register', '/register', '/api/auth/register', '/api/register'],
     }
 
     // Memory fallback
-    if (memoryStore.userEmailMap.has(cleanEmail)) {
+    if (memoryStore.userEmailMap.has(cleanEmail) ||
+        Array.from(memoryStore.users.values()).some(u => u.full_name.toLowerCase() === cleanFullName.toLowerCase())) {
       return res.status(409).json({
         success: false,
-        error: 'Bu e-posta adresi zaten bir hesaba kayıtlı'
+        error: 'Bu kullanıcı adı zaten kullanılıyor'
       });
     }
 
@@ -514,16 +511,17 @@ app.post(['/auth/register', '/register', '/api/auth/register', '/api/register'],
 });
 
 // -------------------------------------------------------------
-// 5. POST /auth/login - Login with email and password
-// (email, password -> id, fullName, email, token)
+// 5. POST /auth/login - Login with username or email and password
+// (username/email, password -> id, fullName, email, token)
 // -------------------------------------------------------------
 app.post(['/auth/login', '/login', '/api/auth/login', '/api/login'], authRateLimiter, async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, username, password } = req.body || {};
+  const identifier = (username || email || '').trim().toLowerCase();
 
-  if (typeof email !== 'string' || !email.trim()) {
+  if (!identifier) {
     return res.status(400).json({
       success: false,
-      error: 'Lütfen e-posta adresinizi giriniz'
+      error: 'Lütfen kullanıcı adınızı giriniz'
     });
   }
 
@@ -534,27 +532,28 @@ app.post(['/auth/login', '/login', '/api/auth/login', '/api/login'], authRateLim
     });
   }
 
-  const cleanEmail = email.trim().toLowerCase();
-
   try {
     let user = null;
 
     if (pool) {
       const userRes = await pool.query(
-        'SELECT id, full_name, email, password_hash FROM users WHERE email = $1',
-        [cleanEmail]
+        'SELECT id, full_name, email, password_hash FROM users WHERE LOWER(email) = $1 OR LOWER(full_name) = $1',
+        [identifier]
       );
       if (userRes.rows.length > 0) {
         user = userRes.rows[0];
       }
     } else {
-      user = memoryStore.userEmailMap.get(cleanEmail);
+      user = memoryStore.userEmailMap.get(identifier) ||
+             Array.from(memoryStore.users.values()).find(u =>
+               u.email.toLowerCase() === identifier || u.full_name.toLowerCase() === identifier
+             );
     }
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: 'E-posta veya şifre hatalı'
+        error: 'Kullanıcı adı veya şifre hatalı'
       });
     }
 
@@ -562,7 +561,7 @@ app.post(['/auth/login', '/login', '/api/auth/login', '/api/login'], authRateLim
     if (!passwordMatch) {
       return res.status(401).json({
         success: false,
-        error: 'E-posta veya şifre hatalı'
+        error: 'Kullanıcı adı veya şifre hatalı'
       });
     }
 

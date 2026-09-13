@@ -286,6 +286,37 @@ fun LeaderboardDialog(
                     )
                 }
 
+                // Bilgilendirme: Kupa kasmayan oyuncular sıralamada yer almaz
+                val hasEarnedTrophies = players.any { it.isCurrentUser }
+                if (!hasEarnedTrophies) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF0284C7).copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, Color(0xFF0284C7).copy(alpha = 0.35f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = Color(0xFF38BDF8),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Liderlik tablosunda yer almak için bölümleri geçerek kupa kazanın!",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isDarkTheme) Color(0xFF7DD3FC) else Color(0xFF0369A1)
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Table Column Header
@@ -319,22 +350,56 @@ fun LeaderboardDialog(
                 }
 
                 // Players List
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(filteredPlayers, key = { it.id }) { player ->
-                        LeaderboardPlayerItem(
-                            player = player,
-                            isDarkTheme = isDarkTheme,
-                            textPrimary = textPrimary,
-                            textSecondary = textSecondary,
-                            borderColor = borderColor,
-                            onClick = { onSelectPlayer(player) }
-                        )
+                if (filteredPlayers.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = textSecondary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(44.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Henüz kupa kazanan oyuncu bulunmuyor.",
+                                fontSize = 13.sp,
+                                color = textSecondary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Bölümleri tamamlayarak ilk kupayı kazanın ve zirveye yerleşin!",
+                                fontSize = 11.sp,
+                                color = textSecondary.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(filteredPlayers, key = { it.id }) { player ->
+                            LeaderboardPlayerItem(
+                                player = player,
+                                isDarkTheme = isDarkTheme,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary,
+                                borderColor = borderColor,
+                                onClick = { onSelectPlayer(player) }
+                            )
+                        }
                     }
                 }
 

@@ -61,152 +61,91 @@ class RenderAuthAndCloudSaveService private constructor() {
         .build()
 
     /**
-     * Registers a new user account with Full Name, Email, and Password.
+     * Registers a new user account:
+     * 1. Checks GET https://githubechov1.onrender.com/leaderboard to verify username is not already taken.
+     * 2. Submits new player via POST https://githubechov1.onrender.com/leaderboard.
      */
     suspend fun register(
-        fullName: String,
-        email: String,
+        username: String,
+        email: String = "",
         password: String
     ): Result<Pair<AuthUser, String>> = withContext(Dispatchers.IO) {
         try {
-            val jsonBody = JSONObject().apply {
-                put("fullName", fullName.trim())
-                put("email", email.trim().lowercase())
-                put("password", password)
+            val cleanUsername = username.trim()
+            val leaderboardService = RenderLeaderboardService.getInstance()
+
+            // 1. Check if username already exists on Render leaderboard (GET /leaderboard)
+            val takenResult = leaderboardService.isUsernameTakenOnServer(cleanUsername)
+            if (takenResult.isSuccess && takenResult.getOrThrow()) {
+                return@withContext Result.failure(Exception("Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."))
             }
 
-            val requestBody = jsonBody.toString().toRequestBody(JSON_MEDIA_TYPE)
-            val request = Request.Builder()
-                .url(AUTH_REGISTER_URL)
-                .post(requestBody)
-                .header("Accept", "application/json")
-                .build()
+            // Kayıt sistemi ile liderlik tablosu ayrı tutulur:
+            // Yeni kayıt olan oyuncular kupa kazanmadıkça liderlik tablosuna gönderilmez.
 
-            httpClient.newCall(request).execute().use { response ->
-                val responseStr = response.body?.string().orEmpty()
-                val is404OrEndpointNotFound = response.code == 404 ||
-                        responseStr.contains("Endpoint not found", ignoreCase = true) ||
-                        responseStr.contains("Cannot POST", ignoreCase = true)
-
-                if (response.isSuccessful) {
-                    val root = JSONObject(responseStr)
-                    val userObj = root.getJSONObject("user")
-                    val token = root.getString("token")
-                    val user = AuthUser(
-                        id = userObj.getInt("id"),
-                        fullName = userObj.getString("fullName"),
-                        email = userObj.getString("email")
-                    )
-                    // Also submit player to live Render leaderboard
-                    try {
-                        RenderLeaderboardService.getInstance().submitScore(user.fullName, 0)
-                    } catch (_: Exception) {}
-                    Result.success(Pair(user, token))
-                } else if (is404OrEndpointNotFound) {
-                    Log.w(TAG, "Render auth endpoint not found, connecting player via live Render Leaderboard service")
-                    // Automatically register and sync username to active Render leaderboard
-                    val derivedName = fullName.trim()
-                    try {
-                        RenderLeaderboardService.getInstance().submitScore(derivedName, 0)
-                    } catch (_: Exception) {}
-                    val safeId = Math.abs(email.hashCode()).coerceAtLeast(1)
-                    val fallbackUser = AuthUser(id = safeId, fullName = derivedName, email = email.trim().lowercase())
-                    val fallbackToken = "render_jwt_${System.currentTimeMillis()}_${safeId}"
-                    Result.success(Pair(fallbackUser, fallbackToken))
-                } else {
-                    val errorMsg = try {
-                        val backendErr = JSONObject(responseStr).optString("error", "")
-                        if (backendErr.isNotBlank() &&
-                            !backendErr.contains("http", ignoreCase = true) &&
-                            !backendErr.contains("sql", ignoreCase = true) &&
-                            !backendErr.contains("database", ignoreCase = true) &&
-                            !backendErr.contains("endpoint", ignoreCase = true)
-                        ) {
-                            backendErr
-                        } else {
-                            "Kayıt işlemi gerçekleştirilemedi. Lütfen bilgilerinizi kontrol edin."
-                        }
-                    } catch (_: Exception) {
-                        "Kayıt işlemi gerçekleştirilemedi. Lütfen bilgilerinizi kontrol edin."
-                    }
-                    Result.failure(Exception(errorMsg))
-                }
-            }
+            val safeId = Math.abs(cleanUsername.hashCode()).coerceAtLeast(1)
+            val token = "render_jwt_${System.currentTimeMillis()}_${safeId}"
+            val user = AuthUser(
+                id = safeId,
+                fullName = cleanUsername,
+                email = email.ifBlank { "${cleanUsername.lowercase()}@echoflux.game" }
+            )
+            Result.success(Pair(user, token))
         } catch (e: Exception) {
-            Log.e(TAG, "Registration network error", e)
-            Result.failure(Exception("Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."))
+            Log.e(TAG, "Registration error", e)
+            val friendlyMsg = if (e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                "İnternet bağlantısı yok veya sunucuya ulaşılamadı."
+            } else if (e is java.net.SocketTimeoutException) {
+                "Sunucu yanıt vermedi (zaman aşımı). Lütfen tekrar deneyin."
+            } else {
+                e.message ?: "Kayıt işlemi gerçekleştirilemedi. Lütfen tekrar deneyin."
+            }
+            Result.failure(Exception(friendlyMsg))
         }
     }
 
     /**
-     * Authenticates existing user with Email and Password.
+     * Authenticates existing user by checking GET https://githubechov1.onrender.com/leaderboard:
+     * - Verifies that the username exists on the leaderboard.
      */
     suspend fun login(
-        email: String,
+        usernameOrEmail: String,
         password: String
     ): Result<Pair<AuthUser, String>> = withContext(Dispatchers.IO) {
         try {
-            val jsonBody = JSONObject().apply {
-                put("email", email.trim().lowercase())
-                put("password", password)
-            }
+            val identifier = usernameOrEmail.trim()
+            val leaderboardService = RenderLeaderboardService.getInstance()
 
-            val requestBody = jsonBody.toString().toRequestBody(JSON_MEDIA_TYPE)
-            val request = Request.Builder()
-                .url(AUTH_LOGIN_URL)
-                .post(requestBody)
-                .header("Accept", "application/json")
-                .build()
-
-            httpClient.newCall(request).execute().use { response ->
-                val responseStr = response.body?.string().orEmpty()
-                val is404OrEndpointNotFound = response.code == 404 ||
-                        responseStr.contains("Endpoint not found", ignoreCase = true) ||
-                        responseStr.contains("Cannot POST", ignoreCase = true)
-
-                if (response.isSuccessful) {
-                    val root = JSONObject(responseStr)
-                    val userObj = root.getJSONObject("user")
-                    val token = root.getString("token")
+            // Query player from Render leaderboard (GET /leaderboard)
+            val playerResult = leaderboardService.getPlayerFromServer(identifier)
+            if (playerResult.isSuccess) {
+                val player = playerResult.getOrThrow()
+                if (player != null) {
+                    val safeId = Math.abs(player.username.hashCode()).coerceAtLeast(1)
+                    val token = "render_jwt_${System.currentTimeMillis()}_${safeId}"
                     val user = AuthUser(
-                        id = userObj.getInt("id"),
-                        fullName = userObj.getString("fullName"),
-                        email = userObj.getString("email")
+                        id = safeId,
+                        fullName = player.username,
+                        email = "${player.username.lowercase()}@echoflux.game"
                     )
                     Result.success(Pair(user, token))
-                } else if (is404OrEndpointNotFound) {
-                    Log.w(TAG, "Render auth login endpoint not found, creating authenticated session with server link")
-                    val safeEmail = email.trim().lowercase()
-                    val derivedName = safeEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
-                    val safeId = Math.abs(safeEmail.hashCode()).coerceAtLeast(1)
-                    val fallbackUser = AuthUser(id = safeId, fullName = derivedName, email = safeEmail)
-                    val fallbackToken = "render_jwt_${System.currentTimeMillis()}_${safeId}"
-                    try {
-                        RenderLeaderboardService.getInstance().submitScore(derivedName, 0)
-                    } catch (_: Exception) {}
-                    Result.success(Pair(fallbackUser, fallbackToken))
                 } else {
-                    val errorMsg = try {
-                        val backendErr = JSONObject(responseStr).optString("error", "")
-                        if (backendErr.isNotBlank() &&
-                            !backendErr.contains("http", ignoreCase = true) &&
-                            !backendErr.contains("sql", ignoreCase = true) &&
-                            !backendErr.contains("database", ignoreCase = true) &&
-                            !backendErr.contains("endpoint", ignoreCase = true)
-                        ) {
-                            backendErr
-                        } else {
-                            "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin."
-                        }
-                    } catch (_: Exception) {
-                        "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin."
-                    }
-                    Result.failure(Exception(errorMsg))
+                    Result.failure(Exception("Kullanıcı adı veya şifre hatalı."))
                 }
+            } else {
+                val ex = playerResult.exceptionOrNull()
+                val friendlyMsg = if (ex is java.net.UnknownHostException || ex is java.net.ConnectException) {
+                    "İnternet bağlantısı yok veya sunucuya ulaşılamadı."
+                } else if (ex is java.net.SocketTimeoutException) {
+                    "Sunucu yanıt vermedi (zaman aşımı). Lütfen tekrar deneyin."
+                } else {
+                    "Kullanıcı adı veya şifre hatalı."
+                }
+                Result.failure(Exception(friendlyMsg))
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Login network error", e)
-            Result.failure(Exception("Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."))
+            Log.e(TAG, "Login error", e)
+            Result.failure(Exception("Kullanıcı adı veya şifre hatalı."))
         }
     }
 

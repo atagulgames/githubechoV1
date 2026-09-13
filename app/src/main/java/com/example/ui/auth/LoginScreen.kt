@@ -106,20 +106,21 @@ fun LoginScreen(
     val syncManager = remember { CloudSaveSyncManager(context) }
     val prefs = remember { EchoPreferences(context) }
 
-    var selectedTab by remember { mutableStateOf(AuthTab.LOGIN) }
+    val hasExistingUser = prefs.authenticatedUsername.isNotBlank() || initialUsername.isNotBlank()
+    var selectedTab by remember { mutableStateOf(AuthTab.REGISTER) }
 
-    // Login Fields (Sadece E-posta ve Şifre)
-    var loginEmail by remember { mutableStateOf(prefs.authenticatedEmail.ifBlank { initialUsername }) }
+    // Login Fields (Kullanıcı Adı ve Şifre) - Varsayılan hesap verilmez
+    var loginUsername by remember { mutableStateOf(if (prefs.rememberMe && prefs.isAuthenticated) prefs.authenticatedUsername else "") }
     var loginPassword by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(initialRememberMe) }
     var loginPasswordVisible by remember { mutableStateOf(false) }
 
-    // Register Fields (Ad Soyad, E-posta, Şifre, Şifre Tekrar)
-    var registerFullName by remember { mutableStateOf("") }
-    var registerEmail by remember { mutableStateOf("") }
+    // Register Fields (Kullanıcı Adı, Şifre, Şifre Tekrar)
+    var registerUsername by remember { mutableStateOf("") }
     var registerPassword by remember { mutableStateOf("") }
     var registerConfirmPassword by remember { mutableStateOf("") }
     var registerPasswordVisible by remember { mutableStateOf(false) }
+    var registerConfirmPasswordVisible by remember { mutableStateOf(false) }
 
     // Feedback State
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -131,33 +132,18 @@ fun LoginScreen(
         HarmonicAudioEngine.playLoginEffect(context)
     }
 
-    fun sanitizeErrorMessage(raw: String?): String {
-        if (raw.isNullOrBlank()) return "Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."
-        val lower = raw.lowercase()
-        if (lower.contains("http") || lower.contains("render") || lower.contains("server") ||
-            lower.contains("sunucu") || lower.contains("database") || lower.contains("postgres") ||
-            lower.contains("sql") || lower.contains("jwt") || lower.contains("token") ||
-            lower.contains("api") || lower.contains("timeout") || lower.contains("exception") ||
-            lower.contains("connection refused") || lower.contains("failed to connect") ||
-            lower.contains("503") || lower.contains("500") || lower.contains("502") || lower.contains("404") ||
-            lower.contains("401") || lower.contains("403")) {
-            return "Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."
-        }
-        return raw
-    }
-
     fun handleLogin() {
         if (isLoading) return
-        val email = loginEmail.trim().lowercase()
+        val username = loginUsername.trim()
         val password = loginPassword.trim()
 
-        if (email.isBlank()) {
-            errorMessage = "Lütfen e-posta adresinizi girin."
+        if (username.isBlank()) {
+            errorMessage = "Kullanıcı adı boş bırakılamaz."
             HarmonicAudioEngine.playHataSound()
             return
         }
-        if (password.length < 6) {
-            errorMessage = "Şifre en az 6 karakter olmalıdır."
+        if (password.isBlank()) {
+            errorMessage = "Şifre boş bırakılamaz."
             HarmonicAudioEngine.playHataSound()
             return
         }
@@ -168,12 +154,12 @@ fun LoginScreen(
 
         coroutineScope.launch {
             // 1. First attempt login via Render Cloud Backend
-            val cloudResult = cloudAuthService.login(email, password)
+            val cloudResult = cloudAuthService.login(username, password)
             if (cloudResult.isSuccess) {
                 val (user, token) = cloudResult.getOrThrow()
                 SecureTokenManager.saveToken(context, token)
 
-                val derivedUsername = if (user.fullName.isNotBlank()) user.fullName else email.substringBefore("@")
+                val derivedUsername = if (user.fullName.isNotBlank()) user.fullName else username
                 prefs.setAuthenticatedUser(
                     username = derivedUsername,
                     remember = rememberMe,
@@ -182,29 +168,40 @@ fun LoginScreen(
                     fullName = user.fullName
                 )
 
-                // Sync with local account cache
-                authRepository.registerOrUpdateExternalUser(
-                    username = derivedUsername,
-                    email = user.email,
-                    fullName = user.fullName
-                )
+                // Sync with local account cache with password
+                val existingAcc = authRepository.getUserAccount(derivedUsername)
+                if (existingAcc == null) {
+                    authRepository.register(
+                        usernameInput = derivedUsername,
+                        emailInput = user.email,
+                        passwordInput = password
+                    )
+                } else {
+                    authRepository.registerOrUpdateExternalUser(
+                        username = derivedUsername,
+                        email = user.email,
+                        fullName = user.fullName
+                    )
+                }
 
                 // Synchronize Cloud Save
                 syncManager.syncOnLogin(token)
 
-                // Also update score on Render leaderboard
-                coroutineScope.launch(Dispatchers.IO) {
-                    try {
-                        com.example.data.RenderLeaderboardService.getInstance().submitScore(derivedUsername, prefs.trophies)
-                    } catch (_: Exception) {}
+                // Also update score on Render leaderboard only if player has earned trophies (> 0)
+                if (prefs.trophies > 0) {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        try {
+                            com.example.data.RenderLeaderboardService.getInstance().submitScore(derivedUsername, prefs.trophies)
+                        } catch (_: Exception) {}
+                    }
                 }
 
                 isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
                 onLoginSuccess(derivedUsername, rememberMe)
             } else {
-                // 2. Fallback to local persistent auth
-                val localResult = authRepository.login(email, password, rememberMe)
+                // 2. Fallback to local persistent auth (offline support or local user)
+                val localResult = authRepository.login(username, password, rememberMe)
                 if (localResult.isSuccess) {
                     val localUser = localResult.getOrThrow()
                     val token = SecureTokenManager.getToken(context) ?: "render_jwt_${System.currentTimeMillis()}"
@@ -215,13 +212,15 @@ fun LoginScreen(
                         remember = rememberMe,
                         passwordHash = localUser.passwordHash,
                         email = localUser.email,
-                        fullName = localUser.fullName
+                        fullName = localUser.username
                     )
 
-                    coroutineScope.launch(Dispatchers.IO) {
-                        try {
-                            com.example.data.RenderLeaderboardService.getInstance().submitScore(localUser.username, prefs.trophies)
-                        } catch (_: Exception) {}
+                    if (prefs.trophies > 0) {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                com.example.data.RenderLeaderboardService.getInstance().submitScore(localUser.username, prefs.trophies)
+                            } catch (_: Exception) {}
+                        }
                     }
 
                     isLoading = false
@@ -229,11 +228,21 @@ fun LoginScreen(
                     onLoginSuccess(localUser.username, rememberMe)
                 } else {
                     isLoading = false
-                    val localError = localResult.exceptionOrNull()?.message.orEmpty()
+                    val cloudErr = cloudResult.exceptionOrNull()?.message.orEmpty()
+                    val localErr = localResult.exceptionOrNull()?.message.orEmpty()
+
                     errorMessage = when {
-                        localError.contains("şifre", ignoreCase = true) -> "Hatalı şifre girdiniz."
-                        localError.contains("bulunamadı", ignoreCase = true) -> "Bu hesap bulunamadı. Lütfen 'Kayıt Ol' sekmesinden kaydolun."
-                        else -> "Giriş yapılamadı. Bilgilerinizi kontrol edip tekrar deneyin veya yeni hesap açın."
+                        cloudErr.contains("hatalı", ignoreCase = true) || localErr.contains("şifre", ignoreCase = true) -> {
+                            "Kullanıcı adı veya şifre hatalı."
+                        }
+                        cloudErr.contains("İnternet", ignoreCase = true) && localErr.contains("bulunamadı", ignoreCase = true) -> {
+                            "İnternet bağlantısı yok veya sunucuya ulaşılamadı."
+                        }
+                        localErr.contains("bulunamadı", ignoreCase = true) -> {
+                            "Kullanıcı adı veya şifre hatalı."
+                        }
+                        cloudErr.isNotBlank() -> cloudErr
+                        else -> "Kullanıcı adı veya şifre hatalı."
                     }
                     HarmonicAudioEngine.playHataSound()
                 }
@@ -243,29 +252,37 @@ fun LoginScreen(
 
     fun handleRegister() {
         if (isLoading) return
-        val fullName = registerFullName.trim()
-        val email = registerEmail.trim().lowercase()
+        val username = registerUsername.trim()
         val password = registerPassword.trim()
         val confirmPassword = registerConfirmPassword.trim()
 
-        if (fullName.length < 2) {
-            errorMessage = "Ad Soyad en az 2 karakter olmalıdır."
+        if (username.isBlank()) {
+            errorMessage = "Kullanıcı adı boş bırakılamaz."
             HarmonicAudioEngine.playHataSound()
             return
         }
-        val emailRegex = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$".toRegex()
-        if (!emailRegex.matches(email)) {
-            errorMessage = "Lütfen geçerli bir e-posta adresi girin."
+        if (username.length < 3) {
+            errorMessage = "Kullanıcı adı en az 3 karakter olmalıdır."
             HarmonicAudioEngine.playHataSound()
             return
         }
-        if (password.length < 8) {
-            errorMessage = "Şifre güvenliğiniz için en az 8 karakter olmalıdır."
+        if (username.length > 20) {
+            errorMessage = "Kullanıcı adı en fazla 20 karakter olabilir."
+            HarmonicAudioEngine.playHataSound()
+            return
+        }
+        if (password.isBlank()) {
+            errorMessage = "Şifre boş bırakılamaz."
+            HarmonicAudioEngine.playHataSound()
+            return
+        }
+        if (password.length < 4) {
+            errorMessage = "Şifre en az 4 karakter olmalıdır."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password != confirmPassword) {
-            errorMessage = "Şifreler birbiriyle eşleşmiyor!"
+            errorMessage = "Şifre tekrar alanı şifreyle aynı olmalıdır."
             HarmonicAudioEngine.playHataSound()
             return
         }
@@ -275,13 +292,22 @@ fun LoginScreen(
         successMessage = null
 
         coroutineScope.launch {
+            // Check local account first
+            val existingLocal = authRepository.getUserAccount(username)
+            if (existingLocal != null) {
+                isLoading = false
+                errorMessage = "Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."
+                HarmonicAudioEngine.playHataSound()
+                return@launch
+            }
+
             // Register on Render Backend
-            val cloudResult = cloudAuthService.register(fullName, email, password)
+            val cloudResult = cloudAuthService.register(username = username, email = "", password = password)
             if (cloudResult.isSuccess) {
                 val (user, token) = cloudResult.getOrThrow()
                 SecureTokenManager.saveToken(context, token)
 
-                val derivedUsername = if (user.fullName.isNotBlank()) user.fullName else email.substringBefore("@")
+                val derivedUsername = if (user.fullName.isNotBlank()) user.fullName else username
                 prefs.setAuthenticatedUser(
                     username = derivedUsername,
                     remember = true,
@@ -290,32 +316,33 @@ fun LoginScreen(
                     fullName = user.fullName
                 )
 
-                // Save to local Room & Vault
-                authRepository.registerOrUpdateExternalUser(
-                    username = derivedUsername,
-                    email = user.email,
-                    fullName = user.fullName
+                // Save to local Room & Vault with secure password hash
+                authRepository.register(
+                    usernameInput = derivedUsername,
+                    emailInput = user.email,
+                    passwordInput = password
                 )
 
                 // Initial Cloud Save synchronization
                 syncManager.syncOnLogin(token)
-
-                // Register to Render leaderboard
-                coroutineScope.launch(Dispatchers.IO) {
-                    try {
-                        com.example.data.RenderLeaderboardService.getInstance().submitScore(derivedUsername, 0)
-                    } catch (_: Exception) {}
-                }
 
                 isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
                 successMessage = "Kayıt başarılı! Giriş yapılıyor..."
                 onLoginSuccess(derivedUsername, true)
             } else {
-                // Cloud returned error -> Fallback to robust local persistent registration
+                val cloudErr = cloudResult.exceptionOrNull()?.message.orEmpty()
+                if (cloudErr.contains("zaten", ignoreCase = true) || cloudErr.contains("already", ignoreCase = true) || cloudErr.contains("kullanılıyor", ignoreCase = true)) {
+                    isLoading = false
+                    errorMessage = "Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."
+                    HarmonicAudioEngine.playHataSound()
+                    return@launch
+                }
+
+                // Cloud returned error/offline -> Fallback to robust local persistent registration
                 val localReg = authRepository.register(
-                    usernameInput = fullName,
-                    emailInput = email,
+                    usernameInput = username,
+                    emailInput = "",
                     passwordInput = password
                 )
                 if (localReg.isSuccess) {
@@ -328,14 +355,8 @@ fun LoginScreen(
                         remember = true,
                         passwordHash = localUser.passwordHash,
                         email = localUser.email,
-                        fullName = localUser.fullName
+                        fullName = localUser.username
                     )
-
-                    coroutineScope.launch(Dispatchers.IO) {
-                        try {
-                            com.example.data.RenderLeaderboardService.getInstance().submitScore(localUser.username, 0)
-                        } catch (_: Exception) {}
-                    }
 
                     isLoading = false
                     HarmonicAudioEngine.playLoginEffect(context)
@@ -414,7 +435,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Tab Selector: GİRİŞ YAP | KAYIT OL
+            // Tab Selector: KAYIT OL | GİRİŞ YAP
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -424,41 +445,7 @@ fun LoginScreen(
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                // Giriş Yap Tab
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (selectedTab == AuthTab.LOGIN) Color(0xFF0284C7) else Color.Transparent
-                        )
-                        .clickable {
-                            selectedTab = AuthTab.LOGIN
-                            errorMessage = null
-                            successMessage = null
-                        }
-                        .padding(vertical = 10.dp)
-                        .testTag("tab_login"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Login,
-                            contentDescription = null,
-                            tint = if (selectedTab == AuthTab.LOGIN) Color.White else Color(0xFF94A3B8),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "GİRİŞ YAP",
-                            color = if (selectedTab == AuthTab.LOGIN) Color.White else Color(0xFF94A3B8),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                // Kayıt Ol Tab
+                // Kayıt Ol Tab (İlk ve Zorunlu Adım)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -491,6 +478,40 @@ fun LoginScreen(
                         )
                     }
                 }
+
+                // Giriş Yap Tab (Önceden Kayıtlı Olanlar)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (selectedTab == AuthTab.LOGIN) Color(0xFF0284C7) else Color.Transparent
+                        )
+                        .clickable {
+                            selectedTab = AuthTab.LOGIN
+                            errorMessage = null
+                            successMessage = null
+                        }
+                        .padding(vertical = 10.dp)
+                        .testTag("tab_login"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Login,
+                            contentDescription = null,
+                            tint = if (selectedTab == AuthTab.LOGIN) Color.White else Color(0xFF94A3B8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "GİRİŞ YAP",
+                            color = if (selectedTab == AuthTab.LOGIN) Color.White else Color(0xFF94A3B8),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -512,17 +533,17 @@ fun LoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = if (selectedTab == AuthTab.LOGIN) "Oyuncu Girişi" else "Yeni Hesap Oluştur",
+                        text = if (selectedTab == AuthTab.REGISTER) "Yeni Oyuncu Kaydı" else "Oyuncu Girişi",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
 
                     Text(
-                        text = if (selectedTab == AuthTab.LOGIN)
-                            "Girdiğiniz bilgilerle kaldığınız seviyeden devam edin"
+                        text = if (selectedTab == AuthTab.REGISTER)
+                            "Oyuna başlamak için ilk olarak kayıt olmanız zorunludur"
                         else
-                            "Tüm ilerlemeniz güvenle kaydedilir",
+                            "Kayıtlı hesabınızla giriş yaparak devam edin",
                         fontSize = 11.sp,
                         color = Color(0xFF94A3B8),
                         textAlign = TextAlign.Center
@@ -583,20 +604,20 @@ fun LoginScreen(
                     }
 
                     if (selectedTab == AuthTab.LOGIN) {
-                        // LOGIN FORM (Sadece E-posta ve Şifre)
+                        // LOGIN FORM (Kullanıcı Adı ve Şifre)
                         OutlinedTextField(
-                            value = loginEmail,
+                            value = loginUsername,
                             onValueChange = {
-                                loginEmail = it
+                                loginUsername = it
                                 errorMessage = null
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("login_email_field"),
-                            label = { Text("E-posta") },
+                                .testTag("login_username_field"),
+                            label = { Text("Kullanıcı Adı") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Default.Email,
+                                    imageVector = Icons.Default.Person,
                                     contentDescription = null,
                                     tint = Color(0xFF38BDF8)
                                 )
@@ -612,7 +633,7 @@ fun LoginScreen(
                                 unfocusedLabelColor = Color(0xFF94A3B8)
                             ),
                             keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Email,
+                                keyboardType = KeyboardType.Text,
                                 imeAction = ImeAction.Next
                             )
                         )
@@ -720,25 +741,42 @@ fun LoginScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "GİRİŞ YAP VE OYNA",
+                                    text = "GİRİŞ YAP",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp
                                 )
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                selectedTab = AuthTab.REGISTER
+                                errorMessage = null
+                                successMessage = null
+                            }
+                        ) {
+                            Text(
+                                text = "Hesabın yok mu? Önce Kayıt Ol",
+                                color = Color(0xFF38BDF8),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     } else {
-                        // REGISTER FORM (Ad Soyad, E-posta, Şifre)
+                        // REGISTER FORM (Kullanıcı Adı, Şifre, Şifre Tekrar)
                         OutlinedTextField(
-                            value = registerFullName,
+                            value = registerUsername,
                             onValueChange = {
-                                registerFullName = it
+                                registerUsername = it
                                 errorMessage = null
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("register_fullname_field"),
-                            label = { Text("Ad Soyad") },
+                                .testTag("register_username_field"),
+                            label = { Text("Kullanıcı Adı") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Person,
@@ -762,42 +800,7 @@ fun LoginScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        OutlinedTextField(
-                            value = registerEmail,
-                            onValueChange = {
-                                registerEmail = it
-                                errorMessage = null
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("register_email_field"),
-                            label = { Text("E-posta") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Email,
-                                    contentDescription = null,
-                                    tint = Color(0xFF38BDF8)
-                                )
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF0284C7),
-                                unfocusedBorderColor = Color(0xFF475569),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedLabelColor = Color(0xFF38BDF8),
-                                unfocusedLabelColor = Color(0xFF94A3B8)
-                            ),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Email,
-                                imeAction = ImeAction.Next
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         OutlinedTextField(
                             value = registerPassword,
@@ -842,7 +845,7 @@ fun LoginScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         OutlinedTextField(
                             value = registerConfirmPassword,
@@ -861,8 +864,17 @@ fun LoginScreen(
                                     tint = Color(0xFF38BDF8)
                                 )
                             },
+                            trailingIcon = {
+                                IconButton(onClick = { registerConfirmPasswordVisible = !registerConfirmPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (registerConfirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Şifreyi Göster",
+                                        tint = Color(0xFF94A3B8)
+                                    )
+                                }
+                            },
                             singleLine = true,
-                            visualTransformation = if (registerPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (registerConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF0284C7),
@@ -910,12 +922,29 @@ fun LoginScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "KAYIT OL VE BAŞLA",
+                                    text = "KAYIT OL",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp
                                 )
                             }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                selectedTab = AuthTab.LOGIN
+                                errorMessage = null
+                                successMessage = null
+                            }
+                        ) {
+                            Text(
+                                text = "Zaten bir hesabın var mı? Giriş Yap",
+                                color = Color(0xFF38BDF8),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
@@ -925,7 +954,7 @@ fun LoginScreen(
 
             // Information Footnote & Version
             Text(
-                text = "Giriş yapmadan ana menüye erişilemez. Her kullanıcının seviye ilerlemesi bağımsız saklanır.",
+                text = "Oyuna başlamak için herkesin ilk olarak kayıt olması zorunludur. Her kullanıcının seviye ve skor ilerlemesi güvenle saklanır.",
                 color = Color(0xFF64748B),
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center,

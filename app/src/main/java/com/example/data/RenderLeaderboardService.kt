@@ -83,14 +83,30 @@ class RenderLeaderboardService private constructor() {
      */
     suspend fun submitScore(
         username: String,
-        score: Int
+        score: Int,
+        force: Boolean = false
     ): Result<SubmitResult> = withContext(Dispatchers.IO) {
         val sanitizedUsername = sanitizeUsername(username)
+        if (sanitizedUsername.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Kullanıcı adı boş olamaz."))
+        }
         val validScore = score.coerceAtLeast(0)
+
+        // Kupa kazanmayan (0 skora sahip) oyuncular liderlik tablosuna gönderilmez
+        if (validScore <= 0 && !force) {
+            return@withContext Result.success(
+                SubmitResult(
+                    success = true,
+                    username = sanitizedUsername,
+                    score = 0,
+                    message = "Score must be greater than 0 to enter leaderboard"
+                )
+            )
+        }
 
         // Prevent redundant network submission if identical username and score was submitted very recently (< 5s)
         val now = System.currentTimeMillis()
-        if (sanitizedUsername == lastSubmittedUsername &&
+        if (!force && sanitizedUsername == lastSubmittedUsername &&
             validScore == lastSubmittedScore &&
             (now - lastSubmitTimestamp) < 5000L
         ) {
@@ -190,24 +206,38 @@ class RenderLeaderboardService private constructor() {
 
                 if (response.isSuccessful) {
                     val resultList = mutableListOf<LeaderboardPlayer>()
-                    val jsonResponse = JSONObject(bodyString)
-                    val leaderboardArray = jsonResponse.optJSONArray("leaderboard") ?: JSONArray()
+                    val bodyTrimmed = bodyString.trim()
+                    val leaderboardArray = if (bodyTrimmed.startsWith("[")) {
+                        JSONArray(bodyTrimmed)
+                    } else {
+                        val jsonResponse = JSONObject(bodyTrimmed)
+                        jsonResponse.optJSONArray("leaderboard")
+                            ?: jsonResponse.optJSONArray("data")
+                            ?: jsonResponse.optJSONArray("scores")
+                            ?: jsonResponse.optJSONArray("entries")
+                            ?: JSONArray()
+                    }
 
                     for (i in 0 until leaderboardArray.length()) {
                         val item = leaderboardArray.optJSONObject(i) ?: continue
-                        val itemUsername = item.optString("username", "Oyuncu").trim()
-                        val itemScore = item.optInt("score", 0)
-                        val rank = i + 1
+                        val itemUsername = (item.optString("username").ifBlank {
+                            item.optString("name").ifBlank {
+                                item.optString("player", "Oyuncu")
+                            }
+                        }).trim()
+                        val itemScore = if (item.has("score")) {
+                            item.optInt("score", 0)
+                        } else if (item.has("trophies")) {
+                            item.optInt("trophies", 0)
+                        } else {
+                            item.optInt("points", 0)
+                        }
+
+                        // Kupa kasmayan (skoru 0 veya altı olan) kayıtlı kullanıcılar liderlik tablosunda yer almaz
+                        if (itemScore <= 0) continue
 
                         val isMe = sanitizedCurrentUser.isNotEmpty() &&
                                 itemUsername.equals(sanitizedCurrentUser, ignoreCase = true)
-
-                        val emoji = when (rank) {
-                            1 -> "👑"
-                            2 -> "🥈"
-                            3 -> "🥉"
-                            else -> if (isMe) "⚡" else getEmojiForIndex(i)
-                        }
 
                         val title = when {
                             itemScore >= 2500 -> "🌟 Galaktik Efsane"
@@ -219,10 +249,10 @@ class RenderLeaderboardService private constructor() {
 
                         resultList.add(
                             LeaderboardPlayer(
-                                id = "render_${itemUsername}_$rank",
-                                rank = rank,
+                                id = "render_${itemUsername}_$i",
+                                rank = 1, // Will be assigned below after sorting
                                 username = itemUsername,
-                                avatarEmoji = emoji,
+                                avatarEmoji = if (isMe) "⚡" else getEmojiForIndex(i),
                                 title = title,
                                 trophies = itemScore,
                                 totalEchoes = 0,
@@ -234,7 +264,21 @@ class RenderLeaderboardService private constructor() {
                         )
                     }
 
-                    Result.success(resultList)
+                    // Sort descending by trophies and assign ranks (1, 2, 3...)
+                    val rankedList = resultList
+                        .sortedByDescending { it.trophies }
+                        .mapIndexed { index, player ->
+                            val rank = index + 1
+                            val emoji = when (rank) {
+                                1 -> "👑"
+                                2 -> "🥈"
+                                3 -> "🥉"
+                                else -> if (player.isCurrentUser) "⚡" else player.avatarEmoji
+                            }
+                            player.copy(rank = rank, avatarEmoji = emoji)
+                        }
+
+                    Result.success(rankedList)
                 } else {
                     Log.w(TAG, "fetchLeaderboard failed with HTTP $statusCode: $bodyString")
                     Result.failure(IOException("Şu anda çevrimiçi sıralamaya ulaşılamıyor. Lütfen biraz sonra tekrar deneyin."))
@@ -252,12 +296,44 @@ class RenderLeaderboardService private constructor() {
         }
     }
 
+    /**
+     * Checks if a username already exists on the Render leaderboard via GET /leaderboard.
+     */
+    suspend fun isUsernameTakenOnServer(username: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        val cleanName = sanitizeUsername(username)
+        val result = fetchLeaderboard("")
+        if (result.isSuccess) {
+            val exists = result.getOrNull().orEmpty().any {
+                it.username.equals(cleanName, ignoreCase = true)
+            }
+            Result.success(exists)
+        } else {
+            Result.failure(result.exceptionOrNull() ?: IOException("Sunucuya ulaşılamadı."))
+        }
+    }
+
+    /**
+     * Retrieves a player from Render leaderboard via GET /leaderboard.
+     */
+    suspend fun getPlayerFromServer(username: String): Result<LeaderboardPlayer?> = withContext(Dispatchers.IO) {
+        val cleanName = sanitizeUsername(username)
+        val result = fetchLeaderboard(cleanName)
+        if (result.isSuccess) {
+            val player = result.getOrNull().orEmpty().firstOrNull {
+                it.username.equals(cleanName, ignoreCase = true)
+            }
+            Result.success(player)
+        } else {
+            Result.failure(result.exceptionOrNull() ?: IOException("Sunucuya ulaşılamadı."))
+        }
+    }
+
     private fun sanitizeUsername(username: String): String {
         val trimmed = username.trim()
-        if (trimmed.isEmpty()) return "Oyuncu"
+        if (trimmed.isEmpty()) return ""
         // Strip out control chars or html tags
         val cleaned = trimmed.replace(Regex("<[^>]*>|[<>]"), "").trim()
-        return if (cleaned.isEmpty()) "Oyuncu" else cleaned.take(20)
+        return cleaned.take(20)
     }
 
     private fun getEmojiForIndex(index: Int): String {
