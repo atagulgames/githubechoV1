@@ -854,13 +854,23 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Information Footnote
+            // Information Footnote & Version
             Text(
                 text = "Giriş yapmadan ana menüye erişilemez. Her kullanıcının seviye ilerlemesi bağımsız saklanır.",
                 color = Color(0xFF64748B),
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center,
                 lineHeight = 16.sp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "ECHO FLUX • v1.2",
+                color = Color(0xFF475569),
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Medium
             )
         }
     }
