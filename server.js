@@ -363,7 +363,7 @@ app.post('/leaderboard', async (req, res) => {
 // 4. POST /auth/register - Register new account
 // (fullName, email, password -> id, fullName, email, token)
 // -------------------------------------------------------------
-app.post('/auth/register', authRateLimiter, async (req, res) => {
+app.post(['/auth/register', '/register', '/api/auth/register', '/api/register'], authRateLimiter, async (req, res) => {
   const { fullName, email, password } = req.body || {};
 
   // Validate fullName
@@ -517,7 +517,7 @@ app.post('/auth/register', authRateLimiter, async (req, res) => {
 // 5. POST /auth/login - Login with email and password
 // (email, password -> id, fullName, email, token)
 // -------------------------------------------------------------
-app.post('/auth/login', authRateLimiter, async (req, res) => {
+app.post(['/auth/login', '/login', '/api/auth/login', '/api/login'], authRateLimiter, async (req, res) => {
   const { email, password } = req.body || {};
 
   if (typeof email !== 'string' || !email.trim()) {

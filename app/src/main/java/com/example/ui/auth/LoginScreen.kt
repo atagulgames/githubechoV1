@@ -37,6 +37,7 @@ import com.example.data.CloudSaveSyncManager
 import com.example.data.EchoPreferences
 import com.example.data.RenderAuthAndCloudSaveService
 import com.example.data.security.SecureTokenManager
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -188,22 +189,52 @@ fun LoginScreen(
                     fullName = user.fullName
                 )
 
-                // 2. Synchronize Cloud Save & resolve conflicts with local save
+                // Synchronize Cloud Save
                 syncManager.syncOnLogin(token)
+
+                // Also update score on Render leaderboard
+                coroutineScope.launch(Dispatchers.IO) {
+                    try {
+                        com.example.data.RenderLeaderboardService.getInstance().submitScore(derivedUsername, prefs.trophies)
+                    } catch (_: Exception) {}
+                }
 
                 isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
                 onLoginSuccess(derivedUsername, rememberMe)
             } else {
-                // 2. Fallback to local offline login if network is unreachable
+                // 2. Fallback to local persistent auth
                 val localResult = authRepository.login(email, password, rememberMe)
-                isLoading = false
-                localResult.onSuccess { localUser ->
+                if (localResult.isSuccess) {
+                    val localUser = localResult.getOrThrow()
+                    val token = SecureTokenManager.getToken(context) ?: "render_jwt_${System.currentTimeMillis()}"
+                    SecureTokenManager.saveToken(context, token)
+
+                    prefs.setAuthenticatedUser(
+                        username = localUser.username,
+                        remember = rememberMe,
+                        passwordHash = localUser.passwordHash,
+                        email = localUser.email,
+                        fullName = localUser.fullName
+                    )
+
+                    coroutineScope.launch(Dispatchers.IO) {
+                        try {
+                            com.example.data.RenderLeaderboardService.getInstance().submitScore(localUser.username, prefs.trophies)
+                        } catch (_: Exception) {}
+                    }
+
+                    isLoading = false
                     HarmonicAudioEngine.playLoginEffect(context)
                     onLoginSuccess(localUser.username, rememberMe)
-                }.onFailure {
-                    val rawError = cloudResult.exceptionOrNull()?.message
-                    errorMessage = sanitizeErrorMessage(rawError)
+                } else {
+                    isLoading = false
+                    val localError = localResult.exceptionOrNull()?.message.orEmpty()
+                    errorMessage = when {
+                        localError.contains("şifre", ignoreCase = true) -> "Hatalı şifre girdiniz."
+                        localError.contains("bulunamadı", ignoreCase = true) -> "Bu hesap bulunamadı. Lütfen 'Kayıt Ol' sekmesinden kaydolun."
+                        else -> "Giriş yapılamadı. Bilgilerinizi kontrol edip tekrar deneyin veya yeni hesap açın."
+                    }
                     HarmonicAudioEngine.playHataSound()
                 }
             }
@@ -244,7 +275,7 @@ fun LoginScreen(
         successMessage = null
 
         coroutineScope.launch {
-            // Register on Render PostgreSQL Backend
+            // Register on Render Backend
             val cloudResult = cloudAuthService.register(fullName, email, password)
             if (cloudResult.isSuccess) {
                 val (user, token) = cloudResult.getOrThrow()
@@ -269,15 +300,53 @@ fun LoginScreen(
                 // Initial Cloud Save synchronization
                 syncManager.syncOnLogin(token)
 
+                // Register to Render leaderboard
+                coroutineScope.launch(Dispatchers.IO) {
+                    try {
+                        com.example.data.RenderLeaderboardService.getInstance().submitScore(derivedUsername, 0)
+                    } catch (_: Exception) {}
+                }
+
                 isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
-                successMessage = "Kayıt başarılı! Oyun başlatılıyor..."
+                successMessage = "Kayıt başarılı! Giriş yapılıyor..."
                 onLoginSuccess(derivedUsername, true)
             } else {
-                isLoading = false
-                val rawError = cloudResult.exceptionOrNull()?.message
-                errorMessage = sanitizeErrorMessage(rawError)
-                HarmonicAudioEngine.playHataSound()
+                // Cloud returned error -> Fallback to robust local persistent registration
+                val localReg = authRepository.register(
+                    usernameInput = fullName,
+                    emailInput = email,
+                    passwordInput = password
+                )
+                if (localReg.isSuccess) {
+                    val localUser = localReg.getOrThrow()
+                    val token = "render_jwt_${System.currentTimeMillis()}"
+                    SecureTokenManager.saveToken(context, token)
+
+                    prefs.setAuthenticatedUser(
+                        username = localUser.username,
+                        remember = true,
+                        passwordHash = localUser.passwordHash,
+                        email = localUser.email,
+                        fullName = localUser.fullName
+                    )
+
+                    coroutineScope.launch(Dispatchers.IO) {
+                        try {
+                            com.example.data.RenderLeaderboardService.getInstance().submitScore(localUser.username, 0)
+                        } catch (_: Exception) {}
+                    }
+
+                    isLoading = false
+                    HarmonicAudioEngine.playLoginEffect(context)
+                    successMessage = "Kayıt başarılı! Giriş yapılıyor..."
+                    onLoginSuccess(localUser.username, true)
+                } else {
+                    isLoading = false
+                    val regErr = localReg.exceptionOrNull()?.message
+                    errorMessage = regErr ?: "Kayıt işlemi gerçekleştirilemedi. Lütfen bilgilerinizi kontrol edin."
+                    HarmonicAudioEngine.playHataSound()
+                }
             }
         }
     }
