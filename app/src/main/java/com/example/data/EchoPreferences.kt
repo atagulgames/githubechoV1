@@ -283,12 +283,22 @@ class EchoPreferences(context: Context) {
         get() = prefs.getString(KEY_AUTH_PASSWORD_HASH, "") ?: ""
         set(value) = prefs.edit().putString(KEY_AUTH_PASSWORD_HASH, value).apply()
 
-    fun setAuthenticatedUser(username: String, remember: Boolean, passwordHash: String = "") {
+    var authenticatedEmail: String
+        get() = prefs.getString("echo_auth_email", "") ?: ""
+        set(value) = prefs.edit().putString("echo_auth_email", value).apply()
+
+    var authenticatedFullName: String
+        get() = prefs.getString("echo_auth_fullname", "") ?: ""
+        set(value) = prefs.edit().putString("echo_auth_fullname", value).apply()
+
+    fun setAuthenticatedUser(username: String, remember: Boolean, passwordHash: String = "", email: String = "", fullName: String = "") {
         prefs.edit()
             .putBoolean(KEY_IS_AUTHENTICATED, true)
             .putString(KEY_AUTH_USERNAME, username)
             .putBoolean(KEY_REMEMBER_ME, remember)
             .putString(KEY_AUTH_PASSWORD_HASH, passwordHash)
+            .putString("echo_auth_email", email)
+            .putString("echo_auth_fullname", fullName)
             .apply()
     }
 
@@ -297,7 +307,11 @@ class EchoPreferences(context: Context) {
             .putBoolean(KEY_IS_AUTHENTICATED, false)
             .apply()
         if (!rememberMe) {
-            prefs.edit().putString(KEY_AUTH_USERNAME, "").apply()
+            prefs.edit()
+                .putString(KEY_AUTH_USERNAME, "")
+                .putString("echo_auth_email", "")
+                .putString("echo_auth_fullname", "")
+                .apply()
         }
     }
 
@@ -442,6 +456,18 @@ class EchoPreferences(context: Context) {
     var isSeason2Initialized: Boolean
         get() = prefs.getBoolean("echo_season_2_initialized", false)
         set(value) = prefs.edit().putBoolean("echo_season_2_initialized", value).apply()
+
+    var isSeason2ThemeActive: Boolean
+        get() = prefs.getBoolean("echo_season_2_theme_active", isSeason2WelcomeShown)
+        set(value) = prefs.edit().putBoolean("echo_season_2_theme_active", value).apply()
+
+    var selectedSeason2Theme: String
+        get() = prefs.getString("echo_season_2_selected_theme", "COSMIC_NEBULA") ?: "COSMIC_NEBULA"
+        set(value) = prefs.edit().putString("echo_season_2_selected_theme", value).apply()
+
+    var isSeason2BackgroundEffectsEnabled: Boolean
+        get() = prefs.getBoolean("echo_season_2_bg_effects", true)
+        set(value) = prefs.edit().putBoolean("echo_season_2_bg_effects", value).apply()
 
     fun resetAllProgressForSeason2() {
         prefs.edit()

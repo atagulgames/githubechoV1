@@ -190,7 +190,7 @@ fun AdBlockerWarningOverlay(
                 ) {
                     Column {
                         Text(
-                            text = if (details.isNotBlank()) details else "ECHO tamamen ücretsiz bir oyundur ve sunucu/geliştirme masrafları reklam gelirleri sayesinde karşılanmaktadır.",
+                            text = if (details.isNotBlank()) details else "ECHOFLUX tamamen ücretsiz bir oyundur ve oyun deneyimi reklam gelirleri sayesinde desteklenmektedir.",
                             fontSize = 13.sp,
                             color = Color(0xFFCBD5E1),
                             lineHeight = 19.sp,

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.Button
@@ -40,9 +41,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,19 +62,45 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
-private data class ConfettiPiece(
+private class ConfettiPiece(
     var x: Float,
     var y: Float,
     var speedY: Float,
     var speedX: Float,
-    var size: Float,
+    var width: Float,
+    var height: Float,
     var rotation: Float,
     var rotSpeed: Float,
+    var flipAngle: Float,
+    var flipSpeed: Float,
+    var swayPhase: Float,
+    var swaySpeed: Float,
     val color: Color
-)
+) {
+    fun update(dt: Float) {
+        val speedFactor = dt / 0.0166f
+        y += speedY * speedFactor
+        x += (speedX + sin(swayPhase) * 1.5f) * speedFactor
+        rotation += rotSpeed * speedFactor
+        flipAngle += flipSpeed * speedFactor
+        swayPhase += swaySpeed * speedFactor
+    }
+
+    fun resetToTop(canvasWidth: Float) {
+        y = -Random.nextFloat() * 160f - 20f
+        x = Random.nextFloat() * (if (canvasWidth > 0f) canvasWidth else 1080f)
+        speedY = Random.nextFloat() * 6f + 4.5f
+        speedX = (Random.nextFloat() - 0.5f) * 3f
+        rotation = Random.nextFloat() * 360f
+        flipAngle = Random.nextFloat() * 360f
+    }
+}
 
 @Composable
 fun Season2WelcomeDialog(
@@ -89,42 +118,52 @@ fun Season2WelcomeDialog(
         label = "PulseScale"
     )
 
-    // Animated live confetti generator
-    var confettiList by remember {
+    // Animated live confetti generator (spread across the whole canvas immediately, smoothly cascading)
+    val confettiPieces = remember {
         val colors = listOf(
             Color(0xFFFFD700), // Gold
             Color(0xFF38BDF8), // Cyan
             Color(0xFFF43F5E), // Rose
             Color(0xFF10B981), // Emerald
             Color(0xFFA855F7), // Purple
-            Color(0xFFFB923C)  // Orange
+            Color(0xFFFB923C), // Orange
+            Color(0xFFFFE600), // Bright Yellow
+            Color(0xFF00E5FF)  // Neon Cyan
         )
-        val list = List(65) {
+        List(85) {
+            val baseSize = Random.nextFloat() * 8f + 8f
             ConfettiPiece(
-                x = Random.nextFloat() * 1000f,
-                y = Random.nextFloat() * -500f,
-                speedY = Random.nextFloat() * 8f + 4f,
-                speedX = (Random.nextFloat() - 0.5f) * 4f,
-                size = Random.nextFloat() * 8f + 6f,
+                x = Random.nextFloat() * 1080f,
+                y = Random.nextFloat() * 2200f - 400f, // Already distributed across full screen height
+                speedY = Random.nextFloat() * 6f + 4.5f,
+                speedX = (Random.nextFloat() - 0.5f) * 3f,
+                width = baseSize,
+                height = baseSize * (Random.nextFloat() * 0.6f + 0.6f),
                 rotation = Random.nextFloat() * 360f,
-                rotSpeed = (Random.nextFloat() - 0.5f) * 12f,
+                rotSpeed = (Random.nextFloat() - 0.5f) * 8f,
+                flipAngle = Random.nextFloat() * 360f,
+                flipSpeed = Random.nextFloat() * 0.12f + 0.05f,
+                swayPhase = Random.nextFloat() * 6.28f,
+                swaySpeed = Random.nextFloat() * 0.08f + 0.04f,
                 color = colors[Random.nextInt(colors.size)]
             )
         }
-        mutableStateOf(list)
     }
 
+    var frameTick by remember { mutableLongStateOf(0L) }
+
     LaunchedEffect(Unit) {
-        while (true) {
-            delay(16L)
-            confettiList.forEach { c ->
-                c.y += c.speedY
-                c.x += c.speedX
-                c.rotation += c.rotSpeed
-                if (c.y > 1800f) {
-                    c.y = Random.nextFloat() * -200f
-                    c.x = Random.nextFloat() * 1000f
+        var lastNanos = 0L
+        while (isActive) {
+            withFrameNanos { nowNanos ->
+                if (lastNanos == 0L) lastNanos = nowNanos
+                val dt = ((nowNanos - lastNanos) / 1_000_000_000f).coerceIn(0.001f, 0.05f)
+                lastNanos = nowNanos
+
+                confettiPieces.forEach { p ->
+                    p.update(dt)
                 }
+                frameTick = nowNanos
             }
         }
     }
@@ -147,12 +186,23 @@ fun Season2WelcomeDialog(
         ) {
             // Live Confetti Rain Canvas Layer
             Canvas(modifier = Modifier.fillMaxSize()) {
-                confettiList.forEach { p ->
+                // Reading frameTick triggers redraw on every display frame
+                val tick = frameTick
+                if (tick == 0L && confettiPieces.isEmpty()) return@Canvas
+
+                val canvasWidth = size.width
+                val canvasHeight = size.height
+
+                confettiPieces.forEach { p ->
+                    if (p.y > canvasHeight + 50f) {
+                        p.resetToTop(canvasWidth)
+                    }
+                    val currentFlip = abs(cos(p.flipAngle)).coerceAtLeast(0.15f)
                     rotate(p.rotation, pivot = Offset(p.x, p.y)) {
                         drawRect(
                             color = p.color,
-                            topLeft = Offset(p.x, p.y),
-                            size = Size(p.size, p.size * 0.6f)
+                            topLeft = Offset(p.x - p.width / 2f, p.y - (p.height * currentFlip) / 2f),
+                            size = Size(p.width, p.height * currentFlip)
                         )
                     }
                 }
@@ -257,6 +307,12 @@ fun Season2WelcomeDialog(
                             iconTint = Color(0xFF10B981),
                             title = "Katlanan Sezon Ödülleri",
                             desc = "Bölüm zaferleri, günlük sandıklar ve görev hediyeleri 2.5 kat artırıldı."
+                        )
+                        Season2FeatureRow(
+                            icon = Icons.Default.Palette,
+                            iconTint = Color(0xFFA855F7),
+                            title = "Yeni Sezon 2 Görsel Temaları",
+                            desc = "Başladığınız an aktifleşen özel renk paletleri ve yaşayan dinamik arka plan desenleri."
                         )
                     }
 

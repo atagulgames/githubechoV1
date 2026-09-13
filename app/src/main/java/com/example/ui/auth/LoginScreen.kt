@@ -33,6 +33,10 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import com.example.data.CloudSaveSyncManager
+import com.example.data.EchoPreferences
+import com.example.data.RenderAuthAndCloudSaveService
+import com.example.data.security.SecureTokenManager
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -97,17 +101,20 @@ fun LoginScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val authRepository = remember { AuthRepository(context) }
+    val cloudAuthService = remember { RenderAuthAndCloudSaveService.getInstance() }
+    val syncManager = remember { CloudSaveSyncManager(context) }
+    val prefs = remember { EchoPreferences(context) }
 
     var selectedTab by remember { mutableStateOf(AuthTab.LOGIN) }
 
-    // Login Fields
-    var loginUsername by remember { mutableStateOf(initialUsername) }
+    // Login Fields (Sadece E-posta ve Şifre)
+    var loginEmail by remember { mutableStateOf(prefs.authenticatedEmail.ifBlank { initialUsername }) }
     var loginPassword by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(initialRememberMe) }
     var loginPasswordVisible by remember { mutableStateOf(false) }
 
-    // Register Fields
-    var registerUsername by remember { mutableStateOf("") }
+    // Register Fields (Ad Soyad, E-posta, Şifre, Şifre Tekrar)
+    var registerFullName by remember { mutableStateOf("") }
     var registerEmail by remember { mutableStateOf("") }
     var registerPassword by remember { mutableStateOf("") }
     var registerConfirmPassword by remember { mutableStateOf("") }
@@ -123,17 +130,32 @@ fun LoginScreen(
         HarmonicAudioEngine.playLoginEffect(context)
     }
 
-    fun handleLogin() {
-        val u = loginUsername.trim()
-        val p = loginPassword.trim()
+    fun sanitizeErrorMessage(raw: String?): String {
+        if (raw.isNullOrBlank()) return "Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."
+        val lower = raw.lowercase()
+        if (lower.contains("http") || lower.contains("render") || lower.contains("server") ||
+            lower.contains("sunucu") || lower.contains("database") || lower.contains("postgres") ||
+            lower.contains("sql") || lower.contains("jwt") || lower.contains("token") ||
+            lower.contains("api") || lower.contains("timeout") || lower.contains("exception") ||
+            lower.contains("connection refused") || lower.contains("failed to connect") ||
+            lower.contains("503") || lower.contains("500") || lower.contains("502") || lower.contains("404") ||
+            lower.contains("401") || lower.contains("403")) {
+            return "Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."
+        }
+        return raw
+    }
 
-        if (u.isBlank()) {
-            errorMessage = "Lütfen kullanıcı adınızı veya e-postanızı girin."
+    fun handleLogin() {
+        val email = loginEmail.trim().lowercase()
+        val password = loginPassword.trim()
+
+        if (email.isBlank()) {
+            errorMessage = "Lütfen e-posta adresinizi girin."
             HarmonicAudioEngine.playHataSound()
             return
         }
-        if (p.length < 4) {
-            errorMessage = "Şifre en az 4 karakter olmalıdır."
+        if (password.length < 6) {
+            errorMessage = "Şifre en az 6 karakter olmalıdır."
             HarmonicAudioEngine.playHataSound()
             return
         }
@@ -143,35 +165,73 @@ fun LoginScreen(
         successMessage = null
 
         coroutineScope.launch {
-            val result = authRepository.login(u, p, rememberMe)
-            isLoading = false
-            result.onSuccess { user ->
+            // 1. First attempt login via Render Cloud Backend
+            val cloudResult = cloudAuthService.login(email, password)
+            if (cloudResult.isSuccess) {
+                val (user, token) = cloudResult.getOrThrow()
+                SecureTokenManager.saveToken(context, token)
+
+                val derivedUsername = if (user.fullName.isNotBlank()) user.fullName else email.substringBefore("@")
+                prefs.setAuthenticatedUser(
+                    username = derivedUsername,
+                    remember = rememberMe,
+                    passwordHash = "",
+                    email = user.email,
+                    fullName = user.fullName
+                )
+
+                // Sync with local account cache
+                authRepository.registerOrUpdateExternalUser(
+                    username = derivedUsername,
+                    email = user.email,
+                    fullName = user.fullName
+                )
+
+                // 2. Synchronize Cloud Save & resolve conflicts with local save
+                syncManager.syncOnLogin(token)
+
+                isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
-                onLoginSuccess(user.username, rememberMe)
-            }.onFailure { err ->
-                errorMessage = err.message ?: "Giriş başarısız oldu. Lütfen bilgilerinizi kontrol edin."
-                HarmonicAudioEngine.playHataSound()
+                onLoginSuccess(derivedUsername, rememberMe)
+            } else {
+                // 2. Fallback to local offline login if network is unreachable
+                val localResult = authRepository.login(email, password, rememberMe)
+                isLoading = false
+                localResult.onSuccess { localUser ->
+                    HarmonicAudioEngine.playLoginEffect(context)
+                    onLoginSuccess(localUser.username, rememberMe)
+                }.onFailure {
+                    val rawError = cloudResult.exceptionOrNull()?.message
+                    errorMessage = sanitizeErrorMessage(rawError)
+                    HarmonicAudioEngine.playHataSound()
+                }
             }
         }
     }
 
     fun handleRegister() {
-        val u = registerUsername.trim()
-        val e = registerEmail.trim()
-        val p = registerPassword.trim()
-        val cp = registerConfirmPassword.trim()
+        val fullName = registerFullName.trim()
+        val email = registerEmail.trim().lowercase()
+        val password = registerPassword.trim()
+        val confirmPassword = registerConfirmPassword.trim()
 
-        if (u.length < 3) {
-            errorMessage = "Kullanıcı adı en az 3 karakter olmalıdır."
+        if (fullName.length < 2) {
+            errorMessage = "Ad Soyad en az 2 karakter olmalıdır."
             HarmonicAudioEngine.playHataSound()
             return
         }
-        if (p.length < 4) {
-            errorMessage = "Şifre en az 4 karakter olmalıdır."
+        val emailRegex = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$".toRegex()
+        if (!emailRegex.matches(email)) {
+            errorMessage = "Lütfen geçerli bir e-posta adresi girin."
             HarmonicAudioEngine.playHataSound()
             return
         }
-        if (p != cp) {
+        if (password.length < 8) {
+            errorMessage = "Şifre güvenliğiniz için en az 8 karakter olmalıdır."
+            HarmonicAudioEngine.playHataSound()
+            return
+        }
+        if (password != confirmPassword) {
             errorMessage = "Şifreler birbiriyle eşleşmiyor!"
             HarmonicAudioEngine.playHataSound()
             return
@@ -182,14 +242,39 @@ fun LoginScreen(
         successMessage = null
 
         coroutineScope.launch {
-            val result = authRepository.register(u, e, p)
-            isLoading = false
-            result.onSuccess { user ->
+            // Register on Render PostgreSQL Backend
+            val cloudResult = cloudAuthService.register(fullName, email, password)
+            if (cloudResult.isSuccess) {
+                val (user, token) = cloudResult.getOrThrow()
+                SecureTokenManager.saveToken(context, token)
+
+                val derivedUsername = if (user.fullName.isNotBlank()) user.fullName else email.substringBefore("@")
+                prefs.setAuthenticatedUser(
+                    username = derivedUsername,
+                    remember = true,
+                    passwordHash = "",
+                    email = user.email,
+                    fullName = user.fullName
+                )
+
+                // Save to local Room & Vault
+                authRepository.registerOrUpdateExternalUser(
+                    username = derivedUsername,
+                    email = user.email,
+                    fullName = user.fullName
+                )
+
+                // Initial Cloud Save synchronization
+                syncManager.syncOnLogin(token)
+
+                isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
-                successMessage = "Kayıt başarılı! Giriş yapılıyor..."
-                onLoginSuccess(user.username, true)
-            }.onFailure { err ->
-                errorMessage = err.message ?: "Kayıt işlemi başarısız oldu."
+                successMessage = "Kayıt başarılı! Oyun başlatılıyor..."
+                onLoginSuccess(derivedUsername, true)
+            } else {
+                isLoading = false
+                val rawError = cloudResult.exceptionOrNull()?.message
+                errorMessage = sanitizeErrorMessage(rawError)
                 HarmonicAudioEngine.playHataSound()
             }
         }
@@ -366,7 +451,7 @@ fun LoginScreen(
                         text = if (selectedTab == AuthTab.LOGIN)
                             "Girdiğiniz bilgilerle kaldığınız seviyeden devam edin"
                         else
-                            "Tüm ilerlemeniz sunucuya güvenle kaydedilir",
+                            "Tüm ilerlemeniz güvenle kaydedilir",
                         fontSize = 11.sp,
                         color = Color(0xFF94A3B8),
                         textAlign = TextAlign.Center
@@ -427,20 +512,20 @@ fun LoginScreen(
                     }
 
                     if (selectedTab == AuthTab.LOGIN) {
-                        // LOGIN FORM
+                        // LOGIN FORM (Sadece E-posta ve Şifre)
                         OutlinedTextField(
-                            value = loginUsername,
+                            value = loginEmail,
                             onValueChange = {
-                                loginUsername = it
+                                loginEmail = it
                                 errorMessage = null
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("login_username_field"),
-                            label = { Text("Kullanıcı Adı veya E-posta") },
+                                .testTag("login_email_field"),
+                            label = { Text("E-posta") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Default.Person,
+                                    imageVector = Icons.Default.Email,
                                     contentDescription = null,
                                     tint = Color(0xFF38BDF8)
                                 )
@@ -456,7 +541,7 @@ fun LoginScreen(
                                 unfocusedLabelColor = Color(0xFF94A3B8)
                             ),
                             keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
+                                keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
                             )
                         )
@@ -572,17 +657,17 @@ fun LoginScreen(
                             }
                         }
                     } else {
-                        // REGISTER FORM
+                        // REGISTER FORM (Ad Soyad, E-posta, Şifre)
                         OutlinedTextField(
-                            value = registerUsername,
+                            value = registerFullName,
                             onValueChange = {
-                                registerUsername = it
+                                registerFullName = it
                                 errorMessage = null
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("register_username_field"),
-                            label = { Text("Kullanıcı Adı") },
+                                .testTag("register_fullname_field"),
+                            label = { Text("Ad Soyad") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Person,
@@ -617,7 +702,7 @@ fun LoginScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("register_email_field"),
-                            label = { Text("E-posta (İsteğe Bağlı)") },
+                            label = { Text("E-posta") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Email,

@@ -164,12 +164,29 @@ fun LevelSelectDialog(
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Text(
-                                text = "100 Seviye Menüsü",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "100 Seviye Menüsü",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFF8B5CF6).copy(alpha = 0.2f))
+                                        .border(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "2. SEZON",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFFA78BFA)
+                                    )
+                                }
+                            }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "Tamamlanan: $completedCount/100",

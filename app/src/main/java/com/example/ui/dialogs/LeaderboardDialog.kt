@@ -133,7 +133,7 @@ fun LeaderboardDialog(
                                 color = textPrimary
                             )
                             Text(
-                                text = "Render PostgreSQL • Global Leaderboard",
+                                text = "Dünya Sıralaması • Sezon 2",
                                 fontSize = 11.sp,
                                 color = Color(0xFF10B981),
                                 fontWeight = FontWeight.SemiBold

@@ -390,6 +390,26 @@ fun EchoTopHUD(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(start = 4.dp)
                     ) {
+                        // Season 2 Cosmic Badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF8B5CF6).copy(alpha = if (state.isDarkTheme) 0.25f else 0.15f))
+                                .border(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "✨ 2. Sezon",
+                                color = Color(0xFFA78BFA),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+
                         val levelRule = com.example.data.LevelRuleCatalog.getRuleForLevel(state.level.levelId, isTurkish = true)
                         val badgeColor = Color(levelRule.badgeColor)
 

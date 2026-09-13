@@ -163,23 +163,6 @@ fun IntroVideoScreen(
                         }
                     }
                 )
-
-                // Skip button allowing player to advance immediately into the game
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.TopEnd
-                ) {
-                    Button(
-                        onClick = onIntroFinished,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.60f)),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.testTag("intro_skip_button")
-                    ) {
-                        Text("Geç ➔", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    }
-                }
             } else {
                 // Seamless cinematic animated fallback if video file is missing or unsupported
                 IntroLandscapeScreen(onIntroFinished = onIntroFinished)

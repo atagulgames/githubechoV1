@@ -50,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.example.R
 import com.example.localization.EchoStrings
+import com.example.ui.components.Season2BackgroundPatternCanvas
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
@@ -98,6 +99,7 @@ fun EchoMainMenu(
     onOpenChest: () -> Unit = {},
     onWatchRewardedAd: () -> Unit = {},
     onOpenSeason2Info: () -> Unit = {},
+    onOpenSeason2Themes: () -> Unit = {},
     onBannerAdLoaded: () -> Unit = {},
     onBannerAdFailed: (String) -> Unit = {},
     modifier: Modifier = Modifier
@@ -119,11 +121,14 @@ fun EchoMainMenu(
         label = "PulseScale"
     )
 
-    val bgTheme = if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
-    val cardBg = if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
+    val s2Theme = state.selectedSeason2Theme
+    val isS2 = state.isSeason2ThemeActive
+
+    val bgTheme = if (isS2) s2Theme.getBackgroundTop(state.isDarkTheme) else if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+    val cardBg = if (isS2) s2Theme.getCardBackground(state.isDarkTheme) else if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
     val textPrimary = if (state.isDarkTheme) Color.White else Color(0xFF0F172A)
     val textSecondary = if (state.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-    val borderColor = if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+    val borderColor = if (isS2) s2Theme.getBorderColor(state.isDarkTheme) else if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
 
     Surface(
         modifier = modifier
@@ -136,6 +141,15 @@ fun EchoMainMenu(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter
         ) {
+            // Season 2 Dynamic Background Pattern Canvas
+            if (isS2 && state.isSeason2BackgroundEffectsEnabled) {
+                Season2BackgroundPatternCanvas(
+                    theme = s2Theme,
+                    isDarkTheme = state.isDarkTheme,
+                    modifier = Modifier.fillMaxSize(),
+                    alphaMultiplier = 0.85f
+                )
+            }
             val isNarrow = maxWidth < 380.dp
             val isShort = maxHeight < 700.dp
             val horizontalPadding = if (isNarrow) 12.dp else 16.dp
@@ -506,6 +520,73 @@ fun EchoMainMenu(
                         tint = Color(0xFFFFB703),
                         modifier = Modifier.size(20.dp)
                     )
+                }
+            }
+
+            // Season 2 Theme Selector Card (Active after Season 2 Welcome screen)
+            if (state.isSeason2ThemeActive) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(3.dp, RoundedCornerShape(16.dp))
+                        .clickable { onOpenSeason2Themes() }
+                        .testTag("season_2_theme_selector_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = s2Theme.primaryAccent.copy(alpha = if (state.isDarkTheme) 0.16f else 0.08f)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        s2Theme.primaryAccent.copy(alpha = 0.6f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = s2Theme.iconEmoji, fontSize = 22.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Sezon 2 Teması: ${s2Theme.displayName}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(s2Theme.secondaryAccent.copy(alpha = 0.2f))
+                                            .padding(horizontal = 6.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "DEĞİŞTİR",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = s2Theme.secondaryAccent
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = s2Theme.subtitle,
+                                    fontSize = 11.sp,
+                                    color = textSecondary
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Temaları Aç",
+                            tint = s2Theme.primaryAccent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 

@@ -80,6 +80,35 @@ class AuthRepository(context: Context) {
         Result.success(newUser)
     }
 
+    suspend fun registerOrUpdateExternalUser(
+        username: String,
+        email: String,
+        fullName: String
+    ): UserAccountEntity = withContext(Dispatchers.IO) {
+        var user = userDao.getUserByEmail(email) ?: userDao.getUserByUsername(username)
+        if (user == null) {
+            user = UserAccountEntity(
+                username = username,
+                email = email,
+                passwordHash = "",
+                currentLevelIndex = preferences.currentLevelIndex,
+                completedLevelsCsv = preferences.getCompletedLevels().joinToString(","),
+                tokens = preferences.tokens,
+                echoBreakers = preferences.echoBreakers,
+                coins = preferences.coins,
+                diamonds = preferences.diamonds,
+                totalEchoes = preferences.totalEchoes,
+                totalStars = preferences.getLevelRecords().sumOf { it.stars },
+                isDarkTheme = true,
+                languageCode = preferences.languageCode,
+                createdAt = System.currentTimeMillis()
+            )
+            userDao.insertOrUpdate(user)
+            PersistentVaultManager.saveAccountToVault(appContext, user)
+        }
+        user
+    }
+
     suspend fun login(
         usernameOrEmailInput: String,
         passwordInput: String,

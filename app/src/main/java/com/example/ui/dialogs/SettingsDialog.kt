@@ -440,7 +440,7 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Live Ads Toggle (Canlı Reklam Modu)
+                // Rewarded Ads Status
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -464,13 +464,13 @@ fun SettingsDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Start.io Reklam Ağı",
+                                text = "Ödüllü Reklamlar",
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "100% Canlı Reklamlar Aktif (App ID: 208838202)",
+                                text = "Ödüllü video ve bonuslar hazır",
                                 color = Color(0xFF16A34A),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -487,7 +487,7 @@ fun SettingsDialog(
                             .testTag("test_ads_toggle")
                     ) {
                         Text(
-                            text = "CANLI",
+                            text = "AKTİF",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF16A34A)
@@ -497,92 +497,57 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Global Leaderboard (LootLocker) Status Card
-                val context = LocalContext.current
-                val lootLocker = remember { com.example.data.LootLockerManager.getInstance(context) }
-                var showKeyEditor by remember { mutableStateOf(false) }
-                var enteredKey by remember { mutableStateOf(lootLocker.getEffectiveGameKey()) }
-
-                Column(
+                // Online Leaderboard Status Card (Clean & User Friendly)
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(cardBg)
                         .border(1.dp, borderColor, RoundedCornerShape(14.dp))
-                        .padding(14.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Leaderboard,
-                                contentDescription = null,
-                                tint = Color(0xFFF59E0B),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Leaderboard,
+                            contentDescription = null,
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
                             Text(
-                                text = "Global Sıralama Tablosu",
+                                text = "Dünya Sıralaması",
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
-                                fontSize = 13.sp
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Skorlar senkronize ediliyor",
+                                color = textSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
-
-                        Text(
-                            text = if (lootLocker.isConfigured()) "🟢 Canlı Bulut" else "🟡 Yerel Aktif",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (lootLocker.isConfigured()) Color(0xFF16A34A) else Color(0xFFD97706)
-                        )
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Tablo Anahtarı: ekoleadbordglobal",
-                        fontSize = 11.sp,
-                        color = textSecondary
-                    )
-
-                    if (!showKeyEditor) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF16A34A).copy(alpha = 0.15f))
+                            .border(1.dp, Color(0xFF16A34A), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
                         Text(
-                            text = if (lootLocker.isConfigured()) "Game API Key aktif (düzenlemek için dokun)" else "LootLocker Game API Key ekle (İsteğe bağlı)",
+                            text = "BAĞLI",
                             fontSize = 11.sp,
-                            color = Color(0xFF0284C7),
-                            modifier = Modifier
-                                .clickable { showKeyEditor = true }
-                                .padding(vertical = 4.dp)
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF16A34A)
                         )
-                    } else {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = enteredKey,
-                            onValueChange = { enteredKey = it },
-                            placeholder = { Text("LootLocker Game API Key", fontSize = 11.sp) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF0284C7),
-                                unfocusedBorderColor = borderColor
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                            Button(
-                                onClick = {
-                                    lootLocker.setGameKey(enteredKey)
-                                    showKeyEditor = false
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
-                            ) {
-                                Text("Kaydet", fontSize = 11.sp)
-                            }
-                        }
                     }
                 }
 

@@ -191,7 +191,11 @@ data class EchoUiState(
     val activeMechanicInfo: com.example.ui.dialogs.LevelMechanicInfo? = null,
     val activeLevelRule: com.example.model.LevelRule? = null,
     val isRuleEncyclopediaOpen: Boolean = false,
-    val isSeason2DialogVisible: Boolean = false
+    val isSeason2DialogVisible: Boolean = false,
+    val isSeason2ThemeActive: Boolean = false,
+    val selectedSeason2Theme: com.example.model.Season2VisualTheme = com.example.model.Season2VisualTheme.COSMIC_NEBULA,
+    val isSeason2BackgroundEffectsEnabled: Boolean = true,
+    val isSeason2ThemeSelectorVisible: Boolean = false
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -272,9 +276,6 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         // 3-Hour Reward Cooldown Ticker
         startRewardCooldownTicker()
-
-        // Season 2 Initialization and Welcome check
-        checkSeason2Status()
     }
 
     private fun startRewardCooldownTicker() {
@@ -337,6 +338,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private fun loadSavedPreferences() {
         val stroke = try { StrokeTheme.valueOf(prefs.strokeThemeName) } catch (_: Exception) { StrokeTheme.NEON_CYAN }
         val echo = try { EchoTheme.valueOf(prefs.echoThemeName) } catch (_: Exception) { EchoTheme.ELECTRIC_RED }
+        val s2Theme = com.example.model.Season2VisualTheme.fromId(prefs.selectedSeason2Theme)
+        val isS2Active = prefs.isSeason2ThemeActive
+        val isS2BgEffects = prefs.isSeason2BackgroundEffectsEnabled
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val isDailyDone = prefs.lastDailyCompletedDate == todayStr
 
@@ -351,6 +355,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 totalEchoes = prefs.totalEchoes,
                 strokeTheme = stroke,
                 echoTheme = echo,
+                isSeason2ThemeActive = isS2Active,
+                selectedSeason2Theme = s2Theme,
+                isSeason2BackgroundEffectsEnabled = isS2BgEffects,
                 soundEnabled = prefs.soundEnabled,
                 hapticsEnabled = prefs.hapticsEnabled,
                 testAdsEnabled = prefs.isTestAdsEnabled,
@@ -656,6 +663,18 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             )
         }
         HarmonicAudioEngine.startBgm()
+
+        // Trigger Season 2 check (shows dialog only on first launch)
+        checkSeason2Status()
+
+        // Background Cloud Save sync if user has an active token
+        val app = getApplication<android.app.Application>()
+        val token = com.example.data.security.SecureTokenManager.getToken(app)
+        if (!token.isNullOrBlank()) {
+            viewModelScope.launch {
+                com.example.data.CloudSaveSyncManager(app).syncOnLogin(token)
+            }
+        }
     }
 
     /**
@@ -744,6 +763,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun claimSeason2WelcomeBonus() {
         prefs.isSeason2WelcomeShown = true
         prefs.isSeason2Initialized = true
+        prefs.isSeason2ThemeActive = true
+        val activeSeasonTheme = com.example.model.Season2VisualTheme.fromId(prefs.selectedSeason2Theme)
         // Season 2 Welcome Package: 500 Tokens, 50 Diamonds, 5 Lasers, 100 Trophies
         prefs.addTokens(500)
         prefs.addDiamonds(50)
@@ -753,6 +774,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         _uiState.update {
             it.copy(
                 isSeason2DialogVisible = false,
+                isSeason2ThemeActive = true,
+                selectedSeason2Theme = activeSeasonTheme,
+                isSeason2BackgroundEffectsEnabled = prefs.isSeason2BackgroundEffectsEnabled,
                 tokens = prefs.tokens,
                 diamonds = prefs.diamonds,
                 echoBreakers = prefs.echoBreakers,
@@ -762,7 +786,41 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
         com.example.audio.HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
-        showToast("🎉 Sezon 2 Başlangıç Paketi Tanımlandı! (+500 Jeton, +50 Elmas, +5 Kırıcı, +100 Kupa)")
+        showToast("✨ Sezon 2 ${activeSeasonTheme.displayName} Teması ve Özel Arka Plan Deseni Aktif Edildi!")
+    }
+
+    fun setSeason2VisualTheme(theme: com.example.model.Season2VisualTheme) {
+        prefs.selectedSeason2Theme = theme.id
+        prefs.isSeason2ThemeActive = true
+        _uiState.update {
+            it.copy(
+                selectedSeason2Theme = theme,
+                isSeason2ThemeActive = true
+            )
+        }
+        com.example.audio.HarmonicAudioEngine.playNodeVisited()
+        triggerHapticLight()
+        showToast("✨ Sezon 2 Teması: ${theme.displayName} aktif!")
+    }
+
+    fun toggleSeason2BackgroundEffects() {
+        val next = !prefs.isSeason2BackgroundEffectsEnabled
+        prefs.isSeason2BackgroundEffectsEnabled = next
+        _uiState.update { it.copy(isSeason2BackgroundEffectsEnabled = next) }
+        triggerHapticLight()
+        showToast(if (next) "✨ Sezon 2 Arka Plan Animasyonları Açık" else "Arka Plan Animasyonları Kapatıldı")
+    }
+
+    fun toggleSeason2ThemeActive() {
+        val next = !prefs.isSeason2ThemeActive
+        prefs.isSeason2ThemeActive = next
+        _uiState.update { it.copy(isSeason2ThemeActive = next) }
+        triggerHapticLight()
+        showToast(if (next) "🌌 Sezon 2 Görsel Teması Açıldı" else "Klasik Tema Aktif")
+    }
+
+    fun setSeason2ThemeSelectorVisible(visible: Boolean) {
+        _uiState.update { it.copy(isSeason2ThemeSelectorVisible = visible) }
     }
 
     fun openSeason2Info() {
@@ -1155,6 +1213,12 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     renderLeaderboard.submitScore(currentUsername, currentTrophies)
                 } catch (e: Exception) {
                     // Fail-safe: Game continues seamlessly without error
+                }
+                try {
+                    val app = getApplication<android.app.Application>()
+                    com.example.data.CloudSaveSyncManager(app).pushLocalToCloud()
+                } catch (e: Exception) {
+                    // Fail-safe: Cloud save sync failure doesn't disrupt game flow
                 }
             }
         }

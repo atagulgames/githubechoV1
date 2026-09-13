@@ -114,12 +114,6 @@ fun IntroLandscapeScreen(
                     else -> Color(0xFF050711) // Echo dark cosmic
                 }
             )
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                onIntroFinished()
-            }
             .testTag("intro_landscape_screen"),
         contentAlignment = Alignment.Center
     ) {
@@ -329,15 +323,6 @@ fun IntroLandscapeScreen(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 4.sp,
                         color = Color(0xFF00E5FF)
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Başlamak için dokun",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color.White.copy(alpha = 0.6f)
                     )
                 }
             }

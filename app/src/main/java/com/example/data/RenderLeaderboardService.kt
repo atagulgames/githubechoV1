@@ -151,18 +151,18 @@ class RenderLeaderboardService private constructor() {
                     )
                 } else {
                     Log.w(TAG, "submitScore failed with HTTP $statusCode: $bodyString")
-                    Result.failure(IOException("Server error HTTP $statusCode: $bodyString"))
+                    Result.failure(IOException("Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."))
                 }
             }
         } catch (e: UnknownHostException) {
             Log.w(TAG, "submitScore network unreachable (offline): ${e.message}")
-            Result.failure(e)
+            Result.failure(IOException("Çevrimdışısınız. Skorunuz yerel olarak kaydedildi."))
         } catch (e: SocketTimeoutException) {
             Log.w(TAG, "submitScore timed out waiting for server: ${e.message}")
-            Result.failure(e)
+            Result.failure(IOException("Bağlantı zaman aşımına uğradı."))
         } catch (e: Exception) {
             Log.w(TAG, "submitScore exception: ${e.message}")
-            Result.failure(e)
+            Result.failure(IOException("Skor senkronize edilemedi."))
         }
     }
 
@@ -237,18 +237,18 @@ class RenderLeaderboardService private constructor() {
                     Result.success(resultList)
                 } else {
                     Log.w(TAG, "fetchLeaderboard failed with HTTP $statusCode: $bodyString")
-                    Result.failure(IOException("Server error HTTP $statusCode"))
+                    Result.failure(IOException("Şu anda çevrimiçi sıralamaya ulaşılamıyor. Lütfen biraz sonra tekrar deneyin."))
                 }
             }
         } catch (e: UnknownHostException) {
             Log.w(TAG, "fetchLeaderboard network unreachable (offline): ${e.message}")
-            Result.failure(e)
+            Result.failure(IOException("Çevrimdışısınız. Lütfen internet bağlantınızı kontrol edin."))
         } catch (e: SocketTimeoutException) {
             Log.w(TAG, "fetchLeaderboard timed out: ${e.message}")
-            Result.failure(e)
+            Result.failure(IOException("Bağlantı zaman aşımına uğradı."))
         } catch (e: Exception) {
             Log.w(TAG, "fetchLeaderboard exception: ${e.message}")
-            Result.failure(e)
+            Result.failure(IOException("Şu anda çevrimiçi sıralamaya ulaşılamıyor."))
         }
     }
 

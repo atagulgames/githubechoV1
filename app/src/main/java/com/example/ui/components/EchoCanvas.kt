@@ -43,6 +43,7 @@ import com.example.model.EchoBeastState
 import com.example.model.GameStatus
 import com.example.model.Node
 import com.example.model.NodeType
+import com.example.model.Season2VisualTheme
 import com.example.model.Point
 import com.example.model.Segment
 import com.example.model.StrokeTheme
@@ -225,7 +226,16 @@ fun EchoCanvas(
         ) {
             // 1. Grid Background (Single GPU drawPoints instruction for buttery 60+ FPS)
             // User request: Screen background NEVER tilts or rotates - stays perfectly stable and upright!
-            drawGridBackground(size.width, size.height, state.isDarkTheme, gridPoints)
+            drawGridBackground(
+                w = size.width,
+                h = size.height,
+                isDarkTheme = state.isDarkTheme,
+                gridPoints = gridPoints,
+                season2Theme = state.selectedSeason2Theme,
+                isSeason2ThemeActive = state.isSeason2ThemeActive,
+                isSeason2BgEffects = state.isSeason2BackgroundEffectsEnabled,
+                timeSec = timeSec
+            )
 
             // Dynamic Constellation Transform: ONLY the cluster of buttons/nodes and webs rotates!
             withTransform({
@@ -453,18 +463,54 @@ private fun DrawScope.drawGridBackground(
     w: Float,
     h: Float,
     isDarkTheme: Boolean,
-    gridPoints: List<Offset>
+    gridPoints: List<Offset>,
+    season2Theme: Season2VisualTheme? = null,
+    isSeason2ThemeActive: Boolean = false,
+    isSeason2BgEffects: Boolean = true,
+    timeSec: Float = 0f
 ) {
-    val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
-    drawRect(color = bgColor)
-    val dotColor = if (isDarkTheme) Color(0x33475569) else Color(0x3394A3B8)
-    drawPoints(
-        points = gridPoints,
-        pointMode = PointMode.Points,
-        color = dotColor,
-        strokeWidth = 2.4f,
-        cap = StrokeCap.Round
-    )
+    if (isSeason2ThemeActive && season2Theme != null) {
+        if (isSeason2BgEffects) {
+            drawSeason2BackgroundPattern(
+                theme = season2Theme,
+                isDarkTheme = isDarkTheme,
+                timeSec = timeSec,
+                w = w,
+                h = h,
+                alphaMultiplier = 0.65f // Gentle ambient level atmosphere that leaves nodes & paths crystal clear
+            )
+        } else {
+            val top = season2Theme.getBackgroundTop(isDarkTheme)
+            val bottom = season2Theme.getBackgroundBottom(isDarkTheme)
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(top, bottom),
+                    startY = 0f,
+                    endY = h
+                ),
+                size = Size(w, h)
+            )
+        }
+        val dotColor = season2Theme.getDotColor(isDarkTheme)
+        drawPoints(
+            points = gridPoints,
+            pointMode = PointMode.Points,
+            color = dotColor,
+            strokeWidth = 2.4f,
+            cap = StrokeCap.Round
+        )
+    } else {
+        val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+        drawRect(color = bgColor)
+        val dotColor = if (isDarkTheme) Color(0x33475569) else Color(0x3394A3B8)
+        drawPoints(
+            points = gridPoints,
+            pointMode = PointMode.Points,
+            color = dotColor,
+            strokeWidth = 2.4f,
+            cap = StrokeCap.Round
+        )
+    }
 }
 
 private fun DrawScope.drawDirectedEdgeArrows(
