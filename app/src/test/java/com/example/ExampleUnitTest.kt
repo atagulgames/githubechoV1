@@ -252,5 +252,13 @@ class ExampleUnitTest {
     }
     println("SUCCESS: Levels 71 to 80 touch rotation fully validated!")
   }
+
+  @Test
+  fun testRenderLeaderboardServiceConfig() {
+    assertEquals("https://githubechov1.onrender.com", com.example.data.RenderLeaderboardService.BASE_URL)
+    assertEquals("https://githubechov1.onrender.com/leaderboard", com.example.data.RenderLeaderboardService.LEADERBOARD_URL)
+    val service = com.example.data.RenderLeaderboardService.getInstance()
+    assertNotNull(service)
+  }
 }
 

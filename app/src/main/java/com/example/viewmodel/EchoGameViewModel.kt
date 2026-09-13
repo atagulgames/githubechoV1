@@ -42,6 +42,7 @@ import com.example.model.EchoBeastState
 import com.example.ui.dialogs.MechanicCatalog
 import com.example.ui.dialogs.LevelMechanicInfo
 import com.example.model.ThemeRarity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -199,6 +200,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private val repo = EchoRepository(application)
     private val authRepo = com.example.data.AuthRepository(application)
     private val lootLocker = com.example.data.LootLockerManager.getInstance(application)
+    private val renderLeaderboard = com.example.data.RenderLeaderboardService.getInstance()
+    private var lastSubmittedLevelIdForLeaderboard: Int = -1
 
     private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val vibratorManager = application.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -482,6 +485,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun startLevelSequence(levelId: Int, isRestart: Boolean = false) {
+        lastSubmittedLevelIdForLeaderboard = -1
         previewJob?.cancel()
         levelTimerJob?.cancel()
 
@@ -1139,10 +1143,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.addTrophies(totalLevelTrophies)
         prefs.addPlayTime(durationSeconds.toLong())
 
-        // Automatically submit score to LootLocker Global Leaderboard (ekoleadbordglobal)
+        // Automatically submit score to Render PostgreSQL Leaderboard (and keep LootLocker sync)
         val currentTrophies = prefs.trophies
-        val currentUsername = _uiState.value.authenticatedUser.ifBlank { "Oyuncu" }
+        val currentUsername = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername.ifBlank { "Oyuncu" } }
         lootLocker.submitScore(currentUsername, currentTrophies)
+
+        if (lastSubmittedLevelIdForLeaderboard != state.level.levelId) {
+            lastSubmittedLevelIdForLeaderboard = state.level.levelId
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    renderLeaderboard.submitScore(currentUsername, currentTrophies)
+                } catch (e: Exception) {
+                    // Fail-safe: Game continues seamlessly without error
+                }
+            }
+        }
         prefs.recordLevelResult(
             levelId = state.level.levelId,
             title = state.level.title,
@@ -2644,22 +2659,23 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private fun loadLeaderboardData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLeaderboardRefreshing = true) }
-            val username = _uiState.value.authenticatedUser.ifBlank { "Oyuncu" }
+            val username = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername.ifBlank { "Oyuncu" } }
 
             // Submit current trophies if any
             if (prefs.trophies > 0) {
+                renderLeaderboard.submitScore(username, prefs.trophies)
                 lootLocker.submitScore(username, prefs.trophies)
             }
 
-            // Fetch live scores from LootLocker
-            val remoteResult = lootLocker.fetchLeaderboard(count = 50, currentUsername = username)
-            val finalPlayers = if (remoteResult.isSuccess && !remoteResult.getOrNull().isNullOrEmpty()) {
-                val remoteList = remoteResult.getOrNull()!!
-                val hasMe = remoteList.any { it.isCurrentUser }
+            // Fetch live scores from Render PostgreSQL Leaderboard
+            val renderResult = renderLeaderboard.fetchLeaderboard(currentUsername = username)
+            val finalPlayers = if (renderResult.isSuccess && !renderResult.getOrNull().isNullOrEmpty()) {
+                val list = renderResult.getOrNull()!!
+                val hasMe = list.any { it.isCurrentUser }
                 if (!hasMe) {
                     val me = com.example.model.LeaderboardPlayer(
                         id = "current_user",
-                        rank = remoteList.size + 1,
+                        rank = list.size + 1,
                         username = username,
                         avatarEmoji = "⚡",
                         title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
@@ -2671,13 +2687,38 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         isCurrentUser = true,
                         levelRecords = prefs.getLevelRecords()
                     )
-                    (remoteList + me).sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
+                    (list + me).sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
                 } else {
-                    remoteList
+                    list
                 }
             } else {
-                // Fallback to local accounts and curated global competitors if offline/not configured
-                authRepo.getLeaderboardPlayers()
+                // Secondary fallback: Try LootLocker or curated local players if Render is offline
+                val remoteResult = lootLocker.fetchLeaderboard(count = 50, currentUsername = username)
+                if (remoteResult.isSuccess && !remoteResult.getOrNull().isNullOrEmpty()) {
+                    val remoteList = remoteResult.getOrNull()!!
+                    val hasMe = remoteList.any { it.isCurrentUser }
+                    if (!hasMe) {
+                        val me = com.example.model.LeaderboardPlayer(
+                            id = "current_user",
+                            rank = remoteList.size + 1,
+                            username = username,
+                            avatarEmoji = "⚡",
+                            title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
+                            trophies = prefs.trophies,
+                            totalEchoes = prefs.totalEchoes,
+                            totalPlayTimeSec = prefs.totalPlayTimeSec,
+                            maxCombo = prefs.maxCombo,
+                            completedLevelsCount = prefs.getCompletedLevels().size,
+                            isCurrentUser = true,
+                            levelRecords = prefs.getLevelRecords()
+                        )
+                        (remoteList + me).sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
+                    } else {
+                        remoteList
+                    }
+                } else {
+                    authRepo.getLeaderboardPlayers()
+                }
             }
 
             _uiState.update {
