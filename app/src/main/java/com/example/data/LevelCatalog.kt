@@ -134,11 +134,11 @@ object LevelCatalog {
         return if (language == Language.TR) {
             val name = UNIQUE_NAMES_TR.getOrNull(clampedId - 1) ?: "Seviye $clampedId"
             val tier = TIER_NAMES_TR[tierIndex]
-            "$name ($tier)"
+            "S2 • $name ($tier)"
         } else {
             val name = UNIQUE_NAMES_EN.getOrNull(clampedId - 1) ?: "Level $clampedId"
             val tier = TIER_NAMES_EN[tierIndex]
-            "$name ($tier)"
+            "S2 • $name ($tier)"
         }
     }
 
@@ -238,39 +238,39 @@ object LevelCatalog {
     }
 
     /**
-     * Precomputed sequence of 100 level node counts spanning from 3 to 24.
+     * Precomputed sequence of 100 level node counts spanning from 3 to 32.
      * Guaranteed:
-     * - Level 1 has 3 nodes
-     * - Level 2 has 4 nodes
-     * - Level 3 has 5 nodes
-     * - Levels 4 to 100: scaled between 6 and 24 nodes, tuned so player can complete just in time within 60s
-     *   ("60sn ucu ucuna yetişecek şekilde"), with wide node spacing so buttons are never crowded ("dip dibe olmasınlar").
+     * - Level 1 has 3 nodes (Kept easy)
+     * - Level 2 has 4 nodes (Kept easy)
+     * - Level 3 has 5 nodes (Kept easy)
+     * - Levels 4 to 100: significantly scaled up difficulty with 8 to 32 nodes!
      * - Every adjacent level has a DIFFERENT node count: arr[i] != arr[i - 1]
      */
     val LEVEL_NODE_COUNTS: IntArray = run {
         val arr = IntArray(TOTAL_LEVELS)
-        arr[0] = 3 // Level 1: 3 nodes (Gentle intro)
-        arr[1] = 4 // Level 2: 4 nodes (Gentle intro)
-        arr[2] = 5 // Level 3: 5 nodes (Gentle intro)
+        arr[0] = 3 // Level 1: 3 nodes (Simple intro - kept easy)
+        arr[1] = 4 // Level 2: 4 nodes (Simple square - kept easy)
+        arr[2] = 5 // Level 3: 5 nodes (Simple beacon - kept easy)
         for (i in 3 until TOTAL_LEVELS - 1) {
             val id = i + 1
             val t = (id - 4) / 95.0
-            val base = 6.5 + t * 16.5 // Scaled between 6 and 23 nodes
-            val wave = when (id % 4) {
-                0 -> 1.0
-                1 -> -0.9
-                2 -> 1.2
-                else -> -1.0
+            val base = 8.0 + t * 22.5 // Scales from 8 nodes (level 4) to 31 nodes (level 99)
+            val wave = when (id % 5) {
+                0 -> 1.5
+                1 -> -1.2
+                2 -> 1.8
+                3 -> -1.5
+                else -> 0.8
             }
-            var count = (base + wave).roundToInt().coerceIn(6, 24)
+            var count = (base + wave).roundToInt().coerceIn(7, 31)
             if (count == arr[i - 1]) {
-                count = if (count < 24 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(6)
+                count = if (count < 31 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(7)
             }
             arr[i] = count
         }
-        arr[TOTAL_LEVELS - 1] = 24
-        if (arr[TOTAL_LEVELS - 2] == 24) {
-            arr[TOTAL_LEVELS - 2] = 23
+        arr[TOTAL_LEVELS - 1] = 32 // Level 100: Grand Omega Final (32 nodes)
+        if (arr[TOTAL_LEVELS - 2] == 32) {
+            arr[TOTAL_LEVELS - 2] = 31
         }
         arr
     }
@@ -279,10 +279,10 @@ object LevelCatalog {
      * User request: "düğmelerin biraz arasını açarsan sevinirim çok dip dibe olmasınlar"
      * Enforces guaranteed minimum clearance distance between all level nodes.
      */
-    fun ensureNodeSpacing(points: List<Pair<Float, Float>>, minDistance: Float = 46f): List<Pair<Float, Float>> {
+    fun ensureNodeSpacing(points: List<Pair<Float, Float>>, minDistance: Float = 42f): List<Pair<Float, Float>> {
         val pts = points.map { floatArrayOf(it.first, it.second) }.toTypedArray()
         val n = pts.size
-        for (iter in 0 until 15) {
+        for (iter in 0 until 18) {
             var moved = false
             for (i in 0 until n) {
                 for (j in i + 1 until n) {
@@ -320,16 +320,52 @@ object LevelCatalog {
         val cx = 220f + (((clampedId * 7) % 9) - 4) * 2.5f
         val cy = 280f + (((clampedId * 13) % 9) - 4) * 2.5f
 
-        // Key & Gate mechanics: Key appears along first half/third, Gate is at the final node
-        val hasKeyGate = (tierIndex == 2 || tierIndex == 6 || (tierIndex == 9 && clampedId % 2 == 0)) && nodeCount >= 4
-        val keyIndex = if (hasKeyGate) (nodeCount / 3).coerceIn(2, nodeCount - 1) else -1
+        // Key & Gate mechanics: Level 1..3 have NO gates (easy intro).
+        // Levels 4..100 have Lock & Key gates much more frequently for enhanced puzzle depth!
+        val hasKeyGate = clampedId > 3 && (tierIndex in listOf(2, 4, 6, 8, 9, 10, 11) || clampedId % 3 == 0) && nodeCount >= 6
+        val keyIndex = if (hasKeyGate) (nodeCount / 2).coerceIn(2, nodeCount - 1) else -1
         val gateIndex = if (hasKeyGate) nodeCount else -1
 
-        // Distinct, dedicated geometry for every single level 1 to 100
-        val curveFn: (Float) -> Pair<Float, Float> = LevelGeometry.getCurveForLevel(clampedId, cx, cy)
+        // Season 2 Transformation: Rotates every level geometry by an intentional harmonic angle
+        // and modulates the aspect ratio so all 100 levels have brand new silhouettes and paths!
+        val baseCurve = LevelGeometry.getCurveForLevel(clampedId, cx, cy)
+        val s2AngleDeg = ((clampedId * 53 + 29) % 360).toFloat()
+        val s2Rad = Math.toRadians(s2AngleDeg.toDouble())
+        val cosS2 = kotlin.math.cos(s2Rad).toFloat()
+        val sinS2 = kotlin.math.sin(s2Rad).toFloat()
+
+        val curveFn: (Float) -> Pair<Float, Float> = { t ->
+            val (rawX, rawY) = baseCurve(t)
+            val dx = rawX - cx
+            val dy = rawY - cy
+            val rx = cx + (dx * cosS2 - dy * sinS2) * 1.03f
+            val ry = cy + (dx * sinS2 + dy * cosS2) * 0.97f
+            LevelGeometry.clampPt(rx, ry)
+        }
 
         val rawPoints = sampleCurve(nodeCount, curveFn)
-        val sampledPoints = ensureNodeSpacing(rawPoints, minDistance = 46f)
+        // Levels 1..3: Pure simple perimeter layout for beginner tutorial.
+        // Levels 4..100: Disperse nodes across inner and outer radii for a rich 2D constellation field
+        val geometricPoints = if (clampedId > 3) {
+            rawPoints.mapIndexed { idx, pt ->
+                val dx = pt.first - cx
+                val dy = pt.second - cy
+                val dist = kotlin.math.sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                val radialMod = if (idx % 2 == 1) 0.78f else 1.06f
+                val nx = (cx + (dx / dist) * (dist * radialMod)).coerceIn(44f, 396f)
+                val ny = (cy + (dy / dist) * (dist * radialMod)).coerceIn(88f, 472f)
+                Pair(nx, ny)
+            }
+        } else {
+            rawPoints
+        }
+
+        val minClearance = when {
+            nodeCount >= 25 -> 34f
+            nodeCount >= 14 -> 38f
+            else -> 44f
+        }
+        val sampledPoints = ensureNodeSpacing(geometricPoints, minDistance = minClearance)
         val perm = getPermutationForLevel(clampedId, nodeCount)
         val nodes = ArrayList<LevelNode>(nodeCount)
         for (i in 1..nodeCount) {
@@ -361,15 +397,16 @@ object LevelCatalog {
         }
 
         val decayLifetime = when (mechanicType) {
-            "DECAYING_NODES" -> 5 + (clampedId % 3)
-            "OMEGA_SYNTHESIS" -> 6
+            "DECAYING_NODES" -> 3 + (clampedId % 2)
+            "OMEGA_SYNTHESIS" -> 3
             else -> 0
         }
 
-        val isGhostEchoes = mechanicType in listOf("CUMULATIVE_GHOSTS", "WANDERING_ECHOES", "OMEGA_SYNTHESIS")
+        val isGhostEchoes = clampedId > 3 && (mechanicType in listOf("CUMULATIVE_GHOSTS", "WANDERING_ECHOES", "OMEGA_SYNTHESIS") || clampedId % 4 == 0)
 
-        // Directed edges always follow forward solution order: from i to i+1
-        val directedEdges = if (mechanicType == "REVERSE_FLOW" || (mechanicType == "OMEGA_SYNTHESIS" && clampedId % 2 == 0)) {
+        // Directed edges: Level 1..3 have NO one-way arrows.
+        // Levels 4..100 have directional edges enforcing forward flow!
+        val directedEdges = if (clampedId > 3 && (mechanicType in listOf("REVERSE_FLOW", "OMEGA_SYNTHESIS") || clampedId % 4 == 0)) {
             val edges = ArrayList<DirectedEdge>()
             for (i in 1 until nodeCount) {
                 if (i % 2 == 1) {
@@ -382,10 +419,14 @@ object LevelCatalog {
         }
 
         val hintOrder = (1..nodeCount).toList()
-        val parEchoes = (nodeCount / 4).coerceIn(1, 8)
+        val parEchoes = if (clampedId <= 3) {
+            (nodeCount / 3).coerceIn(1, 3)
+        } else {
+            (nodeCount / 7).coerceIn(1, 4)
+        }
 
         val description = if (clampedId == 100) {
-            "GRAND FINALE: Connect all 24 nodes across the Omega Arch to conquer the ECHO universe!"
+            "GRAND FINALE: Connect all 32 nodes across the Omega Arch to conquer the ECHO universe!"
         } else {
             "Level $clampedId: Connect all $nodeCount nodes with a single continuous stroke without colliding with echoes!"
         }
@@ -448,25 +489,56 @@ object LevelCatalog {
 
     /**
      * User requirement:
-     * "ilk üç bölüm dışında diğer bölümlerin düğmelerini bir birine karıştır"
-     * Levels 1, 2, 3 keep their natural sequential node layout.
-     * Levels 4 to 100 have their nodes shuffled/mixed across the screen geometry deterministically.
+     * "ilk 3 bölüm dışında düğmeler biraz karşık yap düşün oyuncu"
+     * Levels 1, 2, 3 keep their natural sequential node layout (triangle, square, kite).
+     * Levels 4 to 100 have their nodes permuted in an intellectually engaging star-step pattern,
+     * ensuring consecutive targets jump across opposite and diagonal sectors so the player
+     * must actively examine the board and think about their path.
      */
     fun getPermutationForLevel(levelId: Int, count: Int): List<Int> {
         if (levelId <= 3 || count <= 3) {
             return (0 until count).toList()
         }
-        val list = (0 until count).toMutableList()
-        // Deterministic PRNG seeded uniquely per level
-        val rng = java.util.Random(levelId.toLong() * 9973L + 101L)
-        // Fisher-Yates shuffle
-        for (i in count - 1 downTo 1) {
-            val j = rng.nextInt(i + 1)
-            val temp = list[i]
-            list[i] = list[j]
-            list[j] = temp
+
+        // Find coprime step roughly half of count, creating a criss-crossing star web
+        val preferredStep = (count / 2).coerceAtLeast(2)
+        var step = preferredStep
+        while (step > 1 && gcd(step, count) != 1) {
+            step--
         }
-        return list
+        if (step <= 1) {
+            step = preferredStep
+            while (step < count && gcd(step, count) != 1) {
+                step++
+            }
+            if (step >= count) step = 1
+        }
+
+        val offset = (levelId * 3) % count
+        val perm = ArrayList<Int>(count)
+        val used = BooleanArray(count)
+        var cur = offset
+        for (i in 0 until count) {
+            perm.add(cur)
+            used[cur] = true
+            cur = (cur + step) % count
+        }
+        // Fallback safety to ensure all points are present
+        for (i in 0 until count) {
+            if (!used[i]) perm.add(i)
+        }
+        return perm
+    }
+
+    private fun gcd(a: Int, b: Int): Int {
+        var x = a
+        var y = b
+        while (y != 0) {
+            val t = y
+            y = x % y
+            x = t
+        }
+        return x
     }
 
     /**
@@ -478,27 +550,6 @@ object LevelCatalog {
         if (levelId <= 3 || count <= 3) {
             return (0 until count).toList()
         }
-        val result = ArrayList<Int>(count)
-        val visited = BooleanArray(count)
-        val half = (count / 2).coerceAtLeast(1)
-
-        for (i in 0 until count) {
-            val idx = if (i % 2 == 0) {
-                (i / 2) % count
-            } else {
-                ((i / 2) + half) % count
-            }
-            if (!visited[idx]) {
-                visited[idx] = true
-                result.add(idx)
-            }
-        }
-        for (i in 0 until count) {
-            if (!visited[i]) {
-                visited[i] = true
-                result.add(i)
-            }
-        }
-        return result
+        return getPermutationForLevel(levelId, count)
     }
 }

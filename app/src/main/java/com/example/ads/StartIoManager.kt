@@ -81,9 +81,9 @@ object StartIoManager {
      * Initializes Start.io SDK.
      */
     fun initialize(activity: Activity, testMode: Boolean = false) {
-        isTestMode = testMode
+        isTestMode = false // Strictly locked to 100% Live Ads per user directive
         try {
-            StartAppSDK.setTestAdsEnabled(isTestMode)
+            StartAppSDK.setTestAdsEnabled(false)
 
             if (!isInitialized) {
                 // Initialize with App ID 208838202 in 100% Live Ads Mode
@@ -93,7 +93,7 @@ object StartIoManager {
                 // Submit GDPR/Privacy consent for highest fill rate and maximum eCPM on live networks
                 StartAppSDK.setUserConsent(activity, "pas", System.currentTimeMillis(), true)
                 isInitialized = true
-                Log.d(TAG, "Start.io SDK successfully initialized with App ID: $APP_ID (Live Ads Mode: TestMode=$isTestMode)")
+                Log.d(TAG, "Start.io SDK successfully initialized with App ID: $APP_ID (100% LIVE ADS MODE ACTIVE)")
             }
 
             preloadAds(activity)
@@ -103,10 +103,11 @@ object StartIoManager {
     }
 
     fun setTestModeEnabled(enabled: Boolean, context: Context? = null) {
-        isTestMode = enabled
+        // Enforce 100% live ads mode permanently
+        isTestMode = false
         try {
-            StartAppSDK.setTestAdsEnabled(enabled)
-            Log.d(TAG, "Start.io test mode updated: $enabled")
+            StartAppSDK.setTestAdsEnabled(false)
+            Log.d(TAG, "Start.io live ads mode enforced: isTestMode=false")
             preloadedRewardedAd = null
             preloadedInterstitialAd = null
             if (context is Activity) {
@@ -117,7 +118,7 @@ object StartIoManager {
         }
     }
 
-    fun isTestModeEnabled(): Boolean = isTestMode
+    fun isTestModeEnabled(): Boolean = false
 
     /**
      * Preloads both Rewarded Video and Interstitial ads in memory

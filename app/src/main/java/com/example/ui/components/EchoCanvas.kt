@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -164,29 +165,46 @@ fun EchoCanvas(
         }
 
         val isRotatingTier = state.level.mechanicType in listOf("ROTATING_WEB", "OMEGA_SYNTHESIS")
-        val rotationAngle = if (isRotatingTier) sin(timeSec * 0.75f) * 12f else 0f
+        // User request: "sadece düğmeler topluluğu dönsün ekran deyil"
+        // Graceful, smooth continuous rotation of the node cluster (7 deg/sec)
+        val rotationAngle = if (isRotatingTier) (timeSec * 7.0f) % 360f else 0f
+
+        val currentRotationAngle by rememberUpdatedState(rotationAngle)
+        val currentScale by rememberUpdatedState(scale)
+        val currentOffsetX by rememberUpdatedState(offsetX)
+        val currentOffsetY by rememberUpdatedState(offsetY)
+        val currentCanvasWidth by rememberUpdatedState(canvasWidth)
+        val currentCanvasHeight by rememberUpdatedState(canvasHeight)
 
         fun unrotate(pos: Offset): Offset {
-            if (rotationAngle == 0f) return pos
-            val rad = Math.toRadians((-rotationAngle).toDouble())
-            val cosA = cos(rad).toFloat()
-            val sinA = sin(rad).toFloat()
-            val cx = canvasWidth / 2f
-            val cy = canvasHeight / 2f
+            val rot = currentRotationAngle
+            if (rot == 0f) return pos
+            val rad = Math.toRadians((-rot).toDouble())
+            val cosA = kotlin.math.cos(rad).toFloat()
+            val sinA = kotlin.math.sin(rad).toFloat()
+            val cx = currentCanvasWidth / 2f
+            val cy = currentCanvasHeight / 2f
             val dx = pos.x - cx
             val dy = pos.y - cy
             return Offset(cx + dx * cosA - dy * sinA, cy + dx * sinA + dy * cosA)
+        }
+
+        fun toVirtualAtTouch(screen: Offset): Point {
+            val unrotated = unrotate(screen)
+            val vx = (unrotated.x - currentOffsetX) / currentScale
+            val vy = (unrotated.y - currentOffsetY) / currentScale
+            return Point(vx, vy)
         }
 
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .testTag("echo_canvas")
-                .pointerInput(state.gameStatus, scale, offsetX, offsetY, rotationAngle, canvasWidth, canvasHeight) {
+                .pointerInput(state.gameStatus, state.level.levelId) {
                     if (state.gameStatus == GameStatus.PLAYING) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
-                            onPointerDown(toVirtual(unrotate(down.position)))
+                            onPointerDown(toVirtualAtTouch(down.position))
                             down.consume()
 
                             do {
@@ -194,7 +212,7 @@ fun EchoCanvas(
                                 val current = event.changes.firstOrNull()
                                 if (current != null) {
                                     if (current.pressed) {
-                                        onPointerMove(toVirtual(unrotate(current.position)))
+                                        onPointerMove(toVirtualAtTouch(current.position))
                                         current.consume()
                                     }
                                 }
@@ -205,14 +223,16 @@ fun EchoCanvas(
                     }
                 }
         ) {
+            // 1. Grid Background (Single GPU drawPoints instruction for buttery 60+ FPS)
+            // User request: Screen background NEVER tilts or rotates - stays perfectly stable and upright!
+            drawGridBackground(size.width, size.height, state.isDarkTheme, gridPoints)
+
+            // Dynamic Constellation Transform: ONLY the cluster of buttons/nodes and webs rotates!
             withTransform({
                 if (rotationAngle != 0f) {
-                    rotate(degrees = rotationAngle, pivot = center)
+                    rotate(degrees = rotationAngle, pivot = Offset(canvasWidth / 2f, canvasHeight / 2f))
                 }
             }) {
-                // 1. Grid Background (Single GPU drawPoints instruction for buttery 60+ FPS)
-                drawGridBackground(size.width, size.height, state.isDarkTheme, gridPoints)
-
                 // 1.5. Living Web (Yaşayan Ağ) - harmonic breathing connective threads & player tension
                 drawLivingWebMesh(
                     nodes = state.nodes,
@@ -297,6 +317,7 @@ fun EchoCanvas(
                     strokeTheme = state.strokeTheme,
                     isHintActive = state.isHintActive,
                     hintOrder = state.level.hintOrder,
+                    levelId = state.level.levelId,
                     pulseAlpha = pulseAlpha,
                     isDrawing = state.isDrawing,
                     isDarkTheme = state.isDarkTheme,
@@ -676,6 +697,7 @@ private fun DrawScope.drawNodes(
     strokeTheme: StrokeTheme,
     isHintActive: Boolean,
     hintOrder: List<Int>,
+    levelId: Int,
     pulseAlpha: Float,
     isDrawing: Boolean,
     isDarkTheme: Boolean,
@@ -749,7 +771,9 @@ private fun DrawScope.drawNodes(
         } else {
             lastVisited + 1
         }
-        val isNextTarget = isDrawing && node.id == nextExpectedId
+        // In levels 1..3, show the glowing target guide to teach the user.
+        // In levels 4..100 ("düşün oyuncu"), hide the guide so the player must think and search for the number, unless Hint booster is activated!
+        val isNextTarget = (levelId <= 3 || isHintActive) && isDrawing && node.id == nextExpectedId
         if (isNextTarget) {
             drawCircle(
                 color = Color(0xFF0284C7).copy(alpha = 0.30f * pulseAlpha),

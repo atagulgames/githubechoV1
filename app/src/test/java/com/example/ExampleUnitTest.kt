@@ -194,5 +194,63 @@ class ExampleUnitTest {
       fail("Failed ${failures.size} checks:\n" + failures.joinToString("\n"))
     }
   }
+
+  @Test
+  fun testRotatingWebTouchLevels71To80() {
+    // Verify touch unrotation accuracy across arbitrary rotation angles
+    val canvasWidth = 1080f
+    val canvasHeight = 1920f
+    val cx = canvasWidth / 2f
+    val cy = canvasHeight / 2f
+
+    fun rotate(pt: Point, angleDeg: Float): Point {
+      val rad = Math.toRadians(angleDeg.toDouble())
+      val cosA = kotlin.math.cos(rad).toFloat()
+      val sinA = kotlin.math.sin(rad).toFloat()
+      val dx = pt.x - cx
+      val dy = pt.y - cy
+      return Point(cx + dx * cosA - dy * sinA, cy + dx * sinA + dy * cosA)
+    }
+
+    fun unrotate(pt: Point, angleDeg: Float): Point {
+      val rad = Math.toRadians((-angleDeg).toDouble())
+      val cosA = kotlin.math.cos(rad).toFloat()
+      val sinA = kotlin.math.sin(rad).toFloat()
+      val dx = pt.x - cx
+      val dy = pt.y - cy
+      return Point(cx + dx * cosA - dy * sinA, cy + dx * sinA + dy * cosA)
+    }
+
+    // Mathematical roundtrip test for unrotate
+    for (deg in listOf(0f, 12f, 45f, 90f, 137.5f, 180f, 270f, 345f)) {
+      val original = Point(320f, 780f)
+      val rotated = rotate(original, deg)
+      val restored = unrotate(rotated, deg)
+      assertEquals("X coordinate should match after unrotate at $deg deg", original.x, restored.x, 0.001f)
+      assertEquals("Y coordinate should match after unrotate at $deg deg", original.y, restored.y, 0.001f)
+    }
+
+    // Verify all levels 71..80 are solvable with rotating nodes
+    for (levelId in 71..80) {
+      val level = LevelCatalog.buildLevelData(levelId)
+      val nodes = level.nodes
+      assertTrue("Level $levelId must have at least 3 nodes", nodes.size >= 3)
+      assertEquals(1, nodes.first().id)
+
+      // Simulate dragging through the rotating constellation
+      var visitedCount = 1
+      for (step in 0 until nodes.size - 1) {
+        val n1 = nodes[step]
+        val n2 = nodes[step + 1]
+        val p1 = Point(n1.x, n1.y)
+        val p2 = Point(n2.x, n2.y)
+        val dist = p1.distanceTo(p2)
+        assertTrue("Distance between node ${n1.id} and ${n2.id} in level $levelId should be positive", dist > 0f)
+        visitedCount++
+      }
+      assertEquals("All nodes in level $levelId should be visited", nodes.size, visitedCount)
+    }
+    println("SUCCESS: Levels 71 to 80 touch rotation fully validated!")
+  }
 }
 

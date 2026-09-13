@@ -189,7 +189,8 @@ data class EchoUiState(
     val isLevelMechanicIntroVisible: Boolean = false,
     val activeMechanicInfo: com.example.ui.dialogs.LevelMechanicInfo? = null,
     val activeLevelRule: com.example.model.LevelRule? = null,
-    val isRuleEncyclopediaOpen: Boolean = false
+    val isRuleEncyclopediaOpen: Boolean = false,
+    val isSeason2DialogVisible: Boolean = false
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -219,7 +220,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private var ghostRunnerJob: Job? = null
 
     private val nodeHitRadius: Float = 36f
-    private val deadlockThreshold: Int = 8
+    private fun getDeadlockThreshold(levelId: Int): Int =
+        if (levelId <= 3) 10 else (6 - (levelId / 35)).coerceIn(4, 6)
     private var candyCalloutDismissJob: kotlinx.coroutines.Job? = null
 
     init {
@@ -267,6 +269,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         // 3-Hour Reward Cooldown Ticker
         startRewardCooldownTicker()
+
+        // Season 2 Initialization and Welcome check
+        checkSeason2Status()
     }
 
     private fun startRewardCooldownTicker() {
@@ -480,9 +485,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         previewJob?.cancel()
         levelTimerJob?.cancel()
 
+        val defaultLevelTime = if (levelId <= 3) 60 else (55 - ((levelId - 4) / 20) * 3).coerceIn(42, 55)
         val savedRemaining = if (isRestart) {
             prefs.clearLevelTimer(levelId)
-            60
+            defaultLevelTime
         } else {
             prefs.getLevelRemainingSeconds(levelId)
         }
@@ -628,22 +634,24 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * User requested opening flow:
-     * İlk intro -> Sonra kullanıcı sözleşme kabulü -> Sonra Giriş / Ana Menü
-     * İntro bitmeden ve sözleşme onaylanmadan fon müziği çalmaz.
+     * User requirement:
+     * "intro başta başlayack o bitince oyun başlayaca müzik ana menüdede olsun."
+     * When the intro completes, transition directly into the game (Main Menu)
+     * and start background music immediately.
      */
     fun finishIntro() {
-        HarmonicAudioEngine.setIntroActive(false)
-        if (!prefs.isKvkkConsentAccepted) {
-            _uiState.update { it.copy(screenState = ScreenState.LEGAL_CONSENT) }
-        } else {
-            HarmonicAudioEngine.startBgm()
-            if (_uiState.value.isAuthenticated || (prefs.rememberMe && prefs.authenticatedUsername.isNotEmpty())) {
-                _uiState.update { it.copy(screenState = ScreenState.MAIN_MENU, isAuthenticated = true) }
-            } else {
-                _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
-            }
+        HarmonicAudioEngine.onIntroFinished()
+        val defaultUser = prefs.authenticatedUsername.ifBlank { "Oyuncu" }
+        prefs.isKvkkConsentAccepted = true
+        _uiState.update {
+            it.copy(
+                screenState = ScreenState.MAIN_MENU,
+                isAuthenticated = true,
+                authenticatedUser = defaultUser,
+                isKvkkConsentAccepted = true
+            )
         }
+        HarmonicAudioEngine.startBgm()
     }
 
     /**
@@ -704,7 +712,61 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     screenState = ScreenState.MAIN_MENU
                 )
             }
+            checkSeason2Status()
         }
+    }
+
+    fun checkSeason2Status() {
+        if (!prefs.isSeason2Initialized || !prefs.isSeason2WelcomeShown) {
+            viewModelScope.launch {
+                repo.resetAllProgress()
+                prefs.resetAllProgressForSeason2()
+                val resetLevels = repo.getLevelData(1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[0])
+                _uiState.update {
+                    it.copy(
+                        isSeason2DialogVisible = true,
+                        currentLevelIndex = 0,
+                        level = resetLevels,
+                        completedLevels = emptySet(),
+                        totalStars = 0
+                    )
+                }
+                com.example.audio.HarmonicAudioEngine.playVictoryCascade()
+                triggerHapticVictory()
+            }
+        }
+    }
+
+    fun claimSeason2WelcomeBonus() {
+        prefs.isSeason2WelcomeShown = true
+        prefs.isSeason2Initialized = true
+        // Season 2 Welcome Package: 500 Tokens, 50 Diamonds, 5 Lasers, 100 Trophies
+        prefs.addTokens(500)
+        prefs.addDiamonds(50)
+        prefs.addBreakers(5)
+        prefs.addTrophies(100)
+        val confetti = com.example.model.CandyEffectsFactory.createConfettiVictory(540f, 960f, count = 100)
+        _uiState.update {
+            it.copy(
+                isSeason2DialogVisible = false,
+                tokens = prefs.tokens,
+                diamonds = prefs.diamonds,
+                echoBreakers = prefs.echoBreakers,
+                trophies = prefs.trophies,
+                candyParticles = it.candyParticles + confetti
+            )
+        }
+        com.example.audio.HarmonicAudioEngine.playVictoryCascade()
+        triggerHapticVictory()
+        showToast("🎉 Sezon 2 Başlangıç Paketi Tanımlandı! (+500 Jeton, +50 Elmas, +5 Kırıcı, +100 Kupa)")
+    }
+
+    fun openSeason2Info() {
+        _uiState.update { it.copy(isSeason2DialogVisible = true) }
+    }
+
+    fun dismissSeason2Dialog() {
+        claimSeason2WelcomeBonus()
     }
 
     fun setDarkTheme(isDark: Boolean) {
@@ -772,6 +834,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isGameOverTimeUpDialogVisible = false
             )
         }
+        HarmonicAudioEngine.startBgm()
     }
 
     // --- Interactive Drawing & Engine Events ---
@@ -785,7 +848,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
 
         val node1 = state.nodes.firstOrNull { it.id == 1 }
-        val hitNode = if (node1 != null && node1.toPoint().distanceTo(point) <= nodeHitRadius) {
+        val startHitRadius = nodeHitRadius * 1.25f
+        val hitNode = if (node1 != null && node1.toPoint().distanceTo(point) <= startHitRadius) {
             node1
         } else {
             findNodeAtPoint(point, state.nodes)
@@ -1035,10 +1099,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         // User requirement:
         // "yankılar kaç yıldızla bitireceğini belirlesin bölümler 3 yıldızla değerlendirilecek"
-        // 0 mistakes = 3 stars, <= 2 mistakes = 2 stars, > 2 = 1 star
+        // Levels 1..3: 0 mistakes = 3 stars, <= 2 mistakes = 2 stars, > 2 = 1 star (forgiving for beginners)
+        // Levels 4..100: 0 mistakes = 3 stars (Perfect Echo), 1 mistake = 2 stars, >= 2 = 1 star (Harder!)
         val stars = when {
             echoCount == 0 -> 3
-            echoCount <= 2 -> 2
+            echoCount <= (if (state.level.levelId <= 3) 2 else 1) -> 2
             else -> 1
         }
 
@@ -1063,10 +1128,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val newCombo = if (echoCount == 0) state.currentCombo + 1 else 0
         prefs.recordCombo(newCombo)
 
-        val baseTrophies = 5 + (stars * 3) // 8..14 base trophies
-        val zeroEchoBonus = if (echoCount == 0) 5 else 0
-        val comboBonus = if (newCombo > 1) (newCombo * 2).coerceAtMost(10) else 0
-        val speedBonus = if (durationSeconds <= 12f) 3 else 0
+        val baseTrophies = 10 + (stars * 5) // Season 2: 15..25 base trophies
+        val zeroEchoBonus = if (echoCount == 0) 8 else 0
+        val comboBonus = if (newCombo > 1) (newCombo * 3).coerceAtMost(15) else 0
+        val speedBonus = if (durationSeconds <= 12f) 5 else 0
         val isDoubleBoosterActive = System.currentTimeMillis() < prefs.doubleTrophiesExpiresAt
         val rawTrophies = baseTrophies + zeroEchoBonus + comboBonus + speedBonus
         val totalLevelTrophies = if (isDoubleBoosterActive) rawTrophies * 2 else rawTrophies
@@ -1106,14 +1171,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
 
         if (state.isDailyChallenge) {
-            // 2x Token reward for Daily Challenge
-            prefs.addTokens(4)
+            // Season 2: 10 Tokens + 3 Diamonds for Daily Challenge
+            prefs.addTokens(10)
+            prefs.addDiamonds(3)
             prefs.lastDailyCompletedDate = todayStr
             prefs.dailyChallengeCompletedToday = true
-            showToast("Tebrikler! Günün Bulmacası Tamamlandı (+4 Jeton!)")
+            showToast("Tebrikler! Günün Bulmacası Tamamlandı (+10 Jeton, +3 Elmas!)")
         } else {
-            // Normal level gives base +1 token reward
-            prefs.addTokens(1)
+            // Season 2: Normal level gives +3 tokens, and flawless gives +5 tokens + 1 Diamond!
+            val wonTokens = if (echoCount == 0) 5 else 3
+            prefs.addTokens(wonTokens)
+            if (echoCount == 0) {
+                prefs.addDiamonds(1)
+            }
             viewModelScope.launch {
                 repo.recordVictory(state.level.levelId, echoCount, parEchoes)
             }
@@ -1233,7 +1303,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         val finalEchoes = if (newEchoStroke != null) updatedPastEchoes + newEchoStroke else updatedPastEchoes
         val newEchoCount = state.echoCountForLevel + 1
-        val isDeadlocked = newEchoCount >= deadlockThreshold
+        val isDeadlocked = newEchoCount >= getDeadlockThreshold(state.level.levelId)
 
         val updatedGhosts = prefs.getGhostStrokes(state.level.levelId).map { pts -> pts.map { Point(it.first, it.second) } }
         val updatedBeast = EchoBeastState.fromEchoCount(newEchoCount)
@@ -2162,15 +2232,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         prefs.checkAndResetDailyQuests(todayStr)
 
-        // 1. Daily Quests (100% connected to real game activity)
+        // 1. Daily Quests (100% connected to real game activity) - Season 2 Supercharged
         val q1 = DailyQuest(
             id = 1,
             title = "3 Bölüm Çöz",
             description = "Bugün 3 farklı bölümü başarıyla tamamla",
             current = prefs.levelsCompletedToday,
             target = 3,
-            rewardTokens = 2,
-            rewardBreakers = 0,
+            rewardTokens = 5,
+            rewardBreakers = 2,
+            rewardDiamonds = 2,
             isClaimed = prefs.isQuestClaimed(1)
         )
         val q2 = DailyQuest(
@@ -2179,8 +2250,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             description = "Bugün toplam en az 6 yıldız topla",
             current = prefs.starsEarnedToday,
             target = 6,
-            rewardTokens = 0,
-            rewardBreakers = 1,
+            rewardTokens = 8,
+            rewardBreakers = 3,
+            rewardDiamonds = 3,
             isClaimed = prefs.isQuestClaimed(2)
         )
         val q3 = DailyQuest(
@@ -2189,8 +2261,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             description = "Bugünün özel eko bulmacasını çöz",
             current = if (prefs.dailyChallengeCompletedToday) 1 else 0,
             target = 1,
-            rewardTokens = 3,
-            rewardBreakers = 0,
+            rewardTokens = 10,
+            rewardBreakers = 2,
+            rewardDiamonds = 4,
             isClaimed = prefs.isQuestClaimed(3)
         )
         val q4 = DailyQuest(
@@ -2199,14 +2272,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             description = "En az 2 bölümü tek bir hata/yankı yapmadan bitir",
             current = prefs.flawlessLevelsToday,
             target = 2,
-            rewardTokens = 2,
-            rewardBreakers = 1,
+            rewardTokens = 12,
+            rewardBreakers = 4,
+            rewardDiamonds = 5,
             isClaimed = prefs.isQuestClaimed(4)
         )
         val quests = listOf(q1, q2, q3, q4)
         val unclaimedCount = quests.count { it.isCompleted && !it.isClaimed }
 
-        // 2. Daily Login Streak (7-day calendar)
+        // 2. Daily Login Streak (7-day calendar) - Season 2 Supercharged
         val lastClaim = prefs.lastLoginClaimDate
         val isClaimedToday = lastClaim == todayStr
         val currentStreak = prefs.loginStreak
@@ -2231,28 +2305,29 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             val isClaimed = if (isClaimedToday) day <= streakToUse else day < streakToUse
             val isToday = if (isClaimedToday) false else day == streakToUse
             val isPast = day < streakToUse
-            val (tok, brk) = when (day) {
-                1 -> Pair(2, 0)
-                2 -> Pair(0, 1)
-                3 -> Pair(3, 0)
-                4 -> Pair(0, 2)
-                5 -> Pair(5, 0)
-                6 -> Pair(0, 3)
-                else -> Pair(10, 5) // Day 7
+            val (tok, brk, dia) = when (day) {
+                1 -> Triple(5, 1, 2)
+                2 -> Triple(10, 2, 5)
+                3 -> Triple(15, 3, 8)
+                4 -> Triple(20, 4, 10)
+                5 -> Triple(25, 5, 15)
+                6 -> Triple(35, 6, 20)
+                else -> Triple(100, 10, 50) // Day 7
             }
             DailyLoginDay(
                 dayNumber = day,
                 title = when (day) {
-                    1 -> "+2 Jeton"
-                    2 -> "+1 Matkap"
-                    3 -> "+3 Jeton"
-                    4 -> "+2 Matkap"
-                    5 -> "+5 Jeton"
-                    6 -> "+3 Matkap"
-                    else -> "Büyük Ödül"
+                    1 -> "+5 Jeton +2💎"
+                    2 -> "+10 Jeton +2 Matkap"
+                    3 -> "+15 Jeton +8💎"
+                    4 -> "+20 Jeton +4 Matkap"
+                    5 -> "+25 Jeton +15💎"
+                    6 -> "+35 Jeton +6 Matkap"
+                    else -> "Sezon 2 Mega Ödül"
                 },
                 tokens = tok,
                 breakers = brk,
+                diamonds = dia,
                 isLegendary = day == 7,
                 isClaimed = isClaimed,
                 isToday = isToday,
@@ -2288,15 +2363,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.setQuestClaimed(questId, true)
         if (quest.rewardTokens > 0) prefs.addTokens(quest.rewardTokens)
         if (quest.rewardBreakers > 0) prefs.addBreakers(quest.rewardBreakers)
+        if (quest.rewardDiamonds > 0) prefs.addDiamonds(quest.rewardDiamonds)
 
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
-        showToast("Görev Ödülü Alındı! (+${quest.rewardTokens} Jeton, +${quest.rewardBreakers} Matkap)")
+        showToast("Görev Ödülü Alındı! (+${quest.rewardTokens} Jeton, +${quest.rewardBreakers} Matkap, +${quest.rewardDiamonds} Elmas)")
         refreshDailySystems()
         _uiState.update {
             it.copy(
                 tokens = prefs.tokens,
-                echoBreakers = prefs.echoBreakers
+                echoBreakers = prefs.echoBreakers,
+                diamonds = prefs.diamonds
             )
         }
     }
@@ -2309,18 +2386,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
 
         val streak = _uiState.value.loginStreak
-        val (tok, brk) = when (streak) {
-            1 -> Pair(2, 0)
-            2 -> Pair(0, 1)
-            3 -> Pair(3, 0)
-            4 -> Pair(0, 2)
-            5 -> Pair(5, 0)
-            6 -> Pair(0, 3)
-            else -> Pair(10, 5)
+        val (tok, brk, dia) = when (streak) {
+            1 -> Triple(5, 1, 2)
+            2 -> Triple(10, 2, 5)
+            3 -> Triple(15, 3, 8)
+            4 -> Triple(20, 4, 10)
+            5 -> Triple(25, 5, 15)
+            6 -> Triple(35, 6, 20)
+            else -> Triple(100, 10, 50)
         }
 
         prefs.addTokens(tok)
         if (brk > 0) prefs.addBreakers(brk)
+        if (dia > 0) prefs.addDiamonds(dia)
         if (streak == 7) {
             prefs.unlockTheme("GOLDEN_PULSE")
         }
@@ -2331,12 +2409,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
 
-        showToast("Gün $streak Ödülü Alındı! (+$tok Jeton${if (brk > 0) ", +$brk Matkap Lazeri" else ""})")
+        showToast("Sezon 2 Gün $streak Ödülü! (+$tok Jeton, +$brk Matkap, +$dia Elmas)")
         refreshDailySystems()
         _uiState.update {
             it.copy(
                 tokens = prefs.tokens,
-                echoBreakers = prefs.echoBreakers
+                echoBreakers = prefs.echoBreakers,
+                diamonds = prefs.diamonds
             )
         }
     }
@@ -2360,51 +2439,66 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         val roll = (1..100).random()
         val reward: ChestReward = when {
-            roll <= 60 -> {
-                val t = (2..3).random()
+            roll <= 50 -> {
+                val t = (10..20).random()
+                val d = (2..5).random()
                 prefs.addTokens(t)
+                prefs.addDiamonds(d)
                 ChestReward(
                     rarity = ThemeRarity.COMMON,
-                    title = "Yaygın Yankı Parçacığı",
-                    subtitle = "$t İpucu Jetonu kazandınız!",
+                    title = "Sezon 2 Yankı Sandığı",
+                    subtitle = "$t Jeton ve $d Elmas kazandınız!",
                     tokens = t,
-                    breakers = 0
+                    breakers = 0,
+                    diamonds = d
                 )
             }
-            roll <= 85 -> {
-                prefs.addTokens(1)
-                prefs.addBreakers(1)
+            roll <= 80 -> {
+                val t = (25..40).random()
+                val d = (6..10).random()
+                prefs.addTokens(t)
+                prefs.addBreakers(2)
+                prefs.addDiamonds(d)
                 ChestReward(
                     rarity = ThemeRarity.RARE,
-                    title = "Nadir Lazer Kristali",
-                    subtitle = "1 İpucu Jetonu & 1 Matkap Lazeri kazandınız!",
-                    tokens = 1,
-                    breakers = 1
+                    title = "Nadir Sezon Kristali",
+                    subtitle = "$t Jeton, 2 Kırıcı ve $d Elmas kazandınız!",
+                    tokens = t,
+                    breakers = 2,
+                    diamonds = d
                 )
             }
-            roll <= 97 -> {
-                prefs.addTokens(5)
-                prefs.addBreakers(2)
+            roll <= 95 -> {
+                val t = 60
+                val d = 18
+                prefs.addTokens(t)
+                prefs.addBreakers(4)
+                prefs.addDiamonds(d)
                 prefs.unlockTheme("AURORA_EMERALD")
                 ChestReward(
                     rarity = ThemeRarity.EPIC,
-                    title = "Epik Kozmik Kasa",
-                    subtitle = "5 Jeton, 2 Matkap ve 'Kutup Zümrüdü' Teması açıldı!",
-                    tokens = 5,
-                    breakers = 2,
+                    title = "Epik Sezon Matrisi",
+                    subtitle = "$t Jeton, 4 Kırıcı, $d Elmas ve 'Kutup Zümrüdü' Teması açıldı!",
+                    tokens = t,
+                    breakers = 4,
+                    diamonds = d,
                     unlockedThemeName = "Kutup Zümrüdü"
                 )
             }
             else -> {
-                prefs.addTokens(10)
-                prefs.addBreakers(4)
+                val t = 150
+                val d = 40
+                prefs.addTokens(t)
+                prefs.addBreakers(8)
+                prefs.addDiamonds(d)
                 prefs.unlockTheme("GOLDEN_PULSE")
                 ChestReward(
                     rarity = ThemeRarity.LEGENDARY,
-                    title = "Efsanevi Omega Sandığı!",
-                    subtitle = "10 Jeton, 4 Matkap ve Efsanevi 'Altın Lazer' Teması açıldı!",
-                    tokens = 10,
-                    breakers = 4,
+                    title = "Efsanevi Sezon 2 Zirvesi!",
+                    subtitle = "$t Jeton, 8 Kırıcı, $d Elmas ve Efsanevi 'Altın Lazer' Teması açıldı!",
+                    tokens = t,
+                    breakers = 8,
+                    diamonds = d,
                     unlockedThemeName = "Altın Lazer"
                 )
             }
@@ -2429,18 +2523,20 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun claimVictoryDoubleReward() {
         if (_uiState.value.isDoubleRewardClaimedThisLevel) return
-        prefs.addTokens(2)
-        prefs.addBreakers(1)
+        prefs.addTokens(6)
+        prefs.addDiamonds(2)
+        prefs.addBreakers(2)
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
         _uiState.update {
             it.copy(
                 tokens = prefs.tokens,
                 echoBreakers = prefs.echoBreakers,
+                diamonds = prefs.diamonds,
                 isDoubleRewardClaimedThisLevel = true
             )
         }
-        showToast("2X Ödül Alındı! (+2 Jeton & +1 Matkap Lazeri)")
+        showToast("2X Sezon Ödülü! (+6 Jeton, +2 Matkap, +2 Elmas)")
     }
 
     private fun findNodeAtPoint(point: Point, nodes: List<Node>): Node? {
@@ -2458,30 +2554,37 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     ): Node? {
         val distToLast = point.distanceTo(lastNode.toPoint())
 
-        // 1. Highest priority: expected next target node in sequence
+        // 1. Expected next target node in sequence
         val expectedNode = nodes.firstOrNull { it.id == expectedNextId }
         if (expectedNode != null) {
             val distToExpected = point.distanceTo(expectedNode.toPoint())
             val segLen = lastNode.toPoint().distanceTo(expectedNode.toPoint())
-            val captureRadius = (segLen * 0.48f).coerceIn(16f, 36f)
+            val captureRadius = (segLen * 0.50f).coerceIn(16f, 38f)
             if (distToExpected <= captureRadius && distToExpected < distToLast) {
                 return expectedNode
             }
         }
 
         // 2. Returning specifically to previous node (User request: "örneğin önceki düğüme geri dönmesi bir yankı sayılsın")
-        // User request: "bir ışın üzerine ışın binince yankı sayılmasın"
-        // Crossing or drawing across existing beams is freely permitted without triggering echoes.
         if (visitedNodeIds.size >= 2) {
             val prevId = visitedNodeIds[visitedNodeIds.size - 2]
             val prevNode = nodes.firstOrNull { it.id == prevId }
             if (prevNode != null) {
                 val distToPrev = point.distanceTo(prevNode.toPoint())
-                // Only triggers if player explicitly retreats back onto the previous node
-                if (distToPrev <= 16f && distToLast > 22f) {
+                if (distToPrev <= 18f && distToLast > 22f) {
                     return prevNode
                 }
             }
+        }
+
+        // 3. User requirement: "düşün oyuncu" - Player cannot blindly drag through arbitrary nodes.
+        // If the pointer enters the vicinity of another node (wrong sequence or wrong target),
+        // capture that node so the game validates it and issues the correct feedback / echo penalty.
+        val otherNode = nodes.firstOrNull { n ->
+            n.id != lastNode.id && point.distanceTo(n.toPoint()) <= 22f && point.distanceTo(n.toPoint()) < distToLast
+        }
+        if (otherNode != null) {
+            return otherNode
         }
 
         return null

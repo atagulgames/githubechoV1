@@ -163,52 +163,26 @@ fun IntroVideoScreen(
                         }
                     }
                 )
-            } else {
-                // Media file not yet found on disk: Report exact required path as mandated by Rule 5
-                Card(
+
+                // Skip button allowing player to advance immediately into the game
+                Box(
                     modifier = Modifier
-                        .padding(24.dp)
-                        .testTag("intro_media_missing_card"),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-                    shape = RoundedCornerShape(20.dp)
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.TopEnd
                 ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Button(
+                        onClick = onIntroFinished,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.60f)),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.testTag("intro_skip_button")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Movie,
-                            contentDescription = "Video",
-                            tint = Color(0xFF38BDF8),
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "GİRİŞ VİDEOSU BEKLENİYOR",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Lütfen intro videonuzu aşağıdaki konuma ekleyin:\nassets/videos/intro.mp4",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 18.sp
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Button(
-                            onClick = onIntroFinished,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("intro_missing_skip_button")
-                        ) {
-                            Text("Giriş Ekranına Geç", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
+                        Text("Geç ➔", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     }
                 }
+            } else {
+                // Seamless cinematic animated fallback if video file is missing or unsupported
+                IntroLandscapeScreen(onIntroFinished = onIntroFinished)
             }
         }
     }

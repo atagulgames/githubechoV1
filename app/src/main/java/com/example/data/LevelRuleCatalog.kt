@@ -268,24 +268,24 @@ object LevelRuleCatalog {
                 )
             }
             9 -> { // Levels 71..80
-                val title = if (id == 71) "Ekranın Dönmesi" else if (id == 75) "Açısal Girdap Rotasyonu" else "Dönen Matris #$id"
+                val title = if (id == 71) "Dönen Düğümler Ağı" else if (id == 75) "Açısal Girdap Düğümleri" else "Dönen Düğümler #$id"
                 val sub = "Milat: Bölüm 71 • Kademe IX (71 - 80)"
-                val rule = "Tüm oyun evreni ve koordinat ekseni yavaşça dönüyor! Parmağın ekranda kayarken tahtanın açısı sürekli değişecektir."
-                val hazard = "Dönüş esnasında rotayı şaşırmak veya merkezkaç kaymasıyla yanlış koordinata dokunmak +1 Yankı üretir."
-                val tip = "Dönüş merkezini referans al; parmağını tahtanın dönüş hızına paralel bir yay çizerek hareket ettir."
+                val rule = "Düğümler kümesi ve bağlantı ağı merkez etrafında yavaşça döner. Ekran ve arka plan sabit kalır; parmağınla dönen düğümleri sırasıyla bağla."
+                val hazard = "Dönen düğümler kümesinde sıradaki hedefi kaçırmak veya yanlış noktaya dokunmak +1 Yankı üretir."
+                val tip = "Arka plan sabit kalırken düğmeler kümesi döner; parmağını dönen sıradaki düğüme yönlendirerek çiz."
                 LevelRule(
                     levelId = id,
                     milestoneId = 71,
                     isMajorMilestone = isMajor,
                     tier = tier,
-                    tierName = "Ekranın Dönmesi",
+                    tierName = "Dönen Düğümler Ağı",
                     ruleTitle = title,
                     subtitle = sub,
                     icon = "🌀",
                     badgeColor = 0xFFF59E0B,
                     accentColor = 0xFFFBBF24,
-                    headline = "Kural: Açısal Rotasyon & Koordinat Dönüşü",
-                    summary = "Dönen koordinat sisteminde merkezkaç kuvvetini yöneterek çiz.",
+                    headline = "Kural: Dönen Düğümler Ağı",
+                    summary = "Sabit ekranda yavaşça dönen düğümler kümesini sırasıyla bağla.",
                     mechanicRule = rule,
                     echoHazard = hazard,
                     proStrategy = tip,
@@ -601,24 +601,24 @@ object LevelRuleCatalog {
                 )
             }
             9 -> { // Levels 71..80
-                val title = if (id == 71) "Rotating Web" else if (id == 75) "Angular Vortex Spin" else "Gyro Matrix #$id"
+                val title = if (id == 71) "Rotating Node Web" else if (id == 75) "Angular Node Vortex" else "Spinning Nodes #$id"
                 val sub = "Milestone: Level 71 • Tier IX (71 - 80)"
-                val rule = "The entire coordinate grid and canvas rotate slowly during play! As your finger moves, the board angle dynamically turns."
-                val hazard = "Failing to compensate for rotation causes touch coordinates to deviate, risking missed nodes (+1 Echo)."
-                val tip = "Use the canvas center as your anchor and lead your stroke along the rotational curve."
+                val rule = "The cluster of nodes and connective web rotates smoothly around the center while the screen remains fixed! Trace through the rotating nodes in sequence."
+                val hazard = "Failing to compensate for node rotation causes finger stroke to deviate, risking missed nodes (+1 Echo)."
+                val tip = "The background remains stationary while the nodes spin smoothly; track and connect the next node in order."
                 LevelRule(
                     levelId = id,
                     milestoneId = 71,
                     isMajorMilestone = isMajor,
                     tier = tier,
-                    tierName = "Rotating Web",
+                    tierName = "Rotating Nodes",
                     ruleTitle = title,
                     subtitle = sub,
                     icon = "🌀",
                     badgeColor = 0xFFF59E0B,
                     accentColor = 0xFFFBBF24,
-                    headline = "Rule: Angular Rotation & Centrifugal Touch",
-                    summary = "Compensate for coordinate rotation as the web spins.",
+                    headline = "Rule: Rotating Node Constellation",
+                    summary = "Connect nodes as the constellation revolves around the center.",
                     mechanicRule = rule,
                     echoHazard = hazard,
                     proStrategy = tip,

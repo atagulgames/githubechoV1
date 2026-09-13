@@ -430,8 +430,29 @@ class EchoPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_LAST_DAILY, value).apply()
 
     var isTestAdsEnabled: Boolean
-        get() = prefs.getBoolean(KEY_TEST_ADS, false)
-        set(value) = prefs.edit().putBoolean(KEY_TEST_ADS, value).apply()
+        get() = false // Strictly locked to 100% Live Ads per user directive
+        set(value) {
+            prefs.edit().putBoolean(KEY_TEST_ADS, false).apply()
+        }
+
+    var isSeason2WelcomeShown: Boolean
+        get() = prefs.getBoolean("echo_season_2_welcome_shown", false)
+        set(value) = prefs.edit().putBoolean("echo_season_2_welcome_shown", value).apply()
+
+    var isSeason2Initialized: Boolean
+        get() = prefs.getBoolean("echo_season_2_initialized", false)
+        set(value) = prefs.edit().putBoolean("echo_season_2_initialized", value).apply()
+
+    fun resetAllProgressForSeason2() {
+        prefs.edit()
+            .putBoolean("echo_season_2_initialized", true)
+            .putInt(KEY_CURRENT_LEVEL, 0)
+            .putInt(KEY_TOTAL_ECHOES, 0)
+            .remove(KEY_COMPLETED_LEVELS)
+            .remove(KEY_LAST_DAILY)
+            .remove(KEY_QUESTS_DATE)
+            .apply()
+    }
 
     var isDarkTheme: Boolean
         get() = prefs.getBoolean(KEY_DARK_THEME, true)
@@ -642,7 +663,8 @@ class EchoPreferences(context: Context) {
 
     fun getLevelRemainingSeconds(levelId: Int): Int {
         val deadline = getLevelTimerDeadlineMs(levelId)
-        if (deadline <= 0L) return 60
+        val defaultSec = if (levelId <= 3) 60 else (55 - ((levelId - 4) / 20) * 3).coerceIn(42, 55)
+        if (deadline <= 0L) return defaultSec
         val remaining = ((deadline - System.currentTimeMillis()) / 1000L).toInt()
         return remaining.coerceAtLeast(0)
     }

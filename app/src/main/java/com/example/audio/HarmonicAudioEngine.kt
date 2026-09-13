@@ -40,6 +40,8 @@ object HarmonicAudioEngine {
         isIntroActive = active
         if (active) {
             pauseBgm()
+        } else {
+            startBgm()
         }
     }
 

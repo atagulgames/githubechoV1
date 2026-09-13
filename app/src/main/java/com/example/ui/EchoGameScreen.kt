@@ -56,6 +56,7 @@ import com.example.ui.dialogs.LeaderboardDialog
 import com.example.ui.dialogs.LevelSelectDialog
 import com.example.ui.dialogs.PlayerProfileDialog
 import com.example.ui.dialogs.RewardClaimedDialog
+import com.example.ui.dialogs.Season2WelcomeDialog
 import com.example.ui.dialogs.SettingsDialog
 import com.example.ui.dialogs.ShopDialog
 import com.example.ui.dialogs.SkinsDialog
@@ -153,7 +154,8 @@ fun EchoGameScreen(
                             }
                         },
                         onBannerAdLoaded = { viewModel.onBannerAdLoaded() },
-                        onBannerAdFailed = { err -> viewModel.onBannerAdFailed(err) }
+                        onBannerAdFailed = { err -> viewModel.onBannerAdFailed(err) },
+                        onOpenSeason2Info = { viewModel.openSeason2Info() }
                     )
                 }
 
@@ -502,6 +504,16 @@ fun EchoGameScreen(
             if (state.showDurationStartedBanner && state.screenState == ScreenState.PLAYING_LEVEL) {
                 DurationStartedShakeBanner(
                     modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
+
+            // 20. Sezon 2 Hoş Geldin & Sıfırlama Diyaloğu (Konfetili kutlama & Büyük Başlangıç Paketi)
+            if (state.isSeason2DialogVisible) {
+                Season2WelcomeDialog(
+                    isDarkTheme = state.isDarkTheme,
+                    onClaimAndStart = {
+                        viewModel.claimSeason2WelcomeBonus()
+                    }
                 )
             }
         }

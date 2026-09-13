@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CrisisAlert
 import androidx.compose.material.icons.filled.DarkMode
@@ -62,7 +63,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import com.example.audio.HarmonicAudioEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,10 +97,17 @@ fun EchoMainMenu(
     onOpenDailyLogin: () -> Unit = {},
     onOpenChest: () -> Unit = {},
     onWatchRewardedAd: () -> Unit = {},
+    onOpenSeason2Info: () -> Unit = {},
     onBannerAdLoaded: () -> Unit = {},
     onBannerAdFailed: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // User requirement: "müzik ana menüdede olsun"
+    LaunchedEffect(Unit) {
+        HarmonicAudioEngine.setIntroActive(false)
+        HarmonicAudioEngine.startBgm()
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "PulseLogo")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 0.96f,
@@ -429,6 +439,74 @@ fun EchoMainMenu(
                     textAlign = TextAlign.Center,
                     lineHeight = 17.sp
                 )
+            }
+
+            // Season 2 Glowing Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(18.dp))
+                    .clickable { onOpenSeason2Info() }
+                    .testTag("season_2_banner_card"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (state.isDarkTheme) Color(0xFF1E1B4B) else Color(0xFFEEF2FF)
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.5.dp,
+                    Brush.horizontalGradient(listOf(Color(0xFFFFB703), Color(0xFF38BDF8), Color(0xFFEC4899)))
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFB703).copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✨", fontSize = 18.sp)
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "SEZON 2: YENİ ÇAĞ",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp,
+                                    color = if (state.isDarkTheme) Color.White else Color(0xFF1E1B4B)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFFB703))
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text("AKTİF", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                }
+                            }
+                            Text(
+                                text = "100 Yeni Bölüm • Sıfırlanan Seviyeler • 2.5x Ödül",
+                                fontSize = 11.sp,
+                                color = if (state.isDarkTheme) Color(0xFFC7D2FE) else Color(0xFF4338CA)
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFFFFB703),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             // Daily Challenge Card (Dynamic Theme)

@@ -458,36 +458,41 @@ fun SettingsDialog(
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = null,
-                            tint = if (!testAdsEnabled) Color(0xFF16A34A) else Color(0xFF0284C7),
+                            tint = Color(0xFF16A34A),
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Canlı Reklam Modu",
+                                text = "Start.io Reklam Ağı",
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = if (!testAdsEnabled) "Aktif (Start.io Canlı Reklamlar)" else "Test Modu (Geliştirici Reklamları)",
-                                color = if (!testAdsEnabled) Color(0xFF16A34A) else textSecondary,
-                                fontSize = 11.sp
+                                text = "100% Canlı Reklamlar Aktif (App ID: 208838202)",
+                                color = Color(0xFF16A34A),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
 
-                    Switch(
-                        checked = !testAdsEnabled,
-                        onCheckedChange = { isLive -> onToggleTestAds(!isLive) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF16A34A),
-                            uncheckedThumbColor = Color(0xFF94A3B8),
-                            uncheckedTrackColor = borderColor
-                        ),
-                        modifier = Modifier.testTag("test_ads_toggle")
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF16A34A).copy(alpha = 0.15f))
+                            .border(1.dp, Color(0xFF16A34A), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                            .testTag("test_ads_toggle")
+                    ) {
+                        Text(
+                            text = "CANLI",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF16A34A)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -664,6 +669,16 @@ fun SettingsDialog(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = "ECHO FLUX • v1.2 (Sezon 2)",
+                    fontSize = 11.sp,
+                    color = textSecondary,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .testTag("app_version_label")
+                )
             }
         }
     }

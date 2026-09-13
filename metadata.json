@@ -1,6 +1,6 @@
 {
   "name": "ECHO FLUX",
-  "description": "ECHO FLUX - Minimalist harmonic reflection puzzle game with 100 handcrafted unique levels and Dark/White themes.",
+  "description": "ECHO FLUX v1.2 - Season 2: Minimalist harmonic reflection puzzle game with 100 handcrafted unique levels and Dark/White themes.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
