@@ -4,59 +4,35 @@ import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.VideoView
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.R
 import com.example.audio.HarmonicAudioEngine
-import com.example.media.GameMediaAssets
-import java.io.File
+import kotlinx.coroutines.delay
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Fullscreen intro video player component that plays user-provided intro.mp4 directly.
  * 
  * Strict constraints:
- * - No AI re-generation, modification, filters or replacement of the video.
- * - If missing, strictly states the missing file path rather than generating a placeholder.
- * - Automatically navigates to Login Screen on completion.
- * - Allows manual skip via SKIP / ATLA button.
+ * - The video plays exactly ONCE from beginning to end without restarting.
+ * - Background music (BGM) is strictly suppressed until the intro has completed.
+ * - Single-execution guard prevents multiple completion triggers.
  */
 @Composable
 fun IntroVideoScreen(
@@ -64,71 +40,45 @@ fun IntroVideoScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var isVideoFound by remember { mutableStateOf(false) }
-    var videoUriToPlay by remember { mutableStateOf<Uri?>(null) }
-    var checkingComplete by remember { mutableStateOf(false) }
+    val isFinishedHandled = remember { AtomicBoolean(false) }
+    var isFinishedState by remember { mutableStateOf(false) }
+    var videoViewInstance by remember { mutableStateOf<VideoView?>(null) }
+
+    // Direct, compile-time verified resource URI for intro.mp4 (duration: ~11s)
+    val videoUriToPlay: Uri = remember(context) {
+        Uri.parse("android.resource://${context.packageName}/${R.raw.intro}")
+    }
+
+    val currentOnIntroFinished by rememberUpdatedState(onIntroFinished)
+
+    // Dedicated single-execution completion handler
+    val finishOnce = remember {
+        {
+            if (isFinishedHandled.compareAndSet(false, true)) {
+                isFinishedState = true
+                try {
+                    videoViewInstance?.stopPlayback()
+                } catch (_: Exception) {}
+                currentOnIntroFinished()
+            }
+        }
+    }
 
     // Strictly ensure background music does not play during intro
     DisposableEffect(Unit) {
         HarmonicAudioEngine.setIntroActive(true)
-        onDispose { }
+        onDispose {
+            try {
+                videoViewInstance?.stopPlayback()
+            } catch (_: Exception) {}
+        }
     }
 
-    // Locate the user's intro.mp4 file
+    // Watchdog timer: Automatically advance after 14 seconds if VideoView completion stalls
+    // Video is 11s, so 14s gives plenty of buffer without trapping the user
     LaunchedEffect(Unit) {
-        // 1. Direct raw resource access (res/raw/intro.mp4) - Most reliable on Android
-        val rawId = context.resources.getIdentifier("intro", "raw", context.packageName)
-        if (rawId != 0) {
-            videoUriToPlay = Uri.parse("android.resource://${context.packageName}/$rawId")
-            isVideoFound = true
-            checkingComplete = true
-            return@LaunchedEffect
-        }
-
-        // 2. Try extracting from standard assets/videos/intro.mp4
-        var extractedFile: File? = GameMediaAssets.getOrExtractAssetToCache(
-            context,
-            GameMediaAssets.INTRO_VIDEO_PATH,
-            "user_intro_video.mp4"
-        )
-
-        // 3. Try assets/intro.mp4
-        if (extractedFile == null || !extractedFile.exists() || extractedFile.length() == 0L) {
-            extractedFile = GameMediaAssets.getOrExtractAssetToCache(
-                context,
-                GameMediaAssets.INTRO_VIDEO_ROOT_PATH,
-                "user_intro_video.mp4"
-            )
-        }
-
-        // 4. Fallback: check direct app external/internal storage files if mounted
-        if (extractedFile == null || !extractedFile.exists() || extractedFile.length() == 0L) {
-            val potentialDirectFiles = listOf(
-                File(context.filesDir, "videos/intro.mp4"),
-                File(context.filesDir, "intro.mp4"),
-                File("/data/local/tmp/intro.mp4")
-            )
-            for (f in potentialDirectFiles) {
-                if (f.exists() && f.length() > 0L) {
-                    extractedFile = f
-                    break
-                }
-            }
-        }
-
-        if (extractedFile != null && extractedFile.exists() && extractedFile.length() > 0L) {
-            videoUriToPlay = Uri.fromFile(extractedFile)
-            isVideoFound = true
-        } else {
-            isVideoFound = false
-        }
-        checkingComplete = true
-    }
-
-    // Watchdog timer: Automatically advance after 18 seconds if VideoView completion stalls
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(18_000L)
-        onIntroFinished()
+        delay(14_000L)
+        finishOnce()
     }
 
     Box(
@@ -138,41 +88,39 @@ fun IntroVideoScreen(
             .testTag("intro_video_container"),
         contentAlignment = Alignment.Center
     ) {
-        if (checkingComplete) {
-            if (isVideoFound && videoUriToPlay != null) {
-                // Direct fullscreen playback of the user's intro.mp4
-                AndroidView(
-                    factory = { ctx ->
-                        VideoView(ctx).apply {
-                            layoutParams = FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            setOnPreparedListener { mp ->
-                                mp.isLooping = false
+        if (!isFinishedState) {
+            // Direct fullscreen playback of user's intro.mp4
+            AndroidView(
+                factory = { ctx ->
+                    VideoView(ctx).apply {
+                        videoViewInstance = this
+                        layoutParams = FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        setOnPreparedListener { mp ->
+                            mp.isLooping = false
+                            if (!isFinishedHandled.get()) {
                                 start()
                             }
-                            setOnCompletionListener {
-                                onIntroFinished()
-                            }
-                            setOnErrorListener { _, _, _ ->
-                                onIntroFinished()
-                                true
-                            }
-                            setVideoURI(videoUriToPlay)
                         }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    update = { view ->
-                        if (!view.isPlaying && view.currentPosition == 0) {
-                            view.start()
+                        setOnCompletionListener {
+                            finishOnce()
                         }
+                        setOnErrorListener { _, _, _ ->
+                            finishOnce()
+                            true
+                        }
+                        setVideoURI(videoUriToPlay)
                     }
-                )
-            } else {
-                // Seamless cinematic animated fallback if video file is missing or unsupported
-                IntroLandscapeScreen(onIntroFinished = onIntroFinished)
-            }
+                },
+                modifier = Modifier.fillMaxSize(),
+                update = {
+                    // DO NOT restart the video in update callback!
+                    // Recomposition must never re-trigger video playback.
+                }
+            )
         }
     }
 }
+

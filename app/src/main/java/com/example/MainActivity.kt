@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
     val echoPrefs = com.example.data.EchoPreferences(this)
     echoPrefs.isTestAdsEnabled = false
     StartIoManager.initialize(this, testMode = false)
+    com.example.audio.HarmonicAudioEngine.setIntroActive(true)
     com.example.audio.HarmonicAudioEngine.init(this)
     com.example.audio.HapticEngine.init(this)
 
@@ -84,7 +85,10 @@ class MainActivity : ComponentActivity() {
   override fun onResume() {
     super.onResume()
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-    com.example.audio.HarmonicAudioEngine.resumeBgm()
+    if (!com.example.audio.HarmonicAudioEngine.isIntroActive &&
+        activeGameViewModel?.uiState?.value?.screenState != com.example.model.ScreenState.INTRO) {
+      com.example.audio.HarmonicAudioEngine.resumeBgm()
+    }
     StartIoManager.preloadAds(this)
   }
 

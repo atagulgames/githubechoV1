@@ -186,6 +186,21 @@ app.get('/health', (req, res) => {
 });
 
 // -------------------------------------------------------------
+// 1.1. GET /version.json - App version and update check
+// -------------------------------------------------------------
+app.get('/version.json', (req, res) => {
+  res.status(200).json({
+    version: 2,
+    latest_version: 2,
+    version_name: '1.2',
+    update_url: 'https://echoflux.apk.com',
+    force_update: false,
+    title: 'Yeni Güncelleme',
+    description: 'Yeni bir ECHOFLUX güncellemesi mevcut.'
+  });
+});
+
+// -------------------------------------------------------------
 // 2. GET /leaderboard - Fetch top 100 highest scores
 // (PRESERVED MEVCUT LEADERBOARD SİSTEMİ)
 // -------------------------------------------------------------
@@ -397,7 +412,7 @@ app.post('/auth/register', authRateLimiter, async (req, res) => {
   }
 
   try {
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     if (pool) {
       // Check existing email
@@ -425,11 +440,11 @@ app.post('/auth/register', authRateLimiter, async (req, res) => {
         ON CONFLICT (user_id) DO NOTHING;
       `, [newUser.id]);
 
-      // Sign JWT token
+      // Sign JWT token (valid for 30 days)
       const token = jwt.sign(
         { userId: newUser.id, email: newUser.email },
         JWT_SECRET,
-        { expiresIn: '90d' }
+        { expiresIn: '30d' }
       );
 
       return res.status(200).json({
@@ -476,7 +491,7 @@ app.post('/auth/register', authRateLimiter, async (req, res) => {
     const token = jwt.sign(
       { userId: userId, email: cleanEmail },
       JWT_SECRET,
-      { expiresIn: '90d' }
+      { expiresIn: '30d' }
     );
 
     return res.status(200).json({
@@ -554,7 +569,7 @@ app.post('/auth/login', authRateLimiter, async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       JWT_SECRET,
-      { expiresIn: '90d' }
+      { expiresIn: '30d' }
     );
 
     return res.status(200).json({

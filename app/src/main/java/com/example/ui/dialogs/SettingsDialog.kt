@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
@@ -77,6 +78,7 @@ fun SettingsDialog(
     onToggleTestAds: (Boolean) -> Unit = {},
     onResetAllProgress: () -> Unit = {},
     onOpenSupport: () -> Unit = {},
+    onCheckForUpdates: () -> Unit = {},
     onLogout: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
@@ -552,6 +554,35 @@ fun SettingsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Check for Updates Button ("Güncellemeleri Denetle")
+                OutlinedButton(
+                    onClick = hapticClick(action = onCheckForUpdates),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("check_updates_button"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = textPrimary
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = null,
+                        tint = Color(0xFF0284C7),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Güncellemeleri Denetle",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Support & Contact Button ("Destek & İletişim")
                 Button(

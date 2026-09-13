@@ -62,6 +62,7 @@ import com.example.ui.dialogs.SettingsDialog
 import com.example.ui.dialogs.ShopDialog
 import com.example.ui.dialogs.SkinsDialog
 import com.example.ui.dialogs.SupportDialog
+import com.example.ui.dialogs.UpdateDialog
 import com.example.ui.dialogs.VictoryDialog
 import com.example.ui.auth.LoginScreen
 import com.example.ui.intro.IntroVideoScreen
@@ -258,11 +259,22 @@ fun EchoGameScreen(
             // 1.5. Rate App Dialog (Sadece 3. bölüm bitince çıkar)
             if (state.isRateAppDialogVisible) {
                 RateAppDialog(
-                    onRateClicked = {
-                        viewModel.onRateAppClicked()
+                    onRateSubmitted = { stars ->
+                        viewModel.onRateAppClicked(stars)
                     },
                     onDismiss = {
                         viewModel.dismissRateAppDialog()
+                    }
+                )
+            }
+
+            // 1.6. App Update Dialog (https://echoflux-kbh9.onrender.com/version.json)
+            val currentUpdateInfo = state.updateInfo
+            if (state.isUpdateDialogVisible && currentUpdateInfo != null) {
+                UpdateDialog(
+                    updateInfo = currentUpdateInfo,
+                    onDismiss = {
+                        viewModel.dismissUpdateDialog()
                     }
                 )
             }
@@ -361,6 +373,9 @@ fun EchoGameScreen(
                     onOpenSupport = {
                         viewModel.setSettingsVisible(false)
                         viewModel.setSupportVisible(true)
+                    },
+                    onCheckForUpdates = {
+                        viewModel.checkForUpdates(silent = false)
                     },
                     onLogout = { viewModel.logout() },
                     onDismiss = { viewModel.setSettingsVisible(false) }

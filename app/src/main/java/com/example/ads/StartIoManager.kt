@@ -244,6 +244,16 @@ object StartIoManager {
         }
     }
 
+    private fun Activity.safeRunOnUiThread(action: () -> Unit) {
+        if (!isFinishing && !isDestroyed) {
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) {
+                    action()
+                }
+            }
+        }
+    }
+
     /**
      * Displays a full-screen interstitial ad.
      * Uses preloaded ad if available for instant presentation;
@@ -259,7 +269,7 @@ object StartIoManager {
             fun finishOnce() {
                 if (!isHandled) {
                     isHandled = true
-                    activity.runOnUiThread { onAdClosed() }
+                    activity.safeRunOnUiThread { onAdClosed() }
                     preloadAds(activity)
                 }
             }
@@ -269,7 +279,7 @@ object StartIoManager {
                 preloadedInterstitialAd = null
                 val displayed = preloaded.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdDisplayed() }
+                        activity.safeRunOnUiThread { onAdDisplayed() }
                     }
 
                     override fun adHidden(ad: Ad) {
@@ -289,7 +299,7 @@ object StartIoManager {
             loadAndShowInterstitial(activity, onAdDisplayed) { finishOnce() }
         } catch (e: Exception) {
             Log.e(TAG, "Error displaying interstitial ad", e)
-            activity.runOnUiThread { onAdClosed() }
+            activity.safeRunOnUiThread { onAdClosed() }
         }
     }
 
@@ -302,7 +312,7 @@ object StartIoManager {
         fun finishOnce() {
             if (!isHandled) {
                 isHandled = true
-                activity.runOnUiThread { onAdClosed() }
+                activity.safeRunOnUiThread { onAdClosed() }
                 preloadAds(activity)
             }
         }
@@ -321,7 +331,7 @@ object StartIoManager {
                 if (isHandled) return
                 val displayed = startAppAd.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdDisplayed() }
+                        activity.safeRunOnUiThread { onAdDisplayed() }
                     }
 
                     override fun adHidden(ad: Ad) {
@@ -369,7 +379,7 @@ object StartIoManager {
             fun grantRewardOnce() {
                 if (!rewardGiven) {
                     rewardGiven = true
-                    activity.runOnUiThread { onRewardEarned() }
+                    activity.safeRunOnUiThread { onRewardEarned() }
                 }
             }
 
@@ -388,12 +398,12 @@ object StartIoManager {
 
                 val displayed = preloadedVideo.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdDisplayed() }
+                        activity.safeRunOnUiThread { onAdDisplayed() }
                     }
 
                     override fun adHidden(ad: Ad) {
                         grantRewardOnce()
-                        activity.runOnUiThread { onAdClosed() }
+                        activity.safeRunOnUiThread { onAdClosed() }
                         preloadAds(activity)
                     }
 
@@ -401,7 +411,7 @@ object StartIoManager {
 
                     override fun adNotDisplayed(ad: Ad) {
                         Log.w(TAG, "Preloaded video adNotDisplayed. No reward granted.")
-                        activity.runOnUiThread {
+                        activity.safeRunOnUiThread {
                             onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
                             onAdClosed()
                         }
@@ -420,12 +430,12 @@ object StartIoManager {
 
                 val displayed = preloadedInter.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdDisplayed() }
+                        activity.safeRunOnUiThread { onAdDisplayed() }
                     }
 
                     override fun adHidden(ad: Ad) {
                         grantRewardOnce()
-                        activity.runOnUiThread { onAdClosed() }
+                        activity.safeRunOnUiThread { onAdClosed() }
                         preloadAds(activity)
                     }
 
@@ -433,7 +443,7 @@ object StartIoManager {
 
                     override fun adNotDisplayed(ad: Ad) {
                         Log.w(TAG, "Preloaded interstitial adNotDisplayed. No reward granted.")
-                        activity.runOnUiThread {
+                        activity.safeRunOnUiThread {
                             onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
                             onAdClosed()
                         }
@@ -455,7 +465,7 @@ object StartIoManager {
 
         } catch (e: Exception) {
             Log.e(TAG, "Exception in showRewardedVideoAd", e)
-            activity.runOnUiThread { onAdUnavailable(e.message ?: "Hata") }
+            activity.safeRunOnUiThread { onAdUnavailable(e.message ?: "Hata") }
         }
     }
 
@@ -470,7 +480,7 @@ object StartIoManager {
         val timeoutRunnable = Runnable {
             if (!isHandled) {
                 isHandled = true
-                activity.runOnUiThread {
+                activity.safeRunOnUiThread {
                     onAdUnavailable("Reklam sunucusundan yanıt alınamadı. Lütfen daha sonra tekrar deneyin.")
                     onAdClosed()
                 }
@@ -495,12 +505,12 @@ object StartIoManager {
                 Log.d(TAG, "Live on-demand video received! Showing on device...")
                 val displayed = freshVideoAd.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdDisplayed() }
+                        activity.safeRunOnUiThread { onAdDisplayed() }
                     }
 
                     override fun adHidden(ad: Ad) {
                         grantReward()
-                        activity.runOnUiThread { onAdClosed() }
+                        activity.safeRunOnUiThread { onAdClosed() }
                         preloadAds(activity)
                     }
 
@@ -508,7 +518,7 @@ object StartIoManager {
 
                     override fun adNotDisplayed(ad: Ad) {
                         Log.w(TAG, "Dynamic video adNotDisplayed. No reward granted.")
-                        activity.runOnUiThread {
+                        activity.safeRunOnUiThread {
                             onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
                             onAdClosed()
                         }
@@ -542,12 +552,12 @@ object StartIoManager {
                 Log.d(TAG, "Fallback live fullscreen ad received, showing now...")
                 val displayed = fallbackAd.showAd(object : AdDisplayListener {
                     override fun adDisplayed(ad: Ad) {
-                        activity.runOnUiThread { onAdDisplayed() }
+                        activity.safeRunOnUiThread { onAdDisplayed() }
                     }
 
                     override fun adHidden(ad: Ad) {
                         grantReward()
-                        activity.runOnUiThread { onAdClosed() }
+                        activity.safeRunOnUiThread { onAdClosed() }
                         preloadAds(activity)
                     }
 
@@ -555,7 +565,7 @@ object StartIoManager {
 
                     override fun adNotDisplayed(ad: Ad) {
                         Log.w(TAG, "Fallback adNotDisplayed. No reward granted.")
-                        activity.runOnUiThread {
+                        activity.safeRunOnUiThread {
                             onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
                             onAdClosed()
                         }
@@ -565,7 +575,7 @@ object StartIoManager {
 
                 if (!displayed) {
                     Log.w(TAG, "Fallback ad was not displayed. No reward granted.")
-                    activity.runOnUiThread {
+                    activity.safeRunOnUiThread {
                         onAdUnavailable("Reklam gösterilemedi. Ödül verilemedi.")
                         onAdClosed()
                     }
@@ -576,7 +586,7 @@ object StartIoManager {
             override fun onFailedToReceiveAd(ad: Ad?) {
                 val errMsg = ad?.errorMessage ?: "NO FILL"
                 Log.w(TAG, "Start.io live ad returned $errMsg.")
-                activity.runOnUiThread {
+                activity.safeRunOnUiThread {
                     onAdUnavailable("Reklam şu anda yüklenemedi. Lütfen biraz sonra tekrar deneyin.")
                     onAdClosed()
                 }

@@ -198,7 +198,9 @@ data class EchoUiState(
     val isSeason2ThemeActive: Boolean = false,
     val selectedSeason2Theme: com.example.model.Season2VisualTheme = com.example.model.Season2VisualTheme.COSMIC_NEBULA,
     val isSeason2BackgroundEffectsEnabled: Boolean = true,
-    val isSeason2ThemeSelectorVisible: Boolean = false
+    val isSeason2ThemeSelectorVisible: Boolean = false,
+    val isUpdateDialogVisible: Boolean = false,
+    val updateInfo: com.example.data.UpdateInfo? = null
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -279,6 +281,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         // 3-Hour Reward Cooldown Ticker
         startRewardCooldownTicker()
+
+        // Background non-blocking update check (https://echoflux-kbh9.onrender.com/version.json)
+        checkForUpdates(silent = true)
     }
 
     private fun startRewardCooldownTicker() {
@@ -647,6 +652,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         startLevelSequence(levelData.levelId, isRestart = false)
     }
 
+    private val isIntroFinishedHandled = java.util.concurrent.atomic.AtomicBoolean(false)
+
     /**
      * User requirement:
      * "intro başta başlayack o bitince oyun başlayaca müzik ana menüdede olsun."
@@ -654,30 +661,41 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
      * and start background music immediately.
      */
     fun finishIntro() {
+        if (!isIntroFinishedHandled.compareAndSet(false, true)) return
         HarmonicAudioEngine.onIntroFinished()
-        val defaultUser = prefs.authenticatedUsername.ifBlank { "Oyuncu" }
         prefs.isKvkkConsentAccepted = true
-        _uiState.update {
-            it.copy(
-                screenState = ScreenState.MAIN_MENU,
-                isAuthenticated = true,
-                authenticatedUser = defaultUser,
-                isKvkkConsentAccepted = true
-            )
-        }
-        HarmonicAudioEngine.startBgm()
 
-        // Trigger Season 2 check (shows dialog only on first launch)
-        checkSeason2Status()
-
-        // Background Cloud Save sync if user has an active token
         val app = getApplication<android.app.Application>()
         val token = com.example.data.security.SecureTokenManager.getToken(app)
-        if (!token.isNullOrBlank()) {
+        val hasSavedSession = prefs.rememberMe && prefs.authenticatedUsername.isNotBlank() && !token.isNullOrBlank()
+
+        if (hasSavedSession) {
+            _uiState.update {
+                it.copy(
+                    screenState = ScreenState.MAIN_MENU,
+                    isAuthenticated = true,
+                    authenticatedUser = prefs.authenticatedUsername,
+                    isKvkkConsentAccepted = true
+                )
+            }
+            HarmonicAudioEngine.startBgm()
+            checkSeason2Status()
             viewModelScope.launch {
                 com.example.data.CloudSaveSyncManager(app).syncOnLogin(token)
             }
+        } else {
+            // "ilk başta herkes giriş yapmak ve kayıt olmak zorunda kalsın."
+            _uiState.update {
+                it.copy(
+                    screenState = ScreenState.LOGIN,
+                    isAuthenticated = false,
+                    isKvkkConsentAccepted = true
+                )
+            }
         }
+
+        // Check for app update in background
+        checkForUpdates(silent = true)
     }
 
     /**
@@ -872,6 +890,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
         }
         prefs.clearAuthentication()
+        authRepo.logout()
+        com.example.data.security.SecureTokenManager.clearToken(getApplication())
         _uiState.update {
             it.copy(
                 isAuthenticated = false,
@@ -2119,10 +2139,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun acceptKvkkConsent() {
         prefs.isKvkkConsentAccepted = true
+        val app = getApplication<android.app.Application>()
+        val token = com.example.data.security.SecureTokenManager.getToken(app)
+        val hasSavedSession = prefs.rememberMe && prefs.authenticatedUsername.isNotBlank() && !token.isNullOrBlank()
         _uiState.update {
             it.copy(
                 isKvkkConsentAccepted = true,
-                screenState = if (it.isAuthenticated || (prefs.rememberMe && prefs.authenticatedUsername.isNotEmpty())) {
+                screenState = if (it.isAuthenticated && hasSavedSession) {
                     ScreenState.MAIN_MENU
                 } else {
                     ScreenState.LOGIN
@@ -2913,12 +2936,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun dismissRateAppDialog() {
+        prefs.ratingPromptShown = true
         prefs.hasRatedOrDismissedLevel3Prompt = true
         _uiState.update { it.copy(isRateAppDialogVisible = false) }
     }
 
-    fun onRateAppClicked() {
+    fun onRateAppClicked(stars: Int = 5) {
+        prefs.ratingPromptShown = true
         prefs.hasRatedOrDismissedLevel3Prompt = true
+        prefs.userRatingStars = stars
         _uiState.update { it.copy(isRateAppDialogVisible = false) }
     }
 
@@ -2937,5 +2963,36 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             showToast("Profil başarıyla güncellendi!")
         }
+    }
+
+    private var hasUserDismissedUpdateInSession: Boolean = false
+
+    /**
+     * Checks for app updates via AppUpdateManager (https://echoflux-kbh9.onrender.com/version.json).
+     * Strictly non-blocking, safe from network exceptions.
+     */
+    fun checkForUpdates(silent: Boolean = true) {
+        if (silent && hasUserDismissedUpdateInSession) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val updateManager = com.example.data.AppUpdateManager.getInstance()
+            val info = updateManager.checkForUpdate()
+            if (info != null && info.isUpdateAvailable) {
+                if (!silent || !hasUserDismissedUpdateInSession) {
+                    _uiState.update {
+                        it.copy(
+                            isUpdateDialogVisible = true,
+                            updateInfo = info
+                        )
+                    }
+                }
+            } else if (!silent) {
+                showToast("Uygulamanız güncel.")
+            }
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        hasUserDismissedUpdateInSession = true
+        _uiState.update { it.copy(isUpdateDialogVisible = false) }
     }
 }

@@ -136,9 +136,24 @@ class EchoPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_KVKK_CONSENT_ACCEPTED, false)
         set(value) = prefs.edit().putBoolean(KEY_KVKK_CONSENT_ACCEPTED, value).apply()
 
+    var ratingPromptShown: Boolean
+        get() = prefs.getBoolean("rating_prompt_shown", false) || prefs.getBoolean("has_rated_or_dismissed_lvl3", false)
+        set(value) {
+            prefs.edit()
+                .putBoolean("rating_prompt_shown", value)
+                .putBoolean("has_rated_or_dismissed_lvl3", value)
+                .apply()
+        }
+
+    var userRatingStars: Int
+        get() = prefs.getInt("rating_user_stars", 0)
+        set(value) = prefs.edit().putInt("rating_user_stars", value).apply()
+
     var hasRatedOrDismissedLevel3Prompt: Boolean
-        get() = prefs.getBoolean("has_rated_or_dismissed_lvl3", false)
-        set(value) = prefs.edit().putBoolean("has_rated_or_dismissed_lvl3", value).apply()
+        get() = ratingPromptShown
+        set(value) {
+            ratingPromptShown = value
+        }
 
     var hintAdsWatched: Int
         get() = prefs.getInt(KEY_HINT_ADS_WATCHED, 0)

@@ -146,6 +146,7 @@ fun LoginScreen(
     }
 
     fun handleLogin() {
+        if (isLoading) return
         val email = loginEmail.trim().lowercase()
         val password = loginPassword.trim()
 
@@ -210,6 +211,7 @@ fun LoginScreen(
     }
 
     fun handleRegister() {
+        if (isLoading) return
         val fullName = registerFullName.trim()
         val email = registerEmail.trim().lowercase()
         val password = registerPassword.trim()

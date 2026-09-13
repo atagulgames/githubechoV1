@@ -400,6 +400,7 @@ class AuthRepository(context: Context) {
 
     fun logout() {
         preferences.clearAuthentication()
+        com.example.data.security.SecureTokenManager.clearToken(appContext)
     }
 
     private fun loadUserProgressIntoPreferences(user: UserAccountEntity) {

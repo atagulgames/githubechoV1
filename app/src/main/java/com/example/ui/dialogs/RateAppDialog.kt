@@ -2,8 +2,13 @@ package com.example.ui.dialogs
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,16 +22,18 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,25 +44,33 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.audio.hapticClick
+import com.example.data.EchoPreferences
 
 /**
- * 3. Bölüm bitince gösterilen Derecelendirme Paneli (Rate App Dialog).
- * Kullanıcı "Derecelendir" butonuna bastığında
- * https://apkpure.com/tr/reviews/com.aistudio.echo.ykqrvw adresine yönlendirir.
- * Altındaki "Daha Sonra" butonu ile kapatılabilir.
+ * 3. Bölüm tamamlandığında her cihazda yalnızca 1 KERE açılan Derecelendirme Paneli.
+ *
+ * Başlık: "ECHOFLUX'u değerlendir"
+ * Açıklama: "Deneyiminizi bizimle paylaşın."
+ * 5 interaktif yıldız (başlangıçta boş ☆ ☆ ☆ ☆ ☆)
+ * Ana buton: "Gönder"
+ * Altında küçük, sade, altı çizili: "Daha sonra"
  */
 @Composable
 fun RateAppDialog(
-    onRateClicked: () -> Unit,
+    onRateSubmitted: (stars: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val reviewUrl = "https://apkpure.com/tr/reviews/com.aistudio.echo.ykqrvw"
+
+    var selectedStars by remember { mutableStateOf(0) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -97,7 +112,7 @@ fun RateAppDialog(
                     .padding(horizontal = 24.dp, vertical = 26.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Glowing Celestial Badge with Stars
+                // Glowing Celestial Star Badge
                 Box(
                     modifier = Modifier
                         .size(72.dp)
@@ -118,16 +133,16 @@ fun RateAppDialog(
                         imageVector = Icons.Filled.Star,
                         contentDescription = null,
                         tint = Color(0xFFF59E0B),
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(38.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title
+                // Title: "ECHOFLUX'u değerlendir"
                 Text(
-                    text = "Echo'yu Derecelendir",
-                    fontSize = 22.sp,
+                    text = "ECHOFLUX'u değerlendir",
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     textAlign = TextAlign.Center
@@ -135,123 +150,147 @@ fun RateAppDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Subtitle / Prompt
+                // Description: "Deneyiminizi bizimle paylaşın."
                 Text(
-                    text = "Tebrikler! 3. Bölümü tamamladın. 🎉\n\nEcho deneyimini sevdin mi? Bir dakikanı ayırıp bizi değerlendirerek gelişimimize büyük katkı sağlayabilirsin!",
+                    text = "Deneyiminizi bizimle paylaşın.",
                     fontSize = 14.sp,
-                    lineHeight = 20.sp,
                     color = Color(0xFFCBD5E1),
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // 5 Golden Stars Display
+                // 5 Interactive Stars (☆ ☆ ☆ ☆ ☆ / ★ ★ ★ ☆ ☆)
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF1E293B).copy(alpha = 0.7f))
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .testTag("rating_stars_row")
                 ) {
-                    repeat(5) {
-                        Icon(
-                            imageVector = Icons.Filled.Star,
-                            contentDescription = "Yıldız",
-                            tint = Color(0xFFF59E0B),
+                    for (starIndex in 1..5) {
+                        val isSelected = starIndex <= selectedStars
+                        val starInteractionSource = remember { MutableInteractionSource() }
+
+                        Box(
                             modifier = Modifier
-                                .size(24.dp)
-                                .padding(horizontal = 2.dp)
-                        )
+                                .padding(horizontal = 4.dp)
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable(
+                                    interactionSource = starInteractionSource,
+                                    indication = null,
+                                    onClick = hapticClick {
+                                        selectedStars = starIndex
+                                        errorMessage = null
+                                    }
+                                )
+                                .testTag("star_button_$starIndex"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isSelected) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription = "$starIndex Yıldız",
+                                tint = if (isSelected) Color(0xFFF59E0B) else Color(0xFF64748B),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                // Error Message if user attempts to submit with 0 stars
+                AnimatedVisibility(
+                    visible = errorMessage != null,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Text(
+                        text = errorMessage ?: "",
+                        color = Color(0xFFEF4444),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .padding(top = 10.dp)
+                            .testTag("rating_error_text")
+                    )
+                }
 
-                // Primary Button: "Derecelendir"
+                Spacer(modifier = Modifier.height(22.dp))
+
+                // Main Button: "Gönder"
                 Button(
-                    onClick = {
-                        hapticClick(context)
-                        onRateClicked()
+                    onClick = hapticClick(isHeavy = true) {
+                        if (selectedStars == 0) {
+                            errorMessage = "Lütfen bir puan seçin."
+                            return@hapticClick
+                        }
+
+                        // 1. Save locally & mark prompt shown
+                        val prefs = EchoPreferences(context)
+                        prefs.userRatingStars = selectedStars
+                        prefs.ratingPromptShown = true
+
+                        // 2. Notify view model & close dialog
+                        onRateSubmitted(selectedStars)
+
+                        // 3. Open APKPure review page safely without crash
                         try {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reviewUrl)).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
                         } catch (_: Exception) {
-                            // Fallback if no browser installed
+                            // Safe fallback: URL cannot be opened, game continues without crashing
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .testTag("rate_now_button"),
+                        .height(48.dp)
+                        .testTag("rate_submit_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0284C7),
+                        containerColor = if (selectedStars > 0) Color(0xFF0284C7) else Color(0xFF334155),
                         contentColor = Color.White
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.ThumbUp,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(
-                            text = "Derecelendir",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.size(6.dp))
-                        Icon(
-                            imageVector = Icons.Filled.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
+                    Text(
+                        text = "Gönder",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Secondary Button: "Daha Sonra" (directly underneath as requested)
-                OutlinedButton(
-                    onClick = {
-                        hapticClick(context)
-                        onDismiss()
-                    },
+                // Secondary Text Button: "Daha sonra" (subtle, small, underlined)
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                        .testTag("rate_later_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF94A3B8)
-                    ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0xFF475569).copy(alpha = 0.5f),
-                                Color(0xFF64748B).copy(alpha = 0.5f)
-                            )
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(
+                            onClick = hapticClick {
+                                val prefs = EchoPreferences(context)
+                                prefs.ratingPromptShown = true
+                                onDismiss()
+                            }
                         )
-                    )
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .testTag("rate_later_text_button"),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Daha Sonra",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF94A3B8)
+                        text = "Daha sonra",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xFF94A3B8),
+                        textDecoration = TextDecoration.Underline
                     )
                 }
             }
         }
     }
 }
+
