@@ -588,7 +588,7 @@ fun LevelRuleOnboardingOverlay(
                                             Column {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Text(
-                                                        text = "Bölüm ${rule.levelId}: ${rule.ruleTitle}",
+                                                        text = if (isTurkish) "Bölüm ${rule.levelId}: ${rule.ruleTitle}" else "Level ${rule.levelId}: ${rule.ruleTitle}",
                                                         fontSize = 13.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = textPrimary,

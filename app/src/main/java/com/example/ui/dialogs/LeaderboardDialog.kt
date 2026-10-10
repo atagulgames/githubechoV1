@@ -310,14 +310,14 @@ private fun LeaderboardHeaderBar(
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "SIRALAMA",
+                        text = "LEADERBOARD",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Black,
                         color = Color(0xFFFFD54F),
                         letterSpacing = 1.sp
                     )
                     Text(
-                        text = "DÜNYA & TÜRKİYE",
+                        text = "GLOBAL RANKINGS",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF38BDF8)
@@ -397,7 +397,7 @@ private fun LeaderboardCategoryTabs(
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        val tabs = listOf("🌍 Global", "🇹🇷 Türkiye", "🏆 Top 10")
+        val tabs = listOf("🌍 Global", "🌟 Regional", "🏆 Top 10")
         tabs.forEachIndexed { index, title ->
             val isSelected = selectedCategory == index
 
@@ -654,7 +654,7 @@ private fun LeaderboardTableLabels() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "SIRA / OYUNCU",
+            text = "RANK / PLAYER",
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
             color = Color(0xFF60A5FA),
@@ -663,14 +663,14 @@ private fun LeaderboardTableLabels() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Text(
-                text = "YANKI",
+                text = "ECHOES",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 color = Color(0xFF38BDF8),
                 letterSpacing = 0.5.sp
             )
             Text(
-                text = "KUPA",
+                text = "TROPHIES",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 color = Color(0xFFFFD54F),
@@ -801,7 +801,7 @@ private fun LeaderboardChunkyRow(
                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
                                 Text(
-                                    text = "SEN",
+                                    text = "YOU",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
@@ -972,7 +972,7 @@ private fun LeaderboardEmptyState() {
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Henüz kupa kazanan oyuncu bulunmuyor.",
+                text = "No players have earned trophies yet.",
                 fontSize = 14.sp,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
@@ -981,7 +981,7 @@ private fun LeaderboardEmptyState() {
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Bölümleri tamamlayarak ilk kupayı kazan ve zirveye yerleş!",
+                text = "Complete levels to earn your first trophies and climb to the top!",
                 fontSize = 11.sp,
                 color = Color(0xFF94A3B8),
                 textAlign = TextAlign.Center,
@@ -1040,13 +1040,13 @@ private fun LeaderboardFooter(
 
                     Column {
                         Text(
-                            text = if (currentUser != null) "Sıran: #${currentUser.rank} (${currentUser.trophies} 🏆)" else "Sıralama Dışı",
+                            text = if (currentUser != null) "Rank: #${currentUser.rank} (${currentUser.trophies} 🏆)" else "Unranked",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
                             color = Color(0xFFFFD54F)
                         )
                         Text(
-                            text = if (currentUser != null) "Bölüm geçtikçe kupan artar!" else "Kupa kazanmak için bölüm oyna!",
+                            text = if (currentUser != null) "Earn more trophies by beating levels!" else "Play levels to earn trophies!",
                             fontSize = 10.sp,
                             color = Color(0xFF94A3B8)
                         )
@@ -1081,7 +1081,7 @@ private fun LeaderboardFooter(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Profilim",
+                            text = "My Profile",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -1115,7 +1115,7 @@ private fun LeaderboardFooter(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "KAPAT",
+                    text = "CLOSE",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White,

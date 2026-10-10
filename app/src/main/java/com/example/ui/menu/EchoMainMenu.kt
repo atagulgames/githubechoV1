@@ -193,14 +193,14 @@ fun EchoMainMenu(
                         modifier = Modifier.width(84.dp)
                     ) {
                         SideBadgeItem(
-                            title = "Hediye",
+                            title = "Gift",
                             badgeType = BadgeType.GIFT,
                             testTag = "btn_badge_hediye",
                             onClick = onOpenChest
                         )
 
                         SideBadgeItem(
-                            title = "Jeton Görevi",
+                            title = "Quests",
                             badgeType = BadgeType.COIN_QUEST,
                             testTag = "btn_badge_jeton_gorevi",
                             onClick = onOpenDailyQuests
@@ -223,7 +223,7 @@ fun EchoMainMenu(
                         modifier = Modifier.width(84.dp)
                     ) {
                         SideBadgeItem(
-                            title = "Günlük Ödül",
+                            title = "Daily Reward",
                             badgeType = BadgeType.DAILY_REWARD,
                             testTag = "btn_badge_gunluk_odul",
                             onClick = onWatchRewardedAd
@@ -298,7 +298,7 @@ private fun TopMenuNavBar(
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
-                contentDescription = "Ayarlar",
+                contentDescription = "Settings",
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )
@@ -355,7 +355,7 @@ private fun TopMenuNavBar(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Enerji Ekle",
+                    contentDescription = "Add Energy",
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )
@@ -418,7 +418,7 @@ private fun TopMenuNavBar(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Jeton Ekle",
+                    contentDescription = "Add Coins",
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )
@@ -1000,7 +1000,7 @@ private fun BigPlayButton(
 
         // Bold Play Text with Shadow
         Text(
-            text = "Oyna",
+            text = "Play",
             color = Color.White,
             fontSize = if (isCompact) 26.sp else 30.sp,
             fontWeight = FontWeight.Black,
@@ -1038,7 +1038,7 @@ private fun EnergyCostPill(
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = "Enerji",
+            text = "Energy",
             color = Color.White,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
@@ -1080,7 +1080,7 @@ private fun BottomGameDock(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // LEFT TAB: Görevler (Dartboard with Red exclamation badge)
+            // LEFT TAB: Quests (Dartboard with Red exclamation badge)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -1113,7 +1113,7 @@ private fun BottomGameDock(
                     }
                 }
                 Text(
-                    text = "Görevler",
+                    text = "Quests",
                     color = Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -1123,7 +1123,7 @@ private fun BottomGameDock(
             // Dummy Spacer for elevated center tab
             Spacer(modifier = Modifier.width(70.dp))
 
-            // RIGHT TAB: Sıralama (Golden Trophy)
+            // RIGHT TAB: Leaderboard (Golden Trophy)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -1150,7 +1150,7 @@ private fun BottomGameDock(
                     )
                 }
                 Text(
-                    text = "Sıralama",
+                    text = "Leaderboard",
                     color = Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -1158,7 +1158,7 @@ private fun BottomGameDock(
             }
         }
 
-        // CENTER ELEVATED TAB: "Jener" (Parchment/Scroll Map Icon, Elevated Blue Container)
+        // CENTER ELEVATED TAB: "Levels" (Parchment/Scroll Map Icon, Elevated Blue Container)
         Box(
             modifier = Modifier
                 .offset(y = (-10).dp)
@@ -1184,7 +1184,7 @@ private fun BottomGameDock(
                 ScrollParchmentArt()
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Jener",
+                    text = "Levels",
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Black

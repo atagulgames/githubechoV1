@@ -163,7 +163,7 @@ fun PlayerProfileDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.CameraAlt,
-                                        contentDescription = "Fotoğraf Yükle",
+                                        contentDescription = "Upload Photo",
                                         tint = Color(0xFF0F172A),
                                         modifier = Modifier.size(12.dp)
                                     )
@@ -190,7 +190,7 @@ fun PlayerProfileDialog(
                                         color = Color(0xFF10B981).copy(alpha = 0.2f)
                                     ) {
                                         Text(
-                                            text = "SEN",
+                                            text = "YOU",
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF10B981),
@@ -203,7 +203,7 @@ fun PlayerProfileDialog(
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                text = "${currentTitle} • Sıra #${player.rank}",
+                                text = "${currentTitle} • Rank #${player.rank}",
                                 fontSize = 12.sp,
                                 color = textSecondary
                             )
@@ -218,7 +218,7 @@ fun PlayerProfileDialog(
                             ) {
                                 Icon(
                                     imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
-                                    contentDescription = "Profili Düzenle",
+                                    contentDescription = "Edit Profile",
                                     tint = Color(0xFF00E5FF)
                                 )
                             }
@@ -232,7 +232,7 @@ fun PlayerProfileDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Kapat",
+                                contentDescription = "Close",
                                 tint = textSecondary
                             )
                         }
@@ -250,7 +250,7 @@ fun PlayerProfileDialog(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
-                                text = "Profilini Kişiselleştir",
+                                text = "Customize Profile",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF00E5FF)
@@ -280,7 +280,7 @@ fun PlayerProfileDialog(
                                         modifier = Modifier.size(15.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Fotoğraf Yükle", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("Upload Photo", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
 
                                 if (currentAvatarUri.isNotBlank()) {
@@ -296,7 +296,7 @@ fun PlayerProfileDialog(
                                             contentColor = Color(0xFFEF4444)
                                         )
                                     ) {
-                                        Text("Sıfırla", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                        Text("Reset", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
@@ -309,7 +309,7 @@ fun PlayerProfileDialog(
                                     currentTitle = it
                                     onUpdateProfile?.invoke(currentAvatarUri, it)
                                 },
-                                label = { Text("Özel Unvan / Açıklama") },
+                                label = { Text("Custom Title / Status") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
@@ -343,7 +343,7 @@ fun PlayerProfileDialog(
                         ProfileMetricCard(
                             icon = Icons.Default.EmojiEvents,
                             iconColor = Color(0xFFF59E0B),
-                            title = "Toplam Kupa",
+                            title = "Total Trophies",
                             value = "${player.trophies} 🏆",
                             textColor = textPrimary,
                             subTextColor = textSecondary,
@@ -352,7 +352,7 @@ fun PlayerProfileDialog(
                         ProfileMetricCard(
                             icon = Icons.Default.Waves,
                             iconColor = Color(0xFF06B6D4),
-                            title = "Toplam Yankı",
+                            title = "Total Echoes",
                             value = "${player.totalEchoes}",
                             textColor = textPrimary,
                             subTextColor = textSecondary,
@@ -367,7 +367,7 @@ fun PlayerProfileDialog(
                         ProfileMetricCard(
                             icon = Icons.Default.Schedule,
                             iconColor = Color(0xFF8B5CF6),
-                            title = "Oyun Süresi",
+                            title = "Play Time",
                             value = formattedPlayTime,
                             textColor = textPrimary,
                             subTextColor = textSecondary,
@@ -376,7 +376,7 @@ fun PlayerProfileDialog(
                         ProfileMetricCard(
                             icon = Icons.Default.Whatshot,
                             iconColor = Color(0xFFEF4444),
-                            title = "Maksimum Kombo",
+                            title = "Max Combo",
                             value = "${player.maxCombo}x",
                             textColor = textPrimary,
                             subTextColor = textSecondary,
@@ -394,13 +394,13 @@ fun PlayerProfileDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Tamamlanan Bölümler Detayı",
+                        text = "Completed Levels Detail",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary
                     )
                     Text(
-                        text = "${player.levelRecords.size} / 100 Bölüm",
+                        text = "${player.levelRecords.size} / 100 Levels",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF06B6D4)
@@ -420,7 +420,7 @@ fun PlayerProfileDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Henüz tamamlanmış bölüm kaydı bulunmuyor.\nBölümleri geçtikçe detaylı süre ve yankı istatistikleri burada listelenir.",
+                            text = "No completed levels yet.\nDetailed time and echo statistics will be listed here as you beat levels.",
                             fontSize = 12.sp,
                             color = textSecondary,
                             textAlign = TextAlign.Center,
@@ -537,7 +537,7 @@ private fun LevelRecordRow(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Bölüm ${record.levelId}",
+                        text = "Level ${record.levelId}",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary
@@ -560,7 +560,7 @@ private fun LevelRecordRow(
                 ) {
                     // Echo count badge
                     Text(
-                        text = if (record.echoesUsed == 0) "0 Yankı (Kusursuz)" else "${record.echoesUsed} Yankı",
+                        text = if (record.echoesUsed == 0) "0 Echoes (Flawless)" else "${record.echoesUsed} Echoes",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (record.echoesUsed == 0) Color(0xFF10B981) else Color(0xFF0284C7)
@@ -578,9 +578,9 @@ private fun LevelRecordRow(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         val formattedTime = if (record.timeTakenSec < 10f) {
-                            String.format(java.util.Locale.US, "%.1f sn", record.timeTakenSec)
+                            String.format(java.util.Locale.US, "%.1fs", record.timeTakenSec)
                         } else {
-                            "${record.timeTakenSec.toInt()} sn"
+                            "${record.timeTakenSec.toInt()}s"
                         }
                         Text(
                             text = formattedTime,
@@ -620,13 +620,13 @@ private fun LevelRecordRow(
 }
 
 private fun formatPlayTime(seconds: Long): String {
-    if (seconds <= 0) return "0 dk"
+    if (seconds <= 0) return "0m"
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
     val sec = seconds % 60
     return when {
-        hours > 0 -> "${hours} sa ${minutes} dk"
-        minutes > 0 -> "${minutes} dk ${sec} sn"
-        else -> "${sec} sn"
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m ${sec}s"
+        else -> "${sec}s"
     }
 }

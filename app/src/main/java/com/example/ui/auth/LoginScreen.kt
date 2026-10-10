@@ -1,5 +1,6 @@
 package com.example.ui.auth
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import com.example.data.CloudSaveSyncManager
 import com.example.data.EchoPreferences
+import com.example.data.FirebaseAuthManager
 import com.example.data.RenderAuthAndCloudSaveService
 import com.example.data.security.SecureTokenManager
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +49,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -120,14 +123,16 @@ fun LoginScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val coroutineScope = rememberCoroutineScope()
     val authRepository = remember { AuthRepository(context) }
     val cloudAuthService = remember { RenderAuthAndCloudSaveService.getInstance() }
     val syncManager = remember { CloudSaveSyncManager(context) }
     val prefs = remember { EchoPreferences(context) }
+    val firebaseAuthManager = remember { FirebaseAuthManager(context) }
 
     val hasExistingUser = prefs.authenticatedUsername.isNotBlank() || initialUsername.isNotBlank()
-    var selectedTab by remember { mutableStateOf(AuthTab.REGISTER) }
+    var selectedTab by remember { mutableStateOf(AuthTab.LOGIN) }
 
     // Login Fields (Kullanıcı Adı ve Şifre) - Varsayılan hesap verilmez
     var loginUsername by remember { mutableStateOf(if (prefs.rememberMe && prefs.isAuthenticated) prefs.authenticatedUsername else "") }
@@ -150,6 +155,77 @@ fun LoginScreen(
     // Play login sound effect on enter
     LaunchedEffect(Unit) {
         HarmonicAudioEngine.playLoginEffect(context)
+        if (prefs.rememberMe && prefs.isAuthenticated && firebaseAuthManager.isUserSignedIn) {
+            firebaseAuthManager.attemptSilentGoogleSignIn(
+                scope = coroutineScope,
+                onSuccess = { signedInUser ->
+                    onLoginSuccess(signedInUser, true)
+                },
+                onUnauthenticated = { /* Keep on screen */ }
+            )
+        }
+    }
+
+    fun handleGoogleSignIn() {
+        if (isLoading) return
+        val currentActivity = activity
+        if (currentActivity == null) {
+            errorMessage = "Sign-in activity could not be found."
+            return
+        }
+        isLoading = true
+        errorMessage = null
+        successMessage = null
+
+        firebaseAuthManager.signInWithGoogle(
+            activity = currentActivity,
+            scope = coroutineScope,
+            onSuccess = { signedInUser ->
+                isLoading = false
+                successMessage = "Signed in with Google! Welcome, $signedInUser"
+                HarmonicAudioEngine.playParty()
+                onLoginSuccess(signedInUser, rememberMe)
+            },
+            onError = { error ->
+                isLoading = false
+                errorMessage = error
+                HarmonicAudioEngine.playHataSound()
+            },
+            onCancelled = {
+                isLoading = false
+            }
+        )
+    }
+
+    fun handleFacebookSignIn() {
+        if (isLoading) return
+        val currentActivity = activity
+        if (currentActivity == null) {
+            errorMessage = "Sign-in activity could not be found."
+            return
+        }
+        isLoading = true
+        errorMessage = null
+        successMessage = null
+
+        firebaseAuthManager.signInWithFacebook(
+            activity = currentActivity,
+            scope = coroutineScope,
+            onSuccess = { signedInUser ->
+                isLoading = false
+                successMessage = "Signed in with Facebook! Welcome, $signedInUser"
+                HarmonicAudioEngine.playParty()
+                onLoginSuccess(signedInUser, rememberMe)
+            },
+            onError = { error ->
+                isLoading = false
+                errorMessage = error
+                HarmonicAudioEngine.playHataSound()
+            },
+            onCancelled = {
+                isLoading = false
+            }
+        )
     }
 
     fun handleLogin() {
@@ -158,12 +234,12 @@ fun LoginScreen(
         val password = loginPassword.trim()
 
         if (username.isBlank()) {
-            errorMessage = "Kullanıcı adı boş bırakılamaz."
+            errorMessage = "Username cannot be empty."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password.isBlank()) {
-            errorMessage = "Şifre boş bırakılamaz."
+            errorMessage = "Password cannot be empty."
             HarmonicAudioEngine.playHataSound()
             return
         }
@@ -252,17 +328,18 @@ fun LoginScreen(
                     val localErr = localResult.exceptionOrNull()?.message.orEmpty()
 
                     errorMessage = when {
-                        cloudErr.contains("hatalı", ignoreCase = true) || localErr.contains("şifre", ignoreCase = true) -> {
-                            "Kullanıcı adı veya şifre hatalı."
+                        cloudErr.contains("hatalı", ignoreCase = true) || localErr.contains("şifre", ignoreCase = true) ||
+                        cloudErr.contains("invalid", ignoreCase = true) || localErr.contains("invalid", ignoreCase = true) -> {
+                            "Incorrect username or password."
                         }
-                        cloudErr.contains("İnternet", ignoreCase = true) && localErr.contains("bulunamadı", ignoreCase = true) -> {
-                            "İnternet bağlantısı yok veya sunucuya ulaşılamadı."
+                        cloudErr.contains("İnternet", ignoreCase = true) || cloudErr.contains("connection", ignoreCase = true) -> {
+                            "No internet connection or server unreachable."
                         }
-                        localErr.contains("bulunamadı", ignoreCase = true) -> {
-                            "Kullanıcı adı veya şifre hatalı."
+                        localErr.contains("bulunamadı", ignoreCase = true) || localErr.contains("not found", ignoreCase = true) -> {
+                            "Incorrect username or password."
                         }
                         cloudErr.isNotBlank() -> cloudErr
-                        else -> "Kullanıcı adı veya şifre hatalı."
+                        else -> "Incorrect username or password."
                     }
                     HarmonicAudioEngine.playHataSound()
                 }
@@ -277,32 +354,32 @@ fun LoginScreen(
         val confirmPassword = registerConfirmPassword.trim()
 
         if (username.isBlank()) {
-            errorMessage = "Kullanıcı adı boş bırakılamaz."
+            errorMessage = "Username cannot be empty."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (username.length < 3) {
-            errorMessage = "Kullanıcı adı en az 3 karakter olmalıdır."
+            errorMessage = "Username must be at least 3 characters."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (username.length > 20) {
-            errorMessage = "Kullanıcı adı en fazla 20 karakter olabilir."
+            errorMessage = "Username cannot exceed 20 characters."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password.isBlank()) {
-            errorMessage = "Şifre boş bırakılamaz."
+            errorMessage = "Password cannot be empty."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password.length < 4) {
-            errorMessage = "Şifre en az 4 karakter olmalıdır."
+            errorMessage = "Password must be at least 4 characters."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password != confirmPassword) {
-            errorMessage = "Şifre tekrar alanı şifreyle aynı olmalıdır."
+            errorMessage = "Passwords do not match."
             HarmonicAudioEngine.playHataSound()
             return
         }
@@ -316,7 +393,7 @@ fun LoginScreen(
             val existingLocal = authRepository.getUserAccount(username)
             if (existingLocal != null) {
                 isLoading = false
-                errorMessage = "Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."
+                errorMessage = "This username is already taken. Please choose another."
                 HarmonicAudioEngine.playHataSound()
                 return@launch
             }
@@ -348,13 +425,13 @@ fun LoginScreen(
 
                 isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
-                successMessage = "Kayıt başarılı! Giriş yapılıyor..."
+                successMessage = "Registration successful! Signing in..."
                 onLoginSuccess(derivedUsername, true)
             } else {
                 val cloudErr = cloudResult.exceptionOrNull()?.message.orEmpty()
                 if (cloudErr.contains("zaten", ignoreCase = true) || cloudErr.contains("already", ignoreCase = true) || cloudErr.contains("kullanılıyor", ignoreCase = true)) {
                     isLoading = false
-                    errorMessage = "Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."
+                    errorMessage = "This username is already taken. Please choose another."
                     HarmonicAudioEngine.playHataSound()
                     return@launch
                 }
@@ -380,12 +457,12 @@ fun LoginScreen(
 
                     isLoading = false
                     HarmonicAudioEngine.playLoginEffect(context)
-                    successMessage = "Kayıt başarılı! Giriş yapılıyor..."
+                    successMessage = "Registration successful! Signing in..."
                     onLoginSuccess(localUser.username, true)
                 } else {
                     isLoading = false
                     val regErr = localReg.exceptionOrNull()?.message
-                    errorMessage = regErr ?: "Kayıt işlemi gerçekleştirilemedi. Lütfen bilgilerinizi kontrol edin."
+                    errorMessage = regErr ?: "Registration could not be completed. Please check your credentials."
                     HarmonicAudioEngine.playHataSound()
                 }
             }
@@ -449,185 +526,96 @@ fun LoginScreen(
             )
         }
 
-        // 2. Cartoon Game GUI Scrollable Content
+        // 2. Cartoon Game GUI Content (Compact, fitting perfectly on screen)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // --- TOP CARTOON GAME LOGO & HEADER ---
-            Box(
+            // --- TOP COMPACT LOGO & HEADER ---
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
-                    .size(86.dp)
-                    .shadow(16.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(
-                        brush = Brush.radialGradient(
-                            listOf(Color(0xFFFFEE58), Color(0xFFFFB300), Color(0xFFF57C00))
-                        )
-                    )
-                    .border(3.5.dp, Color(0xFFFFD54F), CircleShape)
-                    .padding(4.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp)
             ) {
+                // Mini 3D Logo Badge
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .size(38.dp)
+                        .shadow(8.dp, CircleShape)
                         .clip(CircleShape)
                         .background(
-                            brush = Brush.verticalGradient(
-                                listOf(Color(0xFF0D2F82), Color(0xFF061B50))
+                            brush = Brush.radialGradient(
+                                listOf(Color(0xFFFFEE58), Color(0xFFFFB300), Color(0xFFF57C00))
                             )
                         )
-                        .border(2.dp, Color(0xFF38BDF8), CircleShape),
+                        .border(2.dp, Color(0xFFFFD54F), CircleShape)
+                        .padding(2.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.echo_game_logo),
                         contentDescription = "ECHO Logo",
-                        modifier = Modifier.size(54.dp).clip(CircleShape)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-            // Comic 3D Title with 3D drop-shadow text effect
-            Box(contentAlignment = Alignment.Center) {
-                // Dark Cartoon Drop Shadow Text
-                Text(
-                    text = "ECHO FLUX",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 4.sp,
-                    color = Color(0xFF02081C),
-                    modifier = Modifier.offset(x = 2.dp, y = 3.dp)
-                )
-                // Front Bright Comic Golden Text
-                Text(
-                    text = "ECHO FLUX",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 4.sp,
-                    color = Color(0xFFFFD54F)
-                )
-            }
-
-            // Cartoon Arcade Subtitle Pill
-            Box(
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF081C54))
-                    .border(1.5.dp, Color(0xFF38BDF8).copy(alpha = 0.8f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 4.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFFFD54F),
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                Column {
+                    // Comic 3D Title
+                    Box {
+                        Text(
+                            text = "ECHO FLUX",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp,
+                            color = Color(0xFF02081C),
+                            modifier = Modifier.offset(x = 1.5.dp, y = 2.dp)
+                        )
+                        Text(
+                            text = "ECHO FLUX",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp,
+                            color = Color(0xFFFFD54F)
+                        )
+                    }
                     Text(
-                        text = "OYUNCU PORTALI & REZONANS",
+                        text = "LOGIN / SIGN IN",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.5.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp,
                         color = Color(0xFF7DD3FC)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFFFD54F),
-                        modifier = Modifier.size(12.dp)
-                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // --- CARTOON 3D TAB SWITCHER (KAYIT OL | GİRİŞ YAP) ---
+            // --- CARTOON 3D TAB SWITCHER (SIGN IN | SIGN UP) ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xFF06143D))
-                    .border(3.dp, Color(0xFF030B24), RoundedCornerShape(22.dp))
-                    .padding(4.dp)
+                    .border(2.dp, Color(0xFF030B24), RoundedCornerShape(16.dp))
+                    .padding(3.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    // KAYIT OL TAB (3D Cartoony Emerald Button when active)
+                    // SIGN IN TAB (Active by default)
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(
-                                if (selectedTab == AuthTab.REGISTER) {
-                                    Brush.verticalGradient(
-                                        listOf(Color(0xFF22C55E), Color(0xFF16A34A))
-                                    )
-                                } else {
-                                    Brush.verticalGradient(
-                                        listOf(Color.Transparent, Color.Transparent)
-                                    )
-                                }
-                            )
-                            .then(
-                                if (selectedTab == AuthTab.REGISTER) {
-                                    Modifier.border(2.dp, Color(0xFF86EFAC), RoundedCornerShape(18.dp))
-                                } else Modifier
-                            )
-                            .clickable {
-                                selectedTab = AuthTab.REGISTER
-                                errorMessage = null
-                                successMessage = null
-                            }
-                            .padding(vertical = 11.dp)
-                            .testTag("tab_register"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (selectedTab == AuthTab.REGISTER) Color(0xFF14532D) else Color(0xFF0B2160)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PersonAdd,
-                                    contentDescription = null,
-                                    tint = if (selectedTab == AuthTab.REGISTER) Color(0xFFBBF7D0) else Color(0xFF94A3B8),
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "KAYIT OL",
-                                color = if (selectedTab == AuthTab.REGISTER) Color.White else Color(0xFF94A3B8),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                    }
-
-                    // GİRİŞ YAP TAB (3D Cartoony Azure Button when active)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(14.dp))
                             .background(
                                 if (selectedTab == AuthTab.LOGIN) {
                                     Brush.verticalGradient(
@@ -641,7 +629,7 @@ fun LoginScreen(
                             )
                             .then(
                                 if (selectedTab == AuthTab.LOGIN) {
-                                    Modifier.border(2.dp, Color(0xFFBAE6FD), RoundedCornerShape(18.dp))
+                                    Modifier.border(2.dp, Color(0xFFBAE6FD), RoundedCornerShape(14.dp))
                                 } else Modifier
                             )
                             .clickable {
@@ -649,96 +637,114 @@ fun LoginScreen(
                                 errorMessage = null
                                 successMessage = null
                             }
-                            .padding(vertical = 11.dp)
+                            .padding(vertical = 7.dp)
                             .testTag("tab_login"),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (selectedTab == AuthTab.LOGIN) Color(0xFF0369A1) else Color(0xFF0B2160)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Login,
-                                    contentDescription = null,
-                                    tint = if (selectedTab == AuthTab.LOGIN) Color(0xFFE0F2FE) else Color(0xFF94A3B8),
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Default.Login,
+                                contentDescription = null,
+                                tint = if (selectedTab == AuthTab.LOGIN) Color(0xFFE0F2FE) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "GİRİŞ YAP",
+                                text = "SIGN IN",
                                 color = if (selectedTab == AuthTab.LOGIN) Color.White else Color(0xFF94A3B8),
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
+                                letterSpacing = 0.8.sp
+                            )
+                        }
+                    }
+
+                    // SIGN UP TAB
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                if (selectedTab == AuthTab.REGISTER) {
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF22C55E), Color(0xFF16A34A))
+                                    )
+                                } else {
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, Color.Transparent)
+                                    )
+                                }
+                            )
+                            .then(
+                                if (selectedTab == AuthTab.REGISTER) {
+                                    Modifier.border(2.dp, Color(0xFF86EFAC), RoundedCornerShape(14.dp))
+                                } else Modifier
+                            )
+                            .clickable {
+                                selectedTab = AuthTab.REGISTER
+                                errorMessage = null
+                                successMessage = null
+                            }
+                            .padding(vertical = 7.dp)
+                            .testTag("tab_register"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.PersonAdd,
+                                contentDescription = null,
+                                tint = if (selectedTab == AuthTab.REGISTER) Color(0xFFBBF7D0) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "SIGN UP",
+                                color = if (selectedTab == AuthTab.REGISTER) Color.White else Color(0xFF94A3B8),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.8.sp
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // --- CARTOON GAME POP-UP BOARD / DIALOG PANEL ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(24.dp, RoundedCornerShape(26.dp))
-                    .clip(RoundedCornerShape(26.dp))
+                    .shadow(16.dp, RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(22.dp))
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(Color(0xFF0F266A), Color(0xFF0B1F54), Color(0xFF06143D))
                         )
                     )
-                    .border(3.5.dp, Color(0xFF051133), RoundedCornerShape(26.dp))
+                    .border(2.5.dp, Color(0xFF051133), RoundedCornerShape(22.dp))
                     .testTag("auth_card")
             ) {
-                // Secondary Cartoon Inner Bevel Stroke
+                // Secondary Inner Bevel Stroke
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .padding(3.dp)
-                        .border(1.5.dp, Color(0xFF1E4FB8).copy(alpha = 0.7f), RoundedCornerShape(23.dp))
+                        .padding(2.5.dp)
+                        .border(1.dp, Color(0xFF1E4FB8).copy(alpha = 0.6f), RoundedCornerShape(20.dp))
                 )
-
-                // 4 Corner Metal Rivets / Screws (Classic Cartoon Game GUI Panel Accent)
-                Canvas(modifier = Modifier.matchParentSize()) {
-                    val rivetRadius = 4.dp.toPx()
-                    val margin = 14.dp.toPx()
-                    val corners = listOf(
-                        Offset(margin, margin),
-                        Offset(size.width - margin, margin),
-                        Offset(margin, size.height - margin),
-                        Offset(size.width - margin, size.height - margin)
-                    )
-                    corners.forEach { pt ->
-                        // Dark rim
-                        drawCircle(Color(0xFF030B20), radius = rivetRadius + 1.5.dp.toPx(), center = pt)
-                        // Metallic silver center
-                        drawCircle(Color(0xFF94A3B8), radius = rivetRadius, center = pt)
-                        // Specular shine
-                        drawCircle(Color.White, radius = rivetRadius * 0.35f, center = Offset(pt.x - 1.2.dp.toPx(), pt.y - 1.2.dp.toPx()))
-                    }
-                }
 
                 // Card Body Content
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 22.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Floating Cartoon Mode Header Ribbon Plate
+                    // Floating Mode Header Ribbon Plate
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.92f)
-                            .clip(RoundedCornerShape(14.dp))
+                            .fillMaxWidth(0.9f)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(
                                 if (selectedTab == AuthTab.REGISTER) {
                                     Brush.verticalGradient(listOf(Color(0xFF15803D), Color(0xFF166534)))
@@ -747,110 +753,81 @@ fun LoginScreen(
                                 }
                             )
                             .border(
-                                2.dp,
+                                1.5.dp,
                                 if (selectedTab == AuthTab.REGISTER) Color(0xFF4ADE80) else Color(0xFF38BDF8),
-                                RoundedCornerShape(14.dp)
+                                RoundedCornerShape(12.dp)
                             )
-                            .padding(vertical = 8.dp, horizontal = 12.dp),
+                            .padding(vertical = 5.dp, horizontal = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (selectedTab == AuthTab.REGISTER) "★ YENİ OYUNCU KAYDI ★" else "★ OYUNCU GİRİŞİ ★",
-                            fontSize = 15.sp,
+                            text = if (selectedTab == AuthTab.REGISTER) "★ CREATE ACCOUNT ★" else "★ PLAYER SIGN IN ★",
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp,
+                            letterSpacing = 0.8.sp,
                             color = Color.White
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    Text(
-                        text = if (selectedTab == AuthTab.REGISTER)
-                            "Oyuna başlamak için ilk olarak kayıt olmanız zorunludur"
-                        else
-                            "Kayıtlı hesabınızla giriş yaparak maceraya devam edin",
-                        fontSize = 12.sp,
-                        color = Color(0xFF93C5FD),
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Cartoon Error Banner Plate
+                    // Error Banner Plate
                     if (errorMessage != null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 14.dp)
-                                .clip(RoundedCornerShape(14.dp))
+                                .padding(bottom = 6.dp)
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     brush = Brush.verticalGradient(listOf(Color(0xFF991B1B), Color(0xFF7F1D1D)))
                                 )
-                                .border(2.dp, Color(0xFFEF4444), RoundedCornerShape(14.dp))
-                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                                .border(1.5.dp, Color(0xFFEF4444), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                                 .testTag("login_error_banner")
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFDC2626)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "!",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "!",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = errorMessage.orEmpty(),
                                     color = Color(0xFFFEE2E2),
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
 
-                    // Cartoon Success Banner Plate
+                    // Success Banner Plate
                     if (successMessage != null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 14.dp)
-                                .clip(RoundedCornerShape(14.dp))
+                                .padding(bottom = 6.dp)
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     brush = Brush.verticalGradient(listOf(Color(0xFF166534), Color(0xFF14532D)))
                                 )
-                                .border(2.dp, Color(0xFF4ADE80), RoundedCornerShape(14.dp))
-                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                                .border(1.5.dp, Color(0xFF4ADE80), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF22C55E)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = successMessage.orEmpty(),
                                     color = Color(0xFFDCFCE7),
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -858,31 +835,29 @@ fun LoginScreen(
                     }
 
                     if (selectedTab == AuthTab.LOGIN) {
-                        // --- LOGIN FORM (Kullanıcı Adı ve Şifre) ---
-                        // Chunky Cartoon Input: Kullanıcı Adı
+                        // --- LOGIN FORM ---
                         CartoonyGameTextField(
                             value = loginUsername,
                             onValueChange = {
                                 loginUsername = it
                                 errorMessage = null
                             },
-                            label = "Kullanıcı Adı",
+                            label = "Username",
                             icon = Icons.Default.Person,
                             testTag = "login_username_field",
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Next
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        // Chunky Cartoon Input: Şifre
                         CartoonyGameTextField(
                             value = loginPassword,
                             onValueChange = {
                                 loginPassword = it
                                 errorMessage = null
                             },
-                            label = "Şifre",
+                            label = "Password",
                             icon = Icons.Default.Lock,
                             testTag = "login_password_field",
                             isPassword = true,
@@ -893,41 +868,41 @@ fun LoginScreen(
                             onDone = { handleLogin() }
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                        // Cartoon Game Remember Me Checkbox Row
+                        // Remember Me Checkbox Row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .clickable { rememberMe = !rememberMe }
-                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                                .padding(vertical = 2.dp, horizontal = 2.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Checkbox(
                                 checked = rememberMe,
                                 onCheckedChange = { rememberMe = it },
-                                modifier = Modifier.testTag("login_remember_checkbox"),
+                                modifier = Modifier.testTag("login_remember_checkbox").size(28.dp),
                                 colors = CheckboxDefaults.colors(
                                     checkedColor = Color(0xFF0284C7),
                                     uncheckedColor = Color(0xFF475569),
                                     checkmarkColor = Color.White
                                 )
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Beni Hatırla (Oturumu Sakla)",
+                                text = "Remember Me (Keep Signed In)",
                                 color = Color(0xFFE2E8F0),
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        // 3D CHUNKY CARTOON PUSH BUTTON: GİRİŞ YAP
+                        // SIGN IN BUTTON
                         Cartoony3DPushButton(
-                            text = "GİRİŞ YAP",
+                            text = "SIGN IN",
                             icon = Icons.Default.Login,
                             primaryColor = Color(0xFF0284C7),
                             highlightColor = Color(0xFF38BDF8),
@@ -938,54 +913,50 @@ fun LoginScreen(
                             testTag = "login_submit_button"
                         )
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         // Switch to Register Link
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF0B1F54))
-                                .border(1.5.dp, Color(0xFF1E4FB8), RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable {
                                     selectedTab = AuthTab.REGISTER
                                     errorMessage = null
                                     successMessage = null
                                 }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "Hesabın yok mu? Hemen Kayıt Ol ★",
+                                text = "Don't have an account? Sign Up ★",
                                 color = Color(0xFFFFD54F),
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     } else {
-                        // --- REGISTER FORM (Kullanıcı Adı, Şifre, Şifre Tekrar) ---
-                        // Chunky Cartoon Input: Kullanıcı Adı
+                        // --- REGISTER FORM ---
                         CartoonyGameTextField(
                             value = registerUsername,
                             onValueChange = {
                                 registerUsername = it
                                 errorMessage = null
                             },
-                            label = "Kullanıcı Adı (3-20 karakter)",
+                            label = "Username (3-20 chars)",
                             icon = Icons.Default.Person,
                             testTag = "register_username_field",
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Next
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        // Chunky Cartoon Input: Şifre
                         CartoonyGameTextField(
                             value = registerPassword,
                             onValueChange = {
                                 registerPassword = it
                                 errorMessage = null
                             },
-                            label = "Şifre (En az 4 karakter)",
+                            label = "Password (Min 4 chars)",
                             icon = Icons.Default.Lock,
                             testTag = "register_password_field",
                             isPassword = true,
@@ -995,16 +966,15 @@ fun LoginScreen(
                             imeAction = ImeAction.Next
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        // Chunky Cartoon Input: Şifre Tekrar
                         CartoonyGameTextField(
                             value = registerConfirmPassword,
                             onValueChange = {
                                 registerConfirmPassword = it
                                 errorMessage = null
                             },
-                            label = "Şifre Tekrar",
+                            label = "Confirm Password",
                             icon = Icons.Default.Key,
                             testTag = "register_confirm_password_field",
                             isPassword = true,
@@ -1015,11 +985,11 @@ fun LoginScreen(
                             onDone = { handleRegister() }
                         )
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        // 3D CHUNKY CARTOON PUSH BUTTON: KAYIT OL
+                        // SIGN UP BUTTON
                         Cartoony3DPushButton(
-                            text = "KAYIT OL",
+                            text = "SIGN UP",
                             icon = Icons.Default.PersonAdd,
                             primaryColor = Color(0xFF16A34A),
                             highlightColor = Color(0xFF22C55E),
@@ -1030,52 +1000,93 @@ fun LoginScreen(
                             testTag = "register_submit_button"
                         )
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         // Switch to Login Link
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF0B1F54))
-                                .border(1.5.dp, Color(0xFF1E4FB8), RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable {
                                     selectedTab = AuthTab.LOGIN
                                     errorMessage = null
                                     successMessage = null
                                 }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "Zaten hesabın var mı? Buradan Giriş Yap ★",
+                                text = "Already have an account? Sign In ★",
                                 color = Color(0xFF38BDF8),
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // --- FIREBASE SOCIAL AUTHENTICATION (SIDE-BY-SIDE IN ONE ROW) ---
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            thickness = 1.dp,
+                            color = Color(0xFF1E4FB8).copy(alpha = 0.4f)
+                        )
+                        Text(
+                            text = "  OR QUICK SIGN IN  ",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.6.sp
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            thickness = 1.dp,
+                            color = Color(0xFF1E4FB8).copy(alpha = 0.4f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // GOOGLE SIGN IN
+                        SocialCartoony3DButton(
+                            text = "Google",
+                            provider = SocialProvider.GOOGLE,
+                            isLoading = isLoading,
+                            onClick = { handleGoogleSignIn() },
+                            testTag = "google_sign_in_button",
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // FACEBOOK SIGN IN
+                        SocialCartoony3DButton(
+                            text = "Facebook",
+                            provider = SocialProvider.FACEBOOK,
+                            isLoading = isLoading,
+                            onClick = { handleFacebookSignIn() },
+                            testTag = "facebook_sign_in_button",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // Footer Footnote & Cartoon Game Version
+            // Footer Footnote
             Text(
-                text = "★ Her oyuncunun seviye ve skor ilerlemesi bulutta saklanır ★",
-                color = Color(0xFF94A3B8),
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "ECHO FLUX • CARTOON ARCADE EDITION",
+                text = "★ ECHO FLUX • Cloud Synchronized Account ★",
                 color = Color(0xFF64748B),
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = 0.5.sp
             )
         }
     }
@@ -1102,9 +1113,9 @@ private fun CartoonyGameTextField(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF06143D))
-            .border(2.5.dp, Color(0xFF1D4594), RoundedCornerShape(16.dp))
+            .border(1.5.dp, Color(0xFF1D4594), RoundedCornerShape(12.dp))
     ) {
         OutlinedTextField(
             value = value,
@@ -1115,41 +1126,46 @@ private fun CartoonyGameTextField(
             label = {
                 Text(
                     text = label,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
             },
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontSize = 13.sp,
+                color = Color.White
+            ),
             leadingIcon = {
                 Box(
                     modifier = Modifier
-                        .size(30.dp)
+                        .size(24.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF0F2C70))
-                        .border(1.5.dp, Color(0xFF38BDF8), CircleShape),
+                        .border(1.dp, Color(0xFF38BDF8), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = Color(0xFF7DD3FC),
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             },
             trailingIcon = if (isPassword && onTogglePassword != null) {
                 {
-                    IconButton(onClick = onTogglePassword) {
+                    IconButton(onClick = onTogglePassword, modifier = Modifier.size(28.dp)) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = "Şifreyi Göster",
-                            tint = Color(0xFFFFD54F)
+                            contentDescription = "Toggle password visibility",
+                            tint = Color(0xFFFFD54F),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             } else null,
             singleLine = true,
             visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
@@ -1181,48 +1197,46 @@ private fun Cartoony3DPushButton(
     borderColor: Color,
     isLoading: Boolean,
     onClick: () -> Unit,
-    testTag: String
+    testTag: String,
+    modifier: Modifier = Modifier
 ) {
-    // 3D tactile game button with 4dp bottom slab depth
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
-            .shadow(8.dp, RoundedCornerShape(18.dp))
-            .clip(RoundedCornerShape(18.dp))
-            .background(shadowColor) // 3D bottom bevel lip
+            .height(44.dp)
+            .shadow(6.dp, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(shadowColor)
             .testTag(testTag)
             .clickable(enabled = !isLoading, onClick = onClick)
     ) {
-        // Top pushable face with top gloss highlight
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.92f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(13.dp))
                 .background(
                     brush = Brush.verticalGradient(
                         listOf(highlightColor, primaryColor)
                     )
                 )
-                .border(2.dp, borderColor, RoundedCornerShape(16.dp)),
+                .border(1.5.dp, borderColor, RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center
         ) {
-            // Subtle top gloss sheen line
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
+                    .height(4.dp)
                     .align(Alignment.TopCenter)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .clip(RoundedCornerShape(topStart = 13.dp, topEnd = 13.dp))
                     .background(Color.White.copy(alpha = 0.28f))
             )
 
             if (isLoading) {
                 CircularProgressIndicator(
                     color = Color.White,
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.5.dp
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
                 )
             } else {
                 Row(
@@ -1233,15 +1247,119 @@ private fun Cartoony3DPushButton(
                         imageVector = icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = text,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 1.2.sp,
+                        letterSpacing = 1.sp,
                         color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+enum class SocialProvider {
+    GOOGLE,
+    FACEBOOK
+}
+
+@Composable
+private fun SocialCartoony3DButton(
+    text: String,
+    provider: SocialProvider,
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    val isGoogle = provider == SocialProvider.GOOGLE
+    val primaryColor = if (isGoogle) Color(0xFFFFFFFF) else Color(0xFF1877F2)
+    val highlightColor = if (isGoogle) Color(0xFFF8FAFC) else Color(0xFF3B82F6)
+    val shadowColor = if (isGoogle) Color(0xFF94A3B8) else Color(0xFF0C4A9E)
+    val borderColor = if (isGoogle) Color(0xFFCBD5E1) else Color(0xFF93C5FD)
+    val textColor = if (isGoogle) Color(0xFF1E293B) else Color.White
+
+    Box(
+        modifier = modifier
+            .height(42.dp)
+            .shadow(5.dp, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(shadowColor)
+            .testTag(testTag)
+            .clickable(enabled = !isLoading, onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
+                .clip(RoundedCornerShape(13.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(highlightColor, primaryColor)
+                    )
+                )
+                .border(1.5.dp, borderColor, RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .align(Alignment.TopCenter)
+                    .clip(RoundedCornerShape(topStart = 13.dp, topEnd = 13.dp))
+                    .background(Color.White.copy(alpha = if (isGoogle) 0.5f else 0.28f))
+            )
+
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = if (isGoogle) Color(0xFF0284C7) else Color.White,
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(if (isGoogle) Color(0xFFF1F5F9) else Color(0xFF0F4BB5))
+                            .border(1.dp, if (isGoogle) Color(0xFFE2E8F0) else Color(0xFF60A5FA), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isGoogle) {
+                            Text(
+                                text = "G",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF4285F4)
+                            )
+                        } else {
+                            Text(
+                                text = "f",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text(
+                        text = text,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp,
+                        color = textColor
                     )
                 }
             }

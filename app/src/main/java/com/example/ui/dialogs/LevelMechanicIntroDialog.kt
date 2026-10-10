@@ -62,7 +62,7 @@ data class LevelMechanicInfo(
 
 object MechanicCatalog {
     fun getMechanicInfoForLevel(levelId: Int): LevelMechanicInfo {
-        return com.example.data.LevelRuleCatalog.getRuleForLevel(levelId, isTurkish = true).toMechanicInfo()
+        return com.example.data.LevelRuleCatalog.getRuleForLevel(levelId, isTurkish = false).toMechanicInfo()
     }
 }
 
@@ -89,7 +89,7 @@ fun LevelMechanicIntroDialog(
     LevelRuleOnboardingOverlay(
         currentLevelId = levelId,
         isDarkTheme = isDarkTheme,
-        isTurkish = true,
+        isTurkish = false,
         onDismiss = onDismiss
     )
 }
