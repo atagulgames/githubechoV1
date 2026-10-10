@@ -15,36 +15,48 @@ import kotlin.math.sin
 
 object LevelCatalog {
 
-    const val TOTAL_LEVELS = 100
+    const val TOTAL_LEVELS = 150
 
     private val TIER_NAMES_EN = listOf(
-        "Foundation",                // Tier 1 (1..3)
-        "Complex Web",               // Tier 2 (4..10)
-        "Floating Nodes",            // Tier 3 (11..20)
-        "Invisible Rays",            // Tier 4 (21..30)
-        "Decaying Nodes",            // Tier 5 (31..40)
-        "Wandering Echoes",          // Tier 6 (41..50)
-        "Decoy Targets",             // Tier 7 (51..60)
-        "Reverse Flow",              // Tier 8 (61..70)
-        "Rotating Web",              // Tier 9 (71..80)
-        "Dual Entangled Web",        // Tier 10 (81..90)
-        "Cumulative Ghost Maze",     // Tier 11 (91..99)
-        "Omega Final: Grand Nexus"   // Tier 12 (100)
+        "Foundation",                       // Tier 1 (1..3)
+        "Complex Web",                      // Tier 2 (4..10)
+        "Floating Nodes",                   // Tier 3 (11..20)
+        "Invisible Rays",                   // Tier 4 (21..30)
+        "Decaying Nodes",                   // Tier 5 (31..40)
+        "Wandering Echoes",                 // Tier 6 (41..50)
+        "Decoy Targets",                    // Tier 7 (51..60)
+        "Reverse Flow",                     // Tier 8 (61..70)
+        "Rotating Web",                     // Tier 9 (71..80)
+        "Dual Entangled Web",               // Tier 10 (81..90)
+        "Cumulative Ghost Maze",            // Tier 11 (91..99)
+        "Omega Final: Grand Nexus",         // Tier 12 (100)
+        "Hyper-Flux Matrix",                // Tier 13 (101..110)
+        "Singularity Void",                 // Tier 14 (111..120)
+        "Quantum Entanglement",             // Tier 15 (121..130)
+        "Chrono-Stasis Fracture",           // Tier 16 (131..140)
+        "Celestial Apex",                   // Tier 17 (141..149)
+        "Cosmic Infinity: Ultimate Nexus"   // Tier 18 (150)
     )
 
     private val TIER_NAMES_TR = listOf(
-        "Temel Ağ",                     // Tier 1 (1..3)
-        "Karmaşık Ağ",                  // Tier 2 (4..10)
-        "Hareketli Düğümler",           // Tier 3 (11..20)
-        "Görünmez Işınlar",             // Tier 4 (21..30)
-        "Zamanla Kaybolan Düğümler",    // Tier 5 (31..40)
-        "Yankıların Hareketi",          // Tier 6 (41..50)
-        "Sahte Hedefler",               // Tier 7 (51..60)
-        "Ters Yönler",                  // Tier 8 (61..70)
-        "Ekranın Dönmesi",              // Tier 9 (71..80)
-        "İki Ağ Aynı Anda",             // Tier 10 (81..90)
-        "Önceki Hataların Birleşmesi",  // Tier 11 (91..99)
-        "Büyük Final: Omega Zirvesi"    // Tier 12 (100)
+        "Temel Ağ",                         // Tier 1 (1..3)
+        "Karmaşık Ağ",                      // Tier 2 (4..10)
+        "Hareketli Düğümler",               // Tier 3 (11..20)
+        "Görünmez Işınlar",                 // Tier 4 (21..30)
+        "Zamanla Kaybolan Düğümler",        // Tier 5 (31..40)
+        "Yankıların Hareketi",              // Tier 6 (41..50)
+        "Sahte Hedefler",                   // Tier 7 (51..60)
+        "Ters Yönler",                      // Tier 8 (61..70)
+        "Ekranın Dönmesi",                  // Tier 9 (71..80)
+        "İki Ağ Aynı Anda",                 // Tier 10 (81..90)
+        "Önceki Hataların Birleşmesi",      // Tier 11 (91..99)
+        "Büyük Final: Omega Zirvesi",       // Tier 12 (100)
+        "Hiper Akı Matrisi",                // Tier 13 (101..110)
+        "Tekillik Boşluğu",                 // Tier 14 (111..120)
+        "Dolanık Kuantum Geçitleri",        // Tier 15 (121..130)
+        "Zamansal Kırılma",                 // Tier 16 (131..140)
+        "Göksel Zirve",                     // Tier 17 (141..149)
+        "Kozmik Sonsuzluk: Nihai Zirve"     // Tier 18 (150)
     )
 
     fun getTierIndex(levelId: Int): Int = when (levelId) {
@@ -59,7 +71,13 @@ object LevelCatalog {
         in 71..80 -> 8
         in 81..90 -> 9
         in 91..99 -> 10
-        else -> 11
+        100 -> 11
+        in 101..110 -> 12
+        in 111..120 -> 13
+        in 121..130 -> 14
+        in 131..140 -> 15
+        in 141..149 -> 16
+        else -> 17
     }
 
     private val UNIQUE_NAMES_EN = listOf(
@@ -92,7 +110,22 @@ object LevelCatalog {
         "Geometric Chaos", "Harmonic Balance", "Supreme Network", "Cosmic Architecture", "Great Portal",
         // Tier 10 (91..100)
         "Zenith Ascent", "Interstellar", "Supernova", "Hyperspace", "Galactic Core",
-        "The Crucible", "Cosmos Pulse", "Grand Convergence", "Master Trial", "ECHO OMEGA"
+        "The Crucible", "Cosmos Pulse", "Grand Convergence", "Master Trial", "ECHO OMEGA",
+        // Tier 13 (101..110): Hyper-Flux Matrix
+        "Hyper Prism", "Plasma Ring", "Photon Cascade", "Subatomic Lattice", "Graviton Loop",
+        "Tachyon Beam", "Flux Capacitor", "Stellar Dynamo", "Aether Vortex", "Pulsar Nexus",
+        // Tier 14 (111..120): Singularity Void
+        "Event Horizon", "Black Hole Maw", "Spacetime Warp", "Gravitational Lens", "Ergosphere Drift",
+        "Hawking Radiation", "Tidal Singularity", "Dark Matter Web", "Void Monolith", "Cosmic Chasm",
+        // Tier 15 (121..130): Quantum Entanglement
+        "Bell State", "Twin Photon Bridge", "Phase Shifter", "Quantum Teleport", "Spin Resonance",
+        "Wavefunction Collapse", "Schrodinger Labyrinth", "Entangled Helix", "Coherence Chamber", "Multi-State Gateway",
+        // Tier 16 (131..140): Chrono-Stasis Fracture
+        "Temporal Paradox", "Frozen Second", "Chronos Spiral II", "Entropy Inversion", "Retrograde Vector",
+        "Time Dilation", "Relic Frequency", "Perpetual Echo", "Infinity Loop II", "Temporal Abyss",
+        // Tier 17 & 18 (141..150): Celestial Apex & Cosmic Infinity
+        "Starlight Constellation", "Galactic Bastion", "Supercluster Web", "Nebular Forge", "Omega Crown",
+        "Titan Nexus", "Celestial Citadel", "The Sovereign Key", "Penultimate Convergence", "COSMIC INFINITY"
     )
 
     private val UNIQUE_NAMES_TR = listOf(
@@ -125,7 +158,22 @@ object LevelCatalog {
         "Geometrik Kaos", "Harmonik Denge", "Yüce Ağ", "Kozmik Mimari", "Büyük Ağ Geçidi",
         // Tier 10 (91..100)
         "Zirve Yükselişi", "Yıldızlararası", "Süpernova", "Hiperuzay", "Galaktik Çekirdek",
-        "Son Sınav", "Kozmos Nabzı", "Büyük Birleşme", "Usta İmtihanı", "ECHO OMEGA"
+        "Son Sınav", "Kozmos Nabzı", "Büyük Birleşme", "Usta İmtihanı", "ECHO OMEGA",
+        // Tier 13 (101..110): Hiper Akı Matrisi
+        "Hiper Prizma", "Plazma Halkası", "Foton Çağlayanı", "Atomaltı Kafesi", "Graviton İlmeği",
+        "Takyon Işını", "Akı Kristali", "Yıldız Dinamosu", "Esir Girdabı", "Pulsar Kavşağı",
+        // Tier 14 (111..120): Tekillik Boşluğu
+        "Olay Ufku", "Karadelik Boğazı", "Uzayzaman Bükülmesi", "Yerçekimi Merceği", "Ergosfer Sürüklenişi",
+        "Hawking Işıması", "Gelgit Tekilliği", "Karanlık Madde Ağı", "Hiçlik Dikilitaşı", "Kozmik Uçurum",
+        // Tier 15 (121..130): Dolanık Kuantum Geçitleri
+        "Bell Durumu", "İkiz Foton Köprüsü", "Faz Kaydırıcı", "Kuantum Işınlama", "Dönü Rezonansı",
+        "Dalga Fonksiyonu Çöküşü", "Schrödinger Labirenti", "Dolanık Sarmal", "Eşevrelilik Odası", "Çoklu Durum Kapısı",
+        // Tier 16 (131..140): Zamansal Kırılma
+        "Zaman Paradoksu", "Donmuş Saniye", "Kronos Sarmalı II", "Entropi Tersinimi", "Geriye Dönük Vektör",
+        "Zaman Genleşmesi", "Kalıntı Frekans", "Sonsuz Yankı", "Sonsuzluk Döngüsü II", "Zamansal Cehennem",
+        // Tier 17 & 18 (141..150): Göksel Zirve & Kozmik Sonsuzluk
+        "Yıldız Takımyıldızı", "Galaktik Kale", "Süperküme Ağı", "Bulutsu Ocağı", "Omega Tacı",
+        "Titan Kavşağı", "Göksel Hisar", "Hükümdar Anahtarı", "Sondan Önceki Birleşme", "KOZMİK SONSUZLUK"
     )
 
     fun getLevelTitle(id: Int, language: Language = Language.EN): String {
@@ -134,11 +182,11 @@ object LevelCatalog {
         return if (language == Language.TR) {
             val name = UNIQUE_NAMES_TR.getOrNull(clampedId - 1) ?: "Seviye $clampedId"
             val tier = TIER_NAMES_TR[tierIndex]
-            "S2 • $name ($tier)"
+            "$name ($tier)"
         } else {
             val name = UNIQUE_NAMES_EN.getOrNull(clampedId - 1) ?: "Level $clampedId"
             val tier = TIER_NAMES_EN[tierIndex]
-            "S2 • $name ($tier)"
+            "$name ($tier)"
         }
     }
 
@@ -172,12 +220,16 @@ object LevelCatalog {
     }
 
     /**
-     * Generates a complete set of 100 unique, guaranteed playable puzzle levels.
-     * Cached in memory for instant 0ms access without GC pressure.
+     * Generates the first 100 levels for backward compatibility with existing tests.
      */
-    fun create100Levels(): List<LevelEntity> = cachedEntities
+    fun create100Levels(): List<LevelEntity> = cachedEntities.take(100)
 
-    fun create250Levels(): List<LevelEntity> = cachedEntities
+    /**
+     * Generates all 150 unique, guaranteed playable puzzle levels.
+     */
+    fun create150Levels(): List<LevelEntity> = cachedEntities
+
+    fun getAllLevels(): List<LevelEntity> = cachedEntities
 
     private fun serializeNodes(nodes: List<LevelNode>): String {
         return nodes.joinToString(";") {
@@ -252,7 +304,8 @@ object LevelCatalog {
         arr[0] = 3 // Level 1: 3 nodes (Simple intro - kept easy)
         arr[1] = 4 // Level 2: 4 nodes (Simple square - kept easy)
         arr[2] = 5 // Level 3: 5 nodes (Simple beacon - kept easy)
-        for (i in 3 until TOTAL_LEVELS - 1) {
+        // Levels 4..100
+        for (i in 3 until 99) {
             val id = i + 1
             val t = (id - 4) / 95.0
             val base = 8.0 + t * 22.5 // Scales from 8 nodes (level 4) to 31 nodes (level 99)
@@ -269,9 +322,27 @@ object LevelCatalog {
             }
             arr[i] = count
         }
-        arr[TOTAL_LEVELS - 1] = 32 // Level 100: Grand Omega Final (32 nodes)
-        if (arr[TOTAL_LEVELS - 2] == 32) {
-            arr[TOTAL_LEVELS - 2] = 31
+        arr[99] = 32 // Level 100: Grand Omega Final (32 nodes)
+        // Levels 101..149: Harder difficulty scaling from 26 to 38 nodes
+        for (i in 100 until TOTAL_LEVELS - 1) {
+            val id = i + 1
+            val t = (id - 101) / 48.0
+            val base = 26.0 + t * 11.5 // 26 to 38 nodes
+            val wave = when (id % 4) {
+                0 -> 1.8
+                1 -> -1.5
+                2 -> 1.2
+                else -> -1.0
+            }
+            var count = (base + wave).roundToInt().coerceIn(24, 38)
+            if (count == arr[i - 1]) {
+                count = if (count < 38 && (id % 2 == 0)) count + 1 else (count - 1).coerceAtLeast(24)
+            }
+            arr[i] = count
+        }
+        arr[TOTAL_LEVELS - 1] = 40 // Level 150: Grand Ultimate Cosmic Finale (40 nodes)
+        if (arr[TOTAL_LEVELS - 2] == 40) {
+            arr[TOTAL_LEVELS - 2] = 39
         }
         arr
     }
@@ -384,7 +455,7 @@ object LevelCatalog {
             nodes.add(LevelNode(i, pt.first, pt.second, type, keyForGate))
         }
 
-        // Mechanic classification for the 12 evolution tiers per user design
+        // Mechanic classification for the evolution tiers
         val mechanicType = when {
             clampedId in 1..3 -> "BASIC_WEB"
             clampedId in 4..10 -> "COMPLEX_WEB"
@@ -398,20 +469,27 @@ object LevelCatalog {
             clampedId in 81..90 -> "DUAL_ENTANGLED_WEB"
             clampedId in 91..99 -> "CUMULATIVE_GHOSTS"
             clampedId == 100 -> "OMEGA_SYNTHESIS"
+            clampedId in 101..110 -> "HYPER_FLUX"
+            clampedId in 111..120 -> "SINGULARITY_VOID"
+            clampedId in 121..130 -> "QUANTUM_ENTANGLEMENT"
+            clampedId in 131..140 -> "CHRONO_STASIS"
+            clampedId in 141..149 -> "CELESTIAL_APEX"
+            clampedId == 150 -> "COSMIC_INFINITY"
             else -> "BASIC_WEB"
         }
 
         val decayLifetime = when (mechanicType) {
             "DECAYING_NODES" -> 3 + (clampedId % 2)
-            "OMEGA_SYNTHESIS" -> 3
+            "CHRONO_STASIS" -> 2 + (clampedId % 2)
+            "CELESTIAL_APEX", "COSMIC_INFINITY", "OMEGA_SYNTHESIS" -> 3
             else -> 0
         }
 
-        val isGhostEchoes = clampedId > 3 && (mechanicType in listOf("CUMULATIVE_GHOSTS", "WANDERING_ECHOES", "OMEGA_SYNTHESIS") || clampedId % 4 == 0)
+        val isGhostEchoes = clampedId > 3 && (mechanicType in listOf("CUMULATIVE_GHOSTS", "WANDERING_ECHOES", "OMEGA_SYNTHESIS", "SINGULARITY_VOID", "CELESTIAL_APEX", "COSMIC_INFINITY") || clampedId % 4 == 0)
 
         // Directed edges: Level 1..3 have NO one-way arrows.
-        // Levels 4..100 have directional edges enforcing forward flow!
-        val directedEdges = if (clampedId > 3 && (mechanicType in listOf("REVERSE_FLOW", "OMEGA_SYNTHESIS") || clampedId % 4 == 0)) {
+        // Higher tiers have directional edges enforcing forward flow!
+        val directedEdges = if (clampedId > 3 && (mechanicType in listOf("REVERSE_FLOW", "OMEGA_SYNTHESIS", "QUANTUM_ENTANGLEMENT", "CHRONO_STASIS", "COSMIC_INFINITY") || clampedId % 4 == 0)) {
             val edges = ArrayList<DirectedEdge>()
             for (i in 1 until nodeCount) {
                 if (i % 2 == 1) {
@@ -427,13 +505,13 @@ object LevelCatalog {
         val parEchoes = if (clampedId <= 3) {
             (nodeCount / 3).coerceIn(1, 3)
         } else {
-            (nodeCount / 7).coerceIn(1, 4)
+            (nodeCount / 7).coerceIn(1, 5)
         }
 
-        val description = if (clampedId == 100) {
-            "GRAND FINALE: Connect all 32 nodes across the Omega Arch to conquer the ECHO universe!"
-        } else {
-            "Level $clampedId: Connect all $nodeCount nodes with a single continuous stroke without colliding with echoes!"
+        val description = when (clampedId) {
+            150 -> "ULTIMATE COSMIC INFINITY: Connect all 40 harmonic celestial nodes across the universal mandala to complete ECHO FLUX!"
+            100 -> "GRAND FINALE: Connect all 32 nodes across the Omega Arch to conquer the ECHO universe!"
+            else -> "Level $clampedId: Connect all $nodeCount nodes with a single continuous stroke without colliding with echoes!"
         }
 
         return LevelData(

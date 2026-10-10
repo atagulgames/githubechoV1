@@ -26,7 +26,7 @@ class EchoRepository(context: Context) {
 
     suspend fun ensureLevelsPopulated() = withContext(Dispatchers.IO) {
         val count = levelDao.getLevelCount()
-        val levels = LevelCatalog.create100Levels()
+        val levels = LevelCatalog.getAllLevels()
         if (count < LevelCatalog.TOTAL_LEVELS) {
             levelDao.insertAll(levels)
         }

@@ -3,6 +3,7 @@ package com.example.data
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -17,7 +18,7 @@ object LevelGeometry {
         Pair(x.coerceIn(44f, 396f), y.coerceIn(88f, 472f))
 
     fun getCurveForLevel(id: Int, cx: Float, cy: Float): (Float) -> Pair<Float, Float> {
-        val clampedId = id.coerceIn(1, 100)
+        val clampedId = id.coerceIn(1, 150)
         return when (clampedId) {
             // =========================================================================
             // TIER 1 (Levels 1..10): Pure Classical Geometries (3 to 8 nodes)
@@ -687,6 +688,324 @@ object LevelGeometry {
                     }
                     else -> Pair(95f + ((t - 0.80f) / 0.20f) * 55f, 125f)
                 }
+                clampPt(cx + u, cy + v)
+            }
+            // =========================================================================
+            // TIER 13 (Levels 101..110): Hyper-Flux Matrix (26 to 34 nodes)
+            // =========================================================================
+            101 -> { t -> // Level 101: Astroid / 4-Cusp Hypocycloid
+                val a = t * 2.0 * PI
+                val r = 135f
+                val u = (r * (cos(a) * cos(a) * cos(a))).toFloat()
+                val v = (r * (sin(a) * sin(a) * sin(a))).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            102 -> { t -> // Level 102: Torus Knot Projection
+                val a = t * 2.0 * PI
+                val r = 125f + 35f * cos(3.0 * a).toFloat()
+                val u = r * cos(2.0 * a).toFloat()
+                val v = r * sin(2.0 * a).toFloat() * 0.9f
+                clampPt(cx + u, cy + v)
+            }
+            103 -> { t -> // Level 103: Fermat Spiral Dual Arm
+                val a = t * 3.5 * PI
+                val r = 140f * sqrt(t).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            104 -> { t -> // Level 104: Butterfly Silhouette
+                val a = t * 2.0 * PI
+                val r = 100f * (sin(a).toFloat() * sin(a).toFloat() * 0.6f + cos(2.0 * a).toFloat() * 0.4f + 0.5f)
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            105 -> { t -> // Level 105: Lissajous 3:4 Resonance
+                val a = t * 2.0 * PI
+                val u = 130f * sin(3.0 * a + PI * 0.25).toFloat()
+                val v = 115f * sin(4.0 * a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            106 -> { t -> // Level 106: Cardioid Heart Loop
+                val a = t * 2.0 * PI
+                val r = 70f * (1f - sin(a).toFloat())
+                clampPt(cx + r * cos(a).toFloat() * 1.5f, cy - r * sin(a).toFloat() * 1.4f)
+            }
+            107 -> { t -> // Level 107: Nephroid Double Lobe
+                val a = t * 2.0 * PI
+                val u = 125f * (3f * cos(a).toFloat() - cos(3.0 * a).toFloat()) * 0.28f
+                val v = 125f * (3f * sin(a).toFloat() - sin(3.0 * a).toFloat()) * 0.28f
+                clampPt(cx + u, cy + v)
+            }
+            108 -> { t -> // Level 108: Lemniscate of Bernoulli
+                val a = -PI * 0.45 + t * 0.9 * PI
+                val scale = 140f
+                val den = (1f + sin(a).toFloat() * sin(a).toFloat()).coerceAtLeast(0.01f)
+                val u = (scale * cos(a).toFloat()) / den
+                val v = (scale * sin(a).toFloat() * cos(a).toFloat()) / den
+                clampPt(cx + u, cy + v)
+            }
+            109 -> { t -> // Level 109: Hypotrochoid Star
+                val a = t * 2.0 * PI
+                val u = 95f * cos(a).toFloat() + 45f * cos(5.0 * a).toFloat()
+                val v = 95f * sin(a).toFloat() - 45f * sin(5.0 * a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            110 -> { t -> // Level 110: Epicycloid 5 Lobes
+                val a = t * 2.0 * PI
+                val u = 100f * cos(a).toFloat() - 30f * cos(5.0 * a).toFloat()
+                val v = 100f * sin(a).toFloat() - 30f * sin(5.0 * a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            // =========================================================================
+            // TIER 14 (Levels 111..120): Singularity Void (28 to 36 nodes)
+            // =========================================================================
+            111 -> { t -> // Level 111: Event Horizon Ellipse Vortex
+                val a = t * 2.2 * PI
+                val r = 135f - 45f * t
+                clampPt(cx + r * 1.15f * cos(a).toFloat(), cy + r * 0.85f * sin(a).toFloat())
+            }
+            112 -> { t -> // Level 112: Accretion Disk Funnel
+                val u = -140f + t * 280f
+                val v = (55f * sin(t * 3.0 * PI) + 60f * cos(t * PI)).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            113 -> { t -> // Level 113: Spacetime Dip Wave
+                val a = t * 2.0 * PI
+                val r = 120f + 30f * sin(6.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            114 -> { t -> // Level 114: 4-Leaf Clover Singularity
+                val a = t * 2.0 * PI
+                val r = 125f * cos(2.0 * a).toFloat().let { kotlin.math.abs(it) } + 25f
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            115 -> { t -> // Level 115: Dual Circle Hourglass
+                val (u, v) = when {
+                    t <= 0.5f -> {
+                        val sub = t / 0.5f * 2.0 * PI
+                        Pair(-65f + 55f * cos(sub).toFloat(), 55f * sin(sub).toFloat())
+                    }
+                    else -> {
+                        val sub = (t - 0.5f) / 0.5f * 2.0 * PI
+                        Pair(65f + 55f * cos(sub).toFloat(), 55f * sin(sub).toFloat())
+                    }
+                }
+                clampPt(cx + u, cy + v)
+            }
+            116 -> { t -> // Level 116: Hexagram Star Perimeter
+                val a = t * 2.0 * PI
+                val r = 125f + 35f * cos(6.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            117 -> { t -> // Level 117: Octagram 8-Point Cosmic Star
+                val a = t * 2.0 * PI
+                val r = 120f + 40f * cos(8.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            118 -> { t -> // Level 118: Right Strophoid Loop
+                val a = -PI * 0.42 + t * 0.84 * PI
+                val u = 120f * (cos(2.0 * a) / cos(a)).toFloat().coerceIn(-1.3f, 1.3f)
+                val v = 120f * (sin(2.0 * a) / (2.0 * cos(a))).toFloat().coerceIn(-1.2f, 1.2f)
+                clampPt(cx + u, cy + v)
+            }
+            119 -> { t -> // Level 119: Folium Loop
+                val a = t * 2.0 * PI
+                val r = 130f * (cos(a).toFloat() * cos(a).toFloat() * 0.7f + 0.35f)
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat() * 1.15f)
+            }
+            120 -> { t -> // Level 120: Rhombus Constellation
+                val (u, v) = when {
+                    t <= 0.25f -> Pair(0f + (t / 0.25f) * 135f, -125f + (t / 0.25f) * 125f)
+                    t <= 0.50f -> Pair(135f - ((t - 0.25f) / 0.25f) * 135f, 0f + ((t - 0.25f) / 0.25f) * 125f)
+                    t <= 0.75f -> Pair(0f - ((t - 0.50f) / 0.25f) * 135f, 125f - ((t - 0.50f) / 0.25f) * 125f)
+                    else -> Pair(-135f + ((t - 0.75f) / 0.25f) * 135f, 0f - ((t - 0.75f) / 0.25f) * 125f)
+                }
+                clampPt(cx + u, cy + v)
+            }
+            // =========================================================================
+            // TIER 15 (Levels 121..130): Quantum Entanglement (30 to 38 nodes)
+            // =========================================================================
+            121 -> { t -> // Level 121: Dual Interlocking Loops
+                val a = t * 2.0 * PI
+                val u = 120f * cos(a).toFloat() + 25f * cos(3.0 * a).toFloat()
+                val v = 95f * sin(a).toFloat() - 25f * sin(3.0 * a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            122 -> { t -> // Level 122: Double Spiral Figure-8
+                val a = t * 2.0 * PI
+                val u = 135f * sin(a).toFloat()
+                val v = 110f * sin(2.0 * a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            123 -> { t -> // Level 123: Trefoil Knot Contour
+                val a = t * 2.0 * PI
+                val u = 115f * (sin(a) + 2.0 * sin(2.0 * a)).toFloat() * 0.35f
+                val v = 115f * (cos(a) - 2.0 * cos(2.0 * a)).toFloat() * 0.35f
+                clampPt(cx + u, cy + v)
+            }
+            124 -> { t -> // Level 124: Sine-Modulated Oval
+                val a = t * 2.0 * PI
+                val r = 125f + 25f * sin(5.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat() * 1.1f, cy + r * sin(a).toFloat() * 0.9f)
+            }
+            125 -> { t -> // Level 125: Honeycomb Diamond Chain
+                val u = -140f + t * 280f
+                val v = 110f * (sin(t * 4.0 * PI) * cos(t * 2.0 * PI)).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            126 -> { t -> // Level 126: Zig-Zag Matrix
+                val u = -135f + t * 270f
+                val v = if ((t * 8).toInt() % 2 == 0) -95f else 95f
+                clampPt(cx + u, cy + v)
+            }
+            127 -> { t -> // Level 127: Serpentine Wave Harmonic
+                val u = -140f + t * 280f
+                val v = 105f * sin(t * 3.5 * PI).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            128 -> { t -> // Level 128: Double Helix Projection
+                val a = t * 3.0 * PI
+                val u = 130f * cos(a).toFloat()
+                val v = -120f + t * 240f
+                clampPt(cx + u, cy + v)
+            }
+            129 -> { t -> // Level 129: Cycloid Wave Arch
+                val a = t * 2.5 * PI
+                val u = -135f + (a / (2.5 * PI) * 270f).toFloat()
+                val v = 110f - 100f * (1f - cos(a).toFloat())
+                clampPt(cx + u, cy + v)
+            }
+            130 -> { t -> // Level 130: Concentric Octagon Ring
+                val a = t * 2.0 * PI
+                val r = 120f + 20f * cos(8.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat() * 1.05f, cy + r * sin(a).toFloat() * 1.05f)
+            }
+            // =========================================================================
+            // TIER 16 (Levels 131..140): Chrono-Stasis Fracture (32 to 38 nodes)
+            // =========================================================================
+            131 -> { t -> // Level 131: Starburst Multi-Spike
+                val a = t * 2.0 * PI
+                val r = 110f + 45f * sin(7.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            132 -> { t -> // Level 132: Involute Spiral Arc
+                val a = 0.5 + t * 2.2 * PI
+                val r = 25f * a.toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            133 -> { t -> // Level 133: Agnesi Curve Loop
+                val u = -140f + t * 280f
+                val den = 1f + (u / 65f) * (u / 65f)
+                val v = (240f / den) - 120f
+                clampPt(cx + u, cy + v)
+            }
+            134 -> { t -> // Level 134: Trisectrix Curve
+                val a = -PI * 0.44 + t * 0.88 * PI
+                val r = 130f * (2.0 * cos(a) - 1.0).toFloat().coerceIn(-1.3f, 1.3f)
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            135 -> { t -> // Level 135: Archimedean Core Arm
+                val a = t * 2.8 * PI
+                val r = 40f + 95f * t
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            136 -> { t -> // Level 136: Hyperbolic Cross
+                val a = t * 2.0 * PI
+                val u = 130f * cos(a).toFloat() * kotlin.math.abs(cos(a).toFloat())
+                val v = 115f * sin(a).toFloat() * kotlin.math.abs(sin(a).toFloat())
+                clampPt(cx + u, cy + v)
+            }
+            137 -> { t -> // Level 137: Sinusoidal Flower
+                val a = t * 2.0 * PI
+                val r = 120f + 35f * sin(9.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            138 -> { t -> // Level 138: Epitrochoid 6-Cusp Shield
+                val a = t * 2.0 * PI
+                val u = 95f * cos(a).toFloat() - 35f * cos(6.0 * a).toFloat()
+                val v = 95f * sin(a).toFloat() - 35f * sin(6.0 * a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            139 -> { t -> // Level 139: Double Tear-Drop Loop
+                val a = t * 2.0 * PI
+                val u = 135f * cos(a).toFloat() * (sin(a).toFloat() * 0.4f + 0.6f)
+                val v = 120f * sin(a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            140 -> { t -> // Level 140: Multi-Stage Quantum Maze
+                val u = -140f + t * 280f
+                val v = (75f * sin(t * 5.0 * PI) + 50f * cos(t * 2.0 * PI)).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            // =========================================================================
+            // TIER 17 (Levels 141..149): Celestial Apex (34 to 39 nodes)
+            // =========================================================================
+            141 -> { t -> // Level 141: Crown Heptagon (7 Lobes)
+                val a = t * 2.0 * PI
+                val r = 125f + 30f * cos(7.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            142 -> { t -> // Level 142: Crescent Moon Contour
+                val a = -PI * 0.8 + t * 1.6 * PI
+                val rOuter = 135f
+                val rInner = 85f
+                val (u, v) = if (t <= 0.5f) {
+                    val sub = t / 0.5f * PI * 1.6 - PI * 0.8
+                    Pair(rOuter * cos(sub).toFloat(), rOuter * sin(sub).toFloat())
+                } else {
+                    val sub = PI * 0.8 - (t - 0.5f) / 0.5f * PI * 1.6
+                    Pair(rInner * cos(sub).toFloat() + 35f, rInner * sin(sub).toFloat())
+                }
+                clampPt(cx + u, cy + v)
+            }
+            143 -> { t -> // Level 143: Super-Ellipse Lamé Curve
+                val a = t * 2.0 * PI
+                val cosA = cos(a).toFloat()
+                val sinA = sin(a).toFloat()
+                val signCos = if (cosA >= 0) 1f else -1f
+                val signSin = if (sinA >= 0) 1f else -1f
+                val u = 135f * signCos * kotlin.math.abs(cosA).pow(0.65f)
+                val v = 120f * signSin * kotlin.math.abs(sinA).pow(0.65f)
+                clampPt(cx + u, cy + v)
+            }
+            144 -> { t -> // Level 144: Parabolic Wave Nexus
+                val u = -140f + t * 280f
+                val v = (115f * sin(t * 6.0 * PI) * (1f - kotlin.math.abs(t - 0.5f) * 0.8f)).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            145 -> { t -> // Level 145: Grand Decagon (10-Point Star)
+                val a = t * 2.0 * PI
+                val r = 120f + 32f * cos(10.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            146 -> { t -> // Level 146: Quad-Vortex Cross
+                val a = t * 2.0 * PI
+                val u = 135f * cos(a).toFloat() * (1f + 0.35f * cos(4.0 * a).toFloat())
+                val v = 120f * sin(a).toFloat() * (1f - 0.35f * cos(4.0 * a).toFloat())
+                clampPt(cx + u, cy + v)
+            }
+            147 -> { t -> // Level 147: Celestial Trident
+                val u = -140f + t * 280f
+                val v = (85f * sin(t * 4.5 * PI) + 45f * sin(t * 9.0 * PI)).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            148 -> { t -> // Level 148: Sovereign Ring with Spoke Nodes
+                val a = t * 2.0 * PI
+                val r = 125f + 25f * cos(12.0 * a).toFloat()
+                clampPt(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+            }
+            149 -> { t -> // Level 149: Penultimate Dual Gateway
+                val a = t * 2.0 * PI
+                val u = 130f * cos(a).toFloat() + 20f * sin(3.0 * a).toFloat()
+                val v = 115f * sin(a).toFloat() + 30f * cos(2.0 * a).toFloat()
+                clampPt(cx + u, cy + v)
+            }
+            // =========================================================================
+            // TIER 18 (Level 150): COSMIC INFINITY - ULTIMATE APEX FINALE (40 nodes)
+            // =========================================================================
+            150 -> { t -> // Level 150: "COSMIC INFINITY" - The Grand Universal Mandala
+                val a = t * 2.0 * PI
+                val r = 130f + 35f * cos(8.0 * a).toFloat() + 15f * sin(4.0 * a).toFloat()
+                val u = r * cos(a).toFloat() * 1.05f
+                val v = r * sin(a).toFloat() * 0.95f
                 clampPt(cx + u, cy + v)
             }
             else -> { t -> clampPt(cx, cy) }

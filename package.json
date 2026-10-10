@@ -4,7 +4,7 @@
   "description": "ECHOFLUX Leaderboard Backend for Render",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node download_server.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

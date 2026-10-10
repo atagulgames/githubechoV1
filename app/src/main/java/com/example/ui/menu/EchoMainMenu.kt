@@ -1,14 +1,17 @@
 package com.example.ui.menu
 
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,80 +21,66 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CrisisAlert
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Diamond
-import androidx.compose.material.icons.filled.ElectricBolt
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material.icons.filled.Leaderboard
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Redeem
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.foundation.Image
-import com.example.audio.HapticEngine
-import com.example.audio.hapticClick
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
-import com.example.R
-import com.example.localization.EchoStrings
-import com.example.ui.components.Season2BackgroundPatternCanvas
-import com.example.ui.components.MeteorStoneButton
-import com.example.ui.components.MeteorStoneTheme
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import com.example.audio.HarmonicAudioEngine
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.audio.HarmonicAudioEngine
+import com.example.audio.hapticClick
+import com.example.data.LevelCatalog
+import com.example.data.local.LevelEntity
 import com.example.viewmodel.EchoUiState
 
 @Composable
 fun EchoMainMenu(
     state: EchoUiState,
     onPlay: () -> Unit,
-    onDailyChallenge: () -> Unit,
-    onOpenLevelSelect: () -> Unit,
-    onOpenShop: () -> Unit,
-    onOpenSkins: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onDailyChallenge: () -> Unit = {},
+    onOpenLevelSelect: () -> Unit = {},
+    onOpenShop: () -> Unit = {},
+    onOpenSkins: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     onOpenSupport: () -> Unit = {},
     onOpenLeaderboard: () -> Unit = {},
     onOpenMyProfile: () -> Unit = {},
@@ -106,985 +95,1426 @@ fun EchoMainMenu(
     onBannerAdFailed: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // User requirement: "müzik ana menüdede olsun"
+    // Start background music in main menu
     LaunchedEffect(Unit) {
         HarmonicAudioEngine.setIntroActive(false)
         HarmonicAudioEngine.startBgm()
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "PulseLogo")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "PulseScale"
-    )
-
-    val s2Theme = state.selectedSeason2Theme
-    val isS2 = state.isSeason2ThemeActive
-
-    val bgTheme = if (isS2) s2Theme.getBackgroundTop(state.isDarkTheme) else if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
-    val cardBg = if (isS2) s2Theme.getCardBackground(state.isDarkTheme) else if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
-    val textPrimary = if (state.isDarkTheme) Color.White else Color(0xFF0F172A)
-    val textSecondary = if (state.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-    val borderColor = if (isS2) s2Theme.getBorderColor(state.isDarkTheme) else if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+    val currentLevel = state.currentLevelIndex + 1
 
     Surface(
         modifier = modifier
             .fillMaxSize()
             .testTag("main_menu_screen"),
-        color = bgTheme
+        color = Color(0xFF061864)
     ) {
-        val scrollState = rememberScrollState()
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.TopCenter
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Season 2 Dynamic Background Pattern Canvas
-            if (isS2 && state.isSeason2BackgroundEffectsEnabled) {
-                Season2BackgroundPatternCanvas(
-                    theme = s2Theme,
-                    isDarkTheme = state.isDarkTheme,
-                    modifier = Modifier.fillMaxSize(),
-                    alphaMultiplier = 0.85f
+            val screenHeight = maxHeight
+            val isShortScreen = screenHeight < 720.dp
+            val isVeryShort = screenHeight < 640.dp
+
+            // Background infinite animations for flowing symbols & gentle ambient pulse
+            val infiniteTransition = rememberInfiniteTransition(label = "MainMenuBackgroundFlow")
+            val flowProgress by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 60000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "MainMenuFlowProgress"
+            )
+            val pulseProgress by infiniteTransition.animateFloat(
+                initialValue = 0.90f,
+                targetValue = 1.10f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 4000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "MainMenuPulseProgress"
+            )
+
+            // 1. Vibrant Royal Blue Deep Background Gradient & Flowing Cartoon Arcade Symbols
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val gradient = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF031454),
+                        Color(0xFF06227D),
+                        Color(0xFF0930A4),
+                        Color(0xFF052074),
+                        Color(0xFF020E3E)
+                    )
+                )
+                drawRect(brush = gradient)
+                // Draw animated flowing cartoon game symbols (Trophies, Crowns, Stars, Gamepads, Gems, Rockets, Lightning, Coins)
+                drawFlowingCasualGameSymbols(
+                    canvasSize = size,
+                    flowProgress = flowProgress,
+                    pulseProgress = pulseProgress
                 )
             }
-            val isNarrow = maxWidth < 380.dp
-            val isShort = maxHeight < 700.dp
-            val horizontalPadding = if (isNarrow) 12.dp else 16.dp
-            val logoBaseSize = if (isNarrow || isShort) 100.dp else 130.dp
 
+            // 2. Strict Fit Column (No Scroll - Everything strictly fits on screen)
             Column(
                 modifier = Modifier
-                    .widthIn(max = 600.dp)
                     .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = horizontalPadding, vertical = if (isShort) 12.dp else 20.dp),
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = if (isVeryShort) 4.dp else 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(if (isShort) 12.dp else 16.dp)
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Navigation Bar: Profile/Player Pill on Left, Action Buttons on Right
+                // TOP BAR: Settings Gear (Left) | Energy Pill (Center) | Coins Pill (Right)
+                TopMenuNavBar(
+                    energyText = "FULL",
+                    coins = state.coins,
+                    onOpenSettings = onOpenSettings,
+                    onOpenShop = onOpenShop,
+                    onRefillEnergy = onOpenShop
+                )
+
+                Spacer(modifier = Modifier.height(if (isVeryShort) 2.dp else 6.dp))
+
+                // MID SECTION: Left Badges | Center Vertical Progression Path | Right Badge
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 2.dp),
+                        .weight(1f, fill = false),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left: Player Profile Pill
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .shadow(2.dp, RoundedCornerShape(20.dp))
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(cardBg)
-                            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-                            .clickable { onOpenMyProfile() }
-                            .padding(horizontal = 9.dp, vertical = 5.dp)
-                            .testTag("profile_icon_button")
+                    // LEFT COLUMN: "Hediye" (Gift Box) + "Jeton Görevi" (Coin Quest)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(if (isShortScreen) 12.dp else 22.dp),
+                        modifier = Modifier.width(84.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF3B82F6).copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (state.userAvatarUri.isNotBlank()) state.userAvatarUri else "⚡",
-                                fontSize = 14.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
-                            Text(
-                                text = state.authenticatedUser,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = if (state.userCustomTitle.isNotBlank()) state.userCustomTitle else "Ses Kaşifi",
-                                fontSize = 10.sp,
-                                color = textSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        SideBadgeItem(
+                            title = "Hediye",
+                            badgeType = BadgeType.GIFT,
+                            testTag = "btn_badge_hediye",
+                            onClick = onOpenChest
+                        )
+
+                        SideBadgeItem(
+                            title = "Jeton Görevi",
+                            badgeType = BadgeType.COIN_QUEST,
+                            testTag = "btn_badge_jeton_gorevi",
+                            onClick = onOpenDailyQuests
+                        )
                     }
 
-                    // Right: Quick Action Buttons (Leaderboard, Theme, Support, Settings)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    // CENTER: Vertical Level Progress Nodes (Connected via yellow pipe)
+                    VerticalLevelProgression(
+                        currentLevel = currentLevel,
+                        completedLevels = state.completedLevels,
+                        allLevels = state.allLevels,
+                        isCompact = isShortScreen,
+                        onSelectLevel = onOpenLevelSelect
+                    )
+
+                    // RIGHT COLUMN: "Günlük Ödül" (Daily Reward with Video Play Icon)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Top,
+                        modifier = Modifier.width(84.dp)
                     ) {
-                        // Leaderboard
-                        IconButton(
-                            onClick = hapticClick(action = onOpenLeaderboard),
-                            modifier = Modifier
-                                .size(36.dp)
-                                .shadow(2.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(cardBg)
-                                .border(1.dp, borderColor, CircleShape)
-                                .testTag("leaderboard_icon_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Leaderboard,
-                                contentDescription = "Liderlik Tablosu",
-                                tint = Color(0xFFF59E0B),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        // Theme Toggle
-                        IconButton(
-                            onClick = hapticClick(action = onToggleDarkTheme),
-                            modifier = Modifier
-                                .size(36.dp)
-                                .shadow(2.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(cardBg)
-                                .border(1.dp, borderColor, CircleShape)
-                                .testTag("menu_theme_toggle_button")
-                        ) {
-                            Icon(
-                                imageVector = if (state.isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
-                                contentDescription = "Tema Değiştir",
-                                tint = if (state.isDarkTheme) Color(0xFF38BDF8) else Color(0xFFF59E0B),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        // Support
-                        IconButton(
-                            onClick = hapticClick(action = onOpenSupport),
-                            modifier = Modifier
-                                .size(36.dp)
-                                .shadow(2.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(cardBg)
-                                .border(1.dp, borderColor, CircleShape)
-                                .testTag("support_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = "Destek & İletişim",
-                                tint = Color(0xFF0284C7),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        // Settings Button - Ample spacing, unconstrained, clean top-right corner
-                        IconButton(
-                            onClick = hapticClick(action = onOpenSettings),
-                            modifier = Modifier
-                                .size(36.dp)
-                                .shadow(2.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(cardBg)
-                                .border(1.dp, borderColor, CircleShape)
-                                .testTag("settings_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Ayarlar",
-                                tint = textSecondary,
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
+                        SideBadgeItem(
+                            title = "Günlük Ödül",
+                            badgeType = BadgeType.DAILY_REWARD,
+                            testTag = "btn_badge_gunluk_odul",
+                            onClick = onWatchRewardedAd
+                        )
                     }
                 }
 
-                // Economy & Resource Badges: Stars, Trophies, Tokens
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Stars Chip
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = cardBg,
-                        border = BorderStroke(1.dp, borderColor),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Yıldızlar",
-                                tint = Color(0xFFF59E0B),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${state.totalStars}/300",
-                                color = textPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
+                Spacer(modifier = Modifier.height(if (isVeryShort) 4.dp else 8.dp))
 
-                    // Trophies Chip (Click to open profile)
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = cardBg,
-                        border = BorderStroke(1.dp, borderColor),
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onOpenMyProfile() }
-                            .testTag("menu_trophies_chip")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.EmojiEvents,
-                                contentDescription = "Kupalar",
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${state.trophies} 🏆",
-                                color = textPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    // Tokens Chip (Click to open shop)
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = cardBg,
-                        border = BorderStroke(1.dp, borderColor),
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onOpenShop() }
-                            .testTag("menu_token_chip")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Diamond,
-                                contentDescription = "Jetonlar",
-                                tint = Color(0xFF0284C7),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${state.tokens} Jeton",
-                                color = textPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-
-                // Middle: Official ECHO Brand Identity & Living Modern Logo
+                // PLAY BUTTON & ENERGY COST BADGE
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Official ECHO Logo with animated cyber aura
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(logoBaseSize * pulseScale)
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(Color(0x5500E5FF), Color(0x227C4DFF), Color.Transparent)
-                                )
-                            )
-                            .border(2.dp, Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF7C4DFF))), RoundedCornerShape(32.dp))
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.echo_logo),
-                            contentDescription = "ECHO Logo",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(30.dp))
-                        )
-                    }
+                    BigPlayButton(
+                        onClick = onPlay,
+                        isCompact = isVeryShort
+                    )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                Text(
-                    text = "ECHO FLUX",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 6.sp,
-                    color = textPrimary,
-                    textAlign = TextAlign.Center
+                    // "⚡ Enerji" Pill
+                    EnergyCostPill(
+                        onClick = onOpenShop
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(if (isVeryShort) 4.dp else 8.dp))
+
+                // BOTTOM DOCK: "Görevler" (Left) | "Jener" (Elevated Center) | "Sıralama" (Right)
+                BottomGameDock(
+                    unclaimedQuestsCount = state.unclaimedQuestsCount,
+                    onOpenQuests = onOpenDailyQuests,
+                    onOpenLevels = onOpenLevelSelect,
+                    onOpenLeaderboard = onOpenLeaderboard
                 )
-
-                Text(
-                    text = "TEK ÇİZGİ STRATEJİ & BULMACA",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 3.sp,
-                    color = Color(0xFF0284C7),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Hataların kırmızı lazer bariyerlere dönüşür.\nZekanı kullan, yolu tek seferde çöz!",
-                    fontSize = 12.sp,
-                    color = textSecondary,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 17.sp
-                )
-            }
-
-            // Season 2 Glowing Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(18.dp))
-                    .clickable { onOpenSeason2Info() }
-                    .testTag("season_2_banner_card"),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (state.isDarkTheme) Color(0xFF1E1B4B) else Color(0xFFEEF2FF)
-                ),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.5.dp,
-                    Brush.horizontalGradient(listOf(Color(0xFFFFB703), Color(0xFF38BDF8), Color(0xFFEC4899)))
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFFFB703).copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✨", fontSize = 18.sp)
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "SEZON 2: YENİ ÇAĞ",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp,
-                                    color = if (state.isDarkTheme) Color.White else Color(0xFF1E1B4B)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFFFFB703))
-                                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                                ) {
-                                    Text("AKTİF", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                                }
-                            }
-                            Text(
-                                text = "100 Yeni Bölüm • Sıfırlanan Seviyeler • 2.5x Ödül",
-                                fontSize = 11.sp,
-                                color = if (state.isDarkTheme) Color(0xFFC7D2FE) else Color(0xFF4338CA)
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = Color(0xFFFFB703),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Season 2 Theme Selector Card (Active after Season 2 Welcome screen)
-            if (state.isSeason2ThemeActive) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(3.dp, RoundedCornerShape(16.dp))
-                        .clickable { onOpenSeason2Themes() }
-                        .testTag("season_2_theme_selector_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = s2Theme.primaryAccent.copy(alpha = if (state.isDarkTheme) 0.16f else 0.08f)
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        s2Theme.primaryAccent.copy(alpha = 0.6f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = s2Theme.iconEmoji, fontSize = 22.sp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Sezon 2 Teması: ${s2Theme.displayName}",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(s2Theme.secondaryAccent.copy(alpha = 0.2f))
-                                            .padding(horizontal = 6.dp, vertical = 1.dp)
-                                    ) {
-                                        Text(
-                                            text = "DEĞİŞTİR",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = s2Theme.secondaryAccent
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = s2Theme.subtitle,
-                                    fontSize = 11.sp,
-                                    color = textSecondary
-                                )
-                            }
-                        }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Temaları Aç",
-                            tint = s2Theme.primaryAccent,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            // Daily Challenge Card (Dynamic Theme)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(3.dp, RoundedCornerShape(18.dp))
-                    .clickable { onDailyChallenge() }
-                    .testTag("daily_challenge_card"),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = cardBg),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (state.isDailyCompletedToday) Color(0xFF86EFAC) else Color(0xFFFDE68A)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (state.isDailyCompletedToday) Color(0xFFDCFCE7) else Color(0xFFFEF3C7)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = null,
-                                tint = if (state.isDailyCompletedToday) Color(0xFF16A34A) else Color(0xFFD97706),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Günün Özel Bulmacası",
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = if (state.isDailyCompletedToday) "Bugün Tamamlandı ✓" else "Çift Jeton Ödülü (2x)",
-                                color = if (state.isDailyCompletedToday) Color(0xFF16A34A) else Color(0xFFD97706),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = if (state.isDailyCompletedToday) "Tamam" else "BAŞLA →",
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0284C7),
-                        fontSize = 13.sp
-                    )
-                }
-            }
-
-            // Game Systems Quick Access: Görevler, Giriş Takvimi, Gizemli Sandık
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // 1. Görevler Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(72.dp)
-                        .shadow(2.dp, RoundedCornerShape(16.dp))
-                        .clickable { onOpenDailyQuests() }
-                        .testTag("menu_daily_quests_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = cardBg),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (state.unclaimedQuestsCount > 0) Color(0xFF0284C7) else borderColor
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(contentAlignment = Alignment.TopEnd) {
-                            Icon(
-                                imageVector = Icons.Default.CrisisAlert,
-                                contentDescription = "Görevler",
-                                tint = Color(0xFF0284C7),
-                                modifier = Modifier.size(22.dp)
-                            )
-                            if (state.unclaimedQuestsCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFEF4444))
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Görevler",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textPrimary
-                        )
-                        Text(
-                            text = if (state.unclaimedQuestsCount > 0) "${state.unclaimedQuestsCount} Hazır" else "Günlük",
-                            fontSize = 10.sp,
-                            color = if (state.unclaimedQuestsCount > 0) Color(0xFF10B981) else textSecondary,
-                            fontWeight = if (state.unclaimedQuestsCount > 0) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-
-                // 2. Giriş Takvimi Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(72.dp)
-                        .shadow(2.dp, RoundedCornerShape(16.dp))
-                        .clickable { onOpenDailyLogin() }
-                        .testTag("menu_daily_login_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = cardBg),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (state.isLoginRewardAvailableToday) Color(0xFFF59E0B) else borderColor
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(contentAlignment = Alignment.TopEnd) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = "Giriş",
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(22.dp)
-                            )
-                            if (state.isLoginRewardAvailableToday) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFF59E0B))
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "${state.loginStreak}. Gün",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textPrimary
-                        )
-                        Text(
-                            text = if (state.isLoginRewardAvailableToday) "Ödül Al!" else "Alındı ✓",
-                            fontSize = 10.sp,
-                            color = if (state.isLoginRewardAvailableToday) Color(0xFFD97706) else textSecondary,
-                            fontWeight = if (state.isLoginRewardAvailableToday) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-
-                // 3. Sandık Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(72.dp)
-                        .shadow(2.dp, RoundedCornerShape(16.dp))
-                        .clickable { onOpenChest() }
-                        .testTag("menu_mystery_chest_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = cardBg),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (state.isFreeChestAvailable) Color(0xFF9333EA) else borderColor
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(contentAlignment = Alignment.TopEnd) {
-                            Icon(
-                                imageVector = Icons.Default.Redeem,
-                                contentDescription = "Sandık",
-                                tint = Color(0xFF9333EA),
-                                modifier = Modifier.size(22.dp)
-                            )
-                            if (state.isFreeChestAvailable) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF9333EA))
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Sandık",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textPrimary
-                        )
-                        Text(
-                            text = if (state.isFreeChestAvailable) "ÜCRETSİZ" else "Aç (${state.adChestsRemainingToday})",
-                            fontSize = 10.sp,
-                            color = if (state.isFreeChestAvailable) Color(0xFF9333EA) else textSecondary,
-                            fontWeight = if (state.isFreeChestAvailable) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-
-            val isRewardCooldown = state.rewardCooldownSeconds > 0
-            val rewardCooldownFormatted = if (isRewardCooldown) {
-                val h = state.rewardCooldownSeconds / 3600
-                val m = (state.rewardCooldownSeconds % 3600) / 60
-                val s = state.rewardCooldownSeconds % 60
-                String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
-            } else ""
-
-            // Start.io Rewarded Video Card (3-Saatlik Yenilenen Ödül)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(3.dp, RoundedCornerShape(18.dp))
-                    .clickable { onWatchRewardedAd() }
-                    .testTag("startio_reward_card"),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = cardBg),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isRewardCooldown) {
-                        if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
-                    } else {
-                        if (state.isDarkTheme) Color(0xFF0369A1) else Color(0xFFBAE6FD)
-                    }
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (isRewardCooldown) {
-                                        if (state.isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
-                                    } else {
-                                        if (state.isDarkTheme) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (isRewardCooldown) Icons.Default.Redeem else Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = if (isRewardCooldown) Color(0xFF94A3B8) else Color(0xFF0284C7),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = if (isRewardCooldown) "3 Saatlik Ödül Beklemede" else "Ücretsiz 3 Saatlik Ödül",
-                                fontWeight = FontWeight.Bold,
-                                color = if (isRewardCooldown) textSecondary else textPrimary,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = if (isRewardCooldown) {
-                                    "Yenilenme: $rewardCooldownFormatted (3 Saatte Bir)"
-                                } else {
-                                    "+1 Matkap Lazeri & +2 Jeton Kazan"
-                                },
-                                color = if (isRewardCooldown) Color(0xFFEAB308) else Color(0xFF0284C7),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isRewardCooldown) Color(0xFF475569) else Color(0xFF0284C7))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = if (isRewardCooldown) rewardCooldownFormatted else "İZLE",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = if (isRewardCooldown) 10.sp else 11.sp
-                        )
-                    }
-                }
-            }
-
-            // Leaderboard & Player Profile Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(58.dp)
-                        .shadow(2.dp, RoundedCornerShape(14.dp))
-                        .clickable { onOpenLeaderboard() }
-                        .testTag("menu_leaderboard_card"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = cardBg),
-                    border = BorderStroke(1.dp, if (state.isDarkTheme) Color(0xFFD97706).copy(alpha = 0.5f) else Color(0xFFFDE68A))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFFEF3C7)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.EmojiEvents,
-                                contentDescription = null,
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Liderlik",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary
-                            )
-                            Text(
-                                text = "Global Sıralama",
-                                fontSize = 10.sp,
-                                color = textSecondary
-                            )
-                        }
-                    }
-                }
-
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(58.dp)
-                        .shadow(2.dp, RoundedCornerShape(14.dp))
-                        .clickable { onOpenMyProfile() }
-                        .testTag("menu_profile_card"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = cardBg),
-                    border = BorderStroke(1.dp, if (state.isDarkTheme) Color(0xFF3B82F6).copy(alpha = 0.5f) else Color(0xFFBFDBFE))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(if (state.isDarkTheme) Color(0xFF1E3A8A) else Color(0xFFDBEAFE)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = Color(0xFF3B82F6),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Profilim",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary
-                            )
-                            Text(
-                                text = "Süre & Kayıtlar",
-                                fontSize = 10.sp,
-                                color = textSecondary
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Bottom Actions: Primary Play Button & Modern Navigation Bar
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Primary "OYNA" Meteor Stone Button
-                MeteorStoneButton(
-                    text = "${EchoStrings.get("play", state.language).uppercase()} (${EchoStrings.get("level", state.language).uppercase()} ${state.currentLevelIndex + 1})",
-                    subtitle = "Tek Çizgi Strateji & Kozmik Bulmaca",
-                    icon = Icons.Default.PlayArrow,
-                    stoneTheme = MeteorStoneTheme.CYAN_PULSE,
-                    height = 62.dp,
-                    onClick = onPlay,
-                    modifier = Modifier.fillMaxWidth(),
-                    testTag = "play_button"
-                )
-
-                // Row: Bölümler (100 Seviye), Temalar, Mağaza (Meteor Stone Styling)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    MeteorStoneButton(
-                        text = "BÖLÜMLER",
-                        subtitle = "100 Seviye",
-                        icon = Icons.Default.GridOn,
-                        stoneTheme = MeteorStoneTheme.OBSIDIAN_SLATE,
-                        height = 54.dp,
-                        onClick = onOpenLevelSelect,
-                        modifier = Modifier.weight(1f),
-                        testTag = "main_levels_button"
-                    )
-
-                    MeteorStoneButton(
-                        text = "TEMALAR",
-                        subtitle = "Görünümler",
-                        icon = Icons.Default.Palette,
-                        stoneTheme = MeteorStoneTheme.COSMIC_PURPLE,
-                        height = 54.dp,
-                        onClick = onOpenSkins,
-                        modifier = Modifier.weight(1f),
-                        testTag = "main_skins_button"
-                    )
-
-                    MeteorStoneButton(
-                        text = "MAĞAZA",
-                        subtitle = "Jeton & Güç",
-                        icon = Icons.Default.ShoppingCart,
-                        stoneTheme = MeteorStoneTheme.SOLAR_AMBER,
-                        height = 54.dp,
-                        onClick = onOpenShop,
-                        modifier = Modifier.weight(1f),
-                        testTag = "main_shop_button"
-                    )
-                }
-
-                // Start.io Banner Ad - always visible
-                com.example.ads.StartAppBannerView(
-                    modifier = Modifier.padding(top = 4.dp),
-                    onAdLoaded = onBannerAdLoaded,
-                    onAdFailedToLoad = onBannerAdFailed
-                )
-            }
             }
         }
     }
 }
 
+/* ========================================================================== */
+/*                              TOP NAVBAR                                    */
+/* ========================================================================== */
+
+@Composable
+private fun TopMenuNavBar(
+    energyText: String,
+    coins: Int,
+    onOpenSettings: () -> Unit,
+    onOpenShop: () -> Unit,
+    onRefillEnergy: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Settings Gear Icon (White 3D circular button)
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .shadow(4.dp, CircleShape)
+                .clip(CircleShape)
+                .background(Color(0xFF0B216B).copy(alpha = 0.85f))
+                .border(2.dp, Color(0xFF1E4FB8), CircleShape)
+                .clickable(onClick = hapticClick(action = onOpenSettings))
+                .testTag("menu_settings_button"),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Ayarlar",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        // Energy Indicator Pill (Fire badge + "FULL" + red + button)
+        Row(
+            modifier = Modifier
+                .height(38.dp)
+                .shadow(4.dp, RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF071954))
+                .border(2.dp, Color(0xFF0F328E), RoundedCornerShape(20.dp))
+                .clickable(onClick = hapticClick(action = onRefillEnergy))
+                .padding(start = 2.dp, end = 4.dp)
+                .testTag("menu_energy_pill"),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Flame Badge
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE51D24)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocalFireDepartment,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            Text(
+                text = energyText,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.5.sp
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Red '+' button
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE51D24)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Enerji Ekle",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // Coin Indicator Pill (3D Gold Coin + 1200 + orange + button)
+        Row(
+            modifier = Modifier
+                .height(38.dp)
+                .shadow(4.dp, RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF071954))
+                .border(2.dp, Color(0xFF0F328E), RoundedCornerShape(20.dp))
+                .clickable(onClick = hapticClick(action = onOpenShop))
+                .padding(start = 4.dp, end = 4.dp)
+                .testTag("menu_coins_pill"),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 3D Coin Graphic
+            Canvas(modifier = Modifier.size(28.dp)) {
+                // Outer gold coin
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFFFFEA79), Color(0xFFFFB800), Color(0xFFD47C00))
+                    ),
+                    radius = size.minDimension / 2f
+                )
+                drawCircle(
+                    color = Color(0xFF8B4700),
+                    radius = size.minDimension / 2f,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+                // Inner ring
+                drawCircle(
+                    color = Color(0xFFFFE665),
+                    radius = size.minDimension / 2.8f,
+                    style = Stroke(width = 1.5.dp.toPx())
+                )
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            Text(
+                text = "$coins",
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Orange '+' button
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFF9800)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Jeton Ekle",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+/* ========================================================================== */
+/*                             SIDE BADGES                                    */
+/* ========================================================================== */
+
+private enum class BadgeType {
+    GIFT, COIN_QUEST, DAILY_REWARD
+}
+
+@Composable
+private fun SideBadgeItem(
+    title: String,
+    badgeType: BadgeType,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale = if (isPressed) 0.93f else 1.0f
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .scale(scale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = hapticClick(action = onClick)
+            )
+            .testTag(testTag)
+    ) {
+        // Upper Icon Container
+        Box(
+            modifier = Modifier
+                .size(60.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            when (badgeType) {
+                BadgeType.GIFT -> {
+                    GiftBoxArt()
+                }
+                BadgeType.COIN_QUEST -> {
+                    TrophyArt()
+                }
+                BadgeType.DAILY_REWARD -> {
+                    DailyRewardChestArt()
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Glossy Pill Label
+        val badgeColor = when (badgeType) {
+            BadgeType.GIFT -> Color(0xFFD4141E)
+            BadgeType.COIN_QUEST -> Color(0xFF091F60)
+            BadgeType.DAILY_REWARD -> Color(0xFF091F60)
+        }
+        val borderColor = when (badgeType) {
+            BadgeType.GIFT -> Color(0xFFFF6B6B)
+            BadgeType.COIN_QUEST -> Color(0xFF2962FF)
+            BadgeType.DAILY_REWARD -> Color(0xFF00B0FF)
+        }
+
+        Box(
+            modifier = Modifier
+                .shadow(3.dp, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(badgeColor)
+                .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+// 3D Cartoon Red Gift Box Art
+@Composable
+private fun GiftBoxArt() {
+    Canvas(modifier = Modifier.size(54.dp)) {
+        val w = size.width
+        val h = size.height
+
+        // Sparkle stars around box
+        drawCircle(Color(0xFFFFD54F), radius = 2.5.dp.toPx(), center = Offset(w * 0.18f, h * 0.2f))
+        drawCircle(Color(0xFFFFD54F), radius = 2.5.dp.toPx(), center = Offset(w * 0.82f, h * 0.25f))
+
+        // Red Box Lid
+        drawRoundRect(
+            brush = Brush.verticalGradient(listOf(Color(0xFFFF3333), Color(0xFFB71C1C))),
+            topLeft = Offset(w * 0.12f, h * 0.28f),
+            size = Size(w * 0.76f, h * 0.24f),
+            cornerRadius = CornerRadius(6.dp.toPx())
+        )
+        // Red Box Body
+        drawRoundRect(
+            brush = Brush.verticalGradient(listOf(Color(0xFFD32F2F), Color(0xFF880E4F))),
+            topLeft = Offset(w * 0.18f, h * 0.48f),
+            size = Size(w * 0.64f, h * 0.44f),
+            cornerRadius = CornerRadius(4.dp.toPx())
+        )
+        // Golden Ribbon (Vertical)
+        drawRect(
+            brush = Brush.horizontalGradient(listOf(Color(0xFFFFD54F), Color(0xFFFFB300))),
+            topLeft = Offset(w * 0.44f, h * 0.28f),
+            size = Size(w * 0.12f, h * 0.64f)
+        )
+        // Golden Ribbon Bow (Top)
+        drawCircle(Color(0xFFFFD54F), radius = 6.dp.toPx(), center = Offset(w * 0.42f, h * 0.22f))
+        drawCircle(Color(0xFFFFD54F), radius = 6.dp.toPx(), center = Offset(w * 0.58f, h * 0.22f))
+        drawCircle(Color(0xFFFFB300), radius = 4.dp.toPx(), center = Offset(w * 0.50f, h * 0.24f))
+    }
+}
+
+// 3D Cartoon Trophy Art with Laurel Wreath
+@Composable
+private fun TrophyArt() {
+    Canvas(modifier = Modifier.size(54.dp)) {
+        val w = size.width
+        val h = size.height
+
+        // Laurel wreath wings (Golden leaves)
+        drawCircle(Color(0xFFFFD54F), radius = 18.dp.toPx(), center = Offset(w * 0.5f, h * 0.46f), style = Stroke(width = 3.dp.toPx()))
+
+        // Golden Cup Body
+        val cupPath = Path().apply {
+            moveTo(w * 0.28f, h * 0.28f)
+            lineTo(w * 0.72f, h * 0.28f)
+            lineTo(w * 0.62f, h * 0.60f)
+            lineTo(w * 0.38f, h * 0.60f)
+            close()
+        }
+        drawPath(
+            path = cupPath,
+            brush = Brush.verticalGradient(listOf(Color(0xFFFFEB3B), Color(0xFFFF9800)))
+        )
+
+        // Cup handles
+        drawArc(
+            color = Color(0xFFFFC107),
+            startAngle = 135f,
+            sweepAngle = 180f,
+            useCenter = false,
+            topLeft = Offset(w * 0.16f, h * 0.30f),
+            size = Size(w * 0.24f, h * 0.22f),
+            style = Stroke(width = 2.5.dp.toPx())
+        )
+        drawArc(
+            color = Color(0xFFFFC107),
+            startAngle = 225f,
+            sweepAngle = 180f,
+            useCenter = false,
+            topLeft = Offset(w * 0.60f, h * 0.30f),
+            size = Size(w * 0.24f, h * 0.22f),
+            style = Stroke(width = 2.5.dp.toPx())
+        )
+
+        // Trophy Stem & Base
+        drawRect(Color(0xFFFF9800), topLeft = Offset(w * 0.46f, h * 0.60f), size = Size(w * 0.08f, h * 0.12f))
+        drawRoundRect(
+            brush = Brush.horizontalGradient(listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))),
+            topLeft = Offset(w * 0.30f, h * 0.72f),
+            size = Size(w * 0.40f, h * 0.10f),
+            cornerRadius = CornerRadius(2.dp.toPx())
+        )
+        // Little white star on cup
+        drawCircle(Color.White, radius = 2.5.dp.toPx(), center = Offset(w * 0.5f, h * 0.42f))
+    }
+}
+
+// 3D Cyan Daily Reward Chest with Play Icon
+@Composable
+private fun DailyRewardChestArt() {
+    Canvas(modifier = Modifier.size(54.dp)) {
+        val w = size.width
+        val h = size.height
+
+        // Cyan Chest Body
+        drawRoundRect(
+            brush = Brush.verticalGradient(listOf(Color(0xFF00E5FF), Color(0xFF0091EA))),
+            topLeft = Offset(w * 0.14f, h * 0.24f),
+            size = Size(w * 0.72f, h * 0.58f),
+            cornerRadius = CornerRadius(8.dp.toPx())
+        )
+        drawRoundRect(
+            color = Color(0xFFE0F7FA),
+            topLeft = Offset(w * 0.14f, h * 0.24f),
+            size = Size(w * 0.72f, h * 0.58f),
+            cornerRadius = CornerRadius(8.dp.toPx()),
+            style = Stroke(width = 2.dp.toPx())
+        )
+
+        // Dark Screen Center
+        drawRoundRect(
+            color = Color(0xFF002244),
+            topLeft = Offset(w * 0.28f, h * 0.34f),
+            size = Size(w * 0.44f, h * 0.38f),
+            cornerRadius = CornerRadius(4.dp.toPx())
+        )
+
+        // White Video Play Triangle
+        val playPath = Path().apply {
+            moveTo(w * 0.44f, h * 0.42f)
+            lineTo(w * 0.60f, h * 0.53f)
+            lineTo(w * 0.44f, h * 0.64f)
+            close()
+        }
+        drawPath(playPath, Color.White)
+
+        // Chest Top Golden Clasp
+        drawCircle(Color(0xFFFFD54F), radius = 3.dp.toPx(), center = Offset(w * 0.5f, h * 0.24f))
+    }
+}
+
+/* ========================================================================== */
+/*                    VERTICAL LEVEL PROGRESSION PATH                         */
+/* ========================================================================== */
+
+@Composable
+private fun VerticalLevelProgression(
+    currentLevel: Int,
+    completedLevels: Set<Int>,
+    allLevels: List<LevelEntity>,
+    isCompact: Boolean,
+    onSelectLevel: () -> Unit
+) {
+    val nodeSizeTop = if (isCompact) 38.dp else 44.dp
+    val nodeSizeMid = if (isCompact) 42.dp else 48.dp
+    val nodeSizeActive = if (isCompact) 64.dp else 74.dp
+    val nodeSizeCompleted = if (isCompact) 44.dp else 50.dp
+    val pipeHeight = if (isCompact) 8.dp else 12.dp
+
+    fun getStarsFor(lvl: Int): Int {
+        val ent = allLevels.find { it.id == lvl }
+        return ent?.stars?.takeIf { it > 0 } ?: if (completedLevels.contains(lvl) || lvl < currentLevel) 3 else 0
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    ) {
+        if (currentLevel <= 1) {
+            // Level 1: No completed levels yet. Show 4, 3, 2 ahead and 1 Active at bottom
+            val lvl4 = (currentLevel + 3).coerceAtMost(LevelCatalog.TOTAL_LEVELS)
+            val lvl3 = (currentLevel + 2).coerceAtMost(LevelCatalog.TOTAL_LEVELS)
+            val lvl2 = (currentLevel + 1).coerceAtMost(LevelCatalog.TOTAL_LEVELS)
+            val lvl1 = currentLevel
+
+            LevelProgressNode(
+                levelNumber = lvl4,
+                size = nodeSizeTop,
+                isActive = false,
+                isCompleted = false,
+                onClick = onSelectLevel
+            )
+            YellowConnectorPipe(height = pipeHeight)
+            LevelProgressNode(
+                levelNumber = lvl3,
+                size = nodeSizeMid,
+                isActive = false,
+                isCompleted = false,
+                onClick = onSelectLevel
+            )
+            YellowConnectorPipe(height = pipeHeight)
+            LevelProgressNode(
+                levelNumber = lvl2,
+                size = nodeSizeMid,
+                isActive = false,
+                isCompleted = false,
+                onClick = onSelectLevel
+            )
+            YellowConnectorPipe(height = pipeHeight)
+            LevelProgressNode(
+                levelNumber = lvl1,
+                size = nodeSizeActive,
+                isActive = true,
+                isCompleted = false,
+                onClick = onSelectLevel
+            )
+        } else if (currentLevel >= LevelCatalog.TOTAL_LEVELS) {
+            // Max level reached (Level 150)
+            val lvlTop = currentLevel
+            val lvlMid1 = currentLevel - 1
+            val lvlMid2 = currentLevel - 2
+            val lvlBot = currentLevel - 3
+
+            LevelProgressNode(
+                levelNumber = lvlTop,
+                size = nodeSizeActive,
+                isActive = true,
+                isCompleted = completedLevels.contains(lvlTop),
+                starsCount = getStarsFor(lvlTop),
+                onClick = onSelectLevel
+            )
+            YellowConnectorPipe(height = pipeHeight)
+            LevelProgressNode(
+                levelNumber = lvlMid1,
+                size = nodeSizeCompleted,
+                isActive = false,
+                isCompleted = true,
+                starsCount = getStarsFor(lvlMid1),
+                onClick = onSelectLevel
+            )
+            YellowConnectorPipe(height = pipeHeight)
+            LevelProgressNode(
+                levelNumber = lvlMid2,
+                size = nodeSizeCompleted,
+                isActive = false,
+                isCompleted = true,
+                starsCount = getStarsFor(lvlMid2),
+                onClick = onSelectLevel
+            )
+            YellowConnectorPipe(height = pipeHeight)
+            LevelProgressNode(
+                levelNumber = lvlBot,
+                size = nodeSizeCompleted,
+                isActive = false,
+                isCompleted = true,
+                starsCount = getStarsFor(lvlBot),
+                onClick = onSelectLevel
+            )
+        } else {
+            // Progression: Level 2+ (e.g. "1 yaptık 2 3 4 gözüksün en baştakinin altındaki bölüm gri olsun yıldızı gözüksün")
+            val lvlAhead2 = (currentLevel + 2).coerceAtMost(LevelCatalog.TOTAL_LEVELS)
+            val lvlAhead1 = (currentLevel + 1).coerceAtMost(LevelCatalog.TOTAL_LEVELS)
+            val lvlCurrent = currentLevel
+            val lvlCompleted = currentLevel - 1
+
+            // TOP: Level + 2 (e.g. 4)
+            LevelProgressNode(
+                levelNumber = lvlAhead2,
+                size = nodeSizeTop,
+                isActive = false,
+                isCompleted = false,
+                onClick = onSelectLevel
+            )
+
+            YellowConnectorPipe(height = pipeHeight)
+
+            // MID: Level + 1 (e.g. 3)
+            LevelProgressNode(
+                levelNumber = lvlAhead1,
+                size = nodeSizeMid,
+                isActive = false,
+                isCompleted = false,
+                onClick = onSelectLevel
+            )
+
+            YellowConnectorPipe(height = pipeHeight)
+
+            // ACTIVE: Current Level (e.g. 2 - prominent glowing rings)
+            LevelProgressNode(
+                levelNumber = lvlCurrent,
+                size = nodeSizeActive,
+                isActive = true,
+                isCompleted = false,
+                onClick = onSelectLevel
+            )
+
+            YellowConnectorPipe(height = pipeHeight)
+
+            // BOTTOM: Completed Level (e.g. 1 - "gri olsun yıldızı gözüksün")
+            LevelProgressNode(
+                levelNumber = lvlCompleted,
+                size = nodeSizeCompleted,
+                isActive = false,
+                isCompleted = true,
+                starsCount = getStarsFor(lvlCompleted),
+                onClick = onSelectLevel
+            )
+        }
+    }
+}
+
+@Composable
+private fun YellowConnectorPipe(height: Dp) {
+    Box(
+        modifier = Modifier
+            .width(12.dp)
+            .height(height)
+            .background(
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFFFFC107), Color(0xFFFFD54F), Color(0xFFFFA000))
+                )
+            )
+            .border(2.dp, Color(0xFF8D5300))
+    )
+}
+
+@Composable
+private fun LevelProgressNode(
+    levelNumber: Int,
+    size: Dp,
+    isActive: Boolean,
+    isCompleted: Boolean = false,
+    starsCount: Int = 3,
+    onClick: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "NodePulse")
+    val glowScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = if (isActive) 1.06f else 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "GlowScale"
+    )
+
+    val backgroundBrush = when {
+        isActive -> Brush.radialGradient(
+            colors = listOf(Color(0xFF00E5FF), Color(0xFF0D47A1), Color(0xFF061864))
+        )
+        isCompleted -> Brush.radialGradient(
+            // "gri olsun" - Cool sleek slate gray cartoon brushed gradient
+            colors = listOf(Color(0xFF64748B), Color(0xFF475569), Color(0xFF334155))
+        )
+        else -> Brush.radialGradient(
+            colors = listOf(Color(0xFF0091EA), Color(0xFF0D47A1), Color(0xFF081A54))
+        )
+    }
+
+    val borderColor = when {
+        isActive -> Color(0xFF00E5FF)
+        isCompleted -> Color(0xFF94A3B8)
+        else -> Color(0xFF2979FF)
+    }
+
+    val borderWidth = if (isActive) 3.5.dp else 2.5.dp
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .scale(if (isActive) glowScale else 1.0f)
+            .shadow(if (isActive) 8.dp else 4.dp, CircleShape)
+            .clip(CircleShape)
+            .background(brush = backgroundBrush)
+            .border(
+                width = borderWidth,
+                color = borderColor,
+                shape = CircleShape
+            )
+            .clickable(onClick = hapticClick(action = onClick))
+            .testTag(
+                when {
+                    isActive -> "active_level_node"
+                    isCompleted -> "completed_level_node_$levelNumber"
+                    else -> "level_node_$levelNumber"
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "$levelNumber",
+                color = if (isCompleted) Color(0xFFF1F5F9) else Color.White,
+                fontSize = if (isActive) 24.sp else 16.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center
+            )
+
+            // "yıldızı gözüksün" - Stars underneath
+            val starTint = when {
+                isActive -> Color(0xFF00E5FF)
+                isCompleted -> Color(0xFFFFD54F) // Vibrant Golden Yellow for completed level!
+                else -> Color(0xFF82B1FF)
+            }
+
+            val starSize = if (isActive) 10.dp else 8.dp
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(1.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(starsCount.coerceIn(1, 3)) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = starTint,
+                        modifier = Modifier.size(starSize)
+                    )
+                }
+            }
+        }
+
+        // Green Checkmark badge on completed level
+        if (isCompleted) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 1.dp, y = 1.dp)
+                    .size(if (size < 46.dp) 13.dp else 16.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF10B981))
+                    .border(1.dp, Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Tamamlandı",
+                    tint = Color.White,
+                    modifier = Modifier.size(if (size < 46.dp) 9.dp else 11.dp)
+                )
+            }
+        }
+    }
+}
+
+/* ========================================================================== */
+/*                       BIG PLAY BUTTON & ENERGY PILL                        */
+/* ========================================================================== */
+
+@Composable
+private fun BigPlayButton(
+    onClick: () -> Unit,
+    isCompact: Boolean
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val buttonScale = if (isPressed) 0.94f else 1.0f
+
+    val btnWidth = if (isCompact) 210.dp else 240.dp
+    val btnHeight = if (isCompact) 56.dp else 66.dp
+
+    Box(
+        modifier = Modifier
+            .width(btnWidth)
+            .height(btnHeight)
+            .scale(buttonScale)
+            .shadow(10.dp, RoundedCornerShape(32.dp), spotColor = Color(0xFFFF6D00))
+            .clip(RoundedCornerShape(32.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFFEE55),
+                        Color(0xFFFFC400),
+                        Color(0xFFFF8F00)
+                    )
+                )
+            )
+            .border(3.5.dp, Color(0xFF8A3B00), RoundedCornerShape(32.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = hapticClick(action = onClick)
+            )
+            .testTag("play_game_button"),
+        contentAlignment = Alignment.Center
+    ) {
+        // Inner Gloss highlight on top half
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.28f),
+                topLeft = Offset(4.dp.toPx(), 2.dp.toPx()),
+                size = Size(size.width - 8.dp.toPx(), size.height * 0.42f),
+                cornerRadius = CornerRadius(20.dp.toPx())
+            )
+        }
+
+        // Bold Play Text with Shadow
+        Text(
+            text = "Oyna",
+            color = Color.White,
+            fontSize = if (isCompact) 26.sp else 30.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 0.5.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun EnergyCostPill(
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .height(30.dp)
+            .shadow(3.dp, RoundedCornerShape(15.dp))
+            .clip(RoundedCornerShape(15.dp))
+            .background(
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFF8E24AA), Color(0xFF6A1B9A))
+                )
+            )
+            .border(1.5.dp, Color(0xFF4A148C), RoundedCornerShape(15.dp))
+            .clickable(onClick = hapticClick(action = onClick))
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Bolt,
+            contentDescription = null,
+            tint = Color(0xFFFFEB3B),
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = "Enerji",
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/* ========================================================================== */
+/*                         BOTTOM GAME NAVIGATION DOCK                        */
+/* ========================================================================== */
+
+@Composable
+private fun BottomGameDock(
+    unclaimedQuestsCount: Int,
+    onOpenQuests: () -> Unit,
+    onOpenLevels: () -> Unit,
+    onOpenLeaderboard: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        // Dark Blue Dock Surface
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .shadow(8.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0xFF091E60), Color(0xFF041038))
+                    )
+                )
+                .border(1.5.dp, Color(0xFF1E4FB8), RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // LEFT TAB: Görevler (Dartboard with Red exclamation badge)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .clickable(onClick = hapticClick(action = onOpenQuests))
+                    .testTag("nav_tab_gorevler")
+            ) {
+                Box(
+                    modifier = Modifier.size(28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Dartboard Bullseye Graphic
+                    DartboardArt()
+
+                    // Exclamation Notification Badge on top right
+                    Box(
+                        modifier = Modifier
+                            .offset(x = 8.dp, y = (-6).dp)
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE51D24)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "!",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+                Text(
+                    text = "Görevler",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Dummy Spacer for elevated center tab
+            Spacer(modifier = Modifier.width(70.dp))
+
+            // RIGHT TAB: Sıralama (Golden Trophy)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .clickable(onClick = hapticClick(action = onOpenLeaderboard))
+                    .testTag("nav_tab_siralama")
+            ) {
+                // Golden Trophy Graphic
+                Canvas(modifier = Modifier.size(26.dp)) {
+                    val w = size.width
+                    val h = size.height
+                    drawRoundRect(
+                        brush = Brush.verticalGradient(listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))),
+                        topLeft = Offset(w * 0.22f, h * 0.15f),
+                        size = Size(w * 0.56f, h * 0.50f),
+                        cornerRadius = CornerRadius(4.dp.toPx())
+                    )
+                    drawRect(Color(0xFFFF8F00), topLeft = Offset(w * 0.42f, h * 0.65f), size = Size(w * 0.16f, h * 0.15f))
+                    drawRoundRect(
+                        Color(0xFFFFC107),
+                        topLeft = Offset(w * 0.28f, h * 0.80f),
+                        size = Size(w * 0.44f, h * 0.14f),
+                        cornerRadius = CornerRadius(2.dp.toPx())
+                    )
+                }
+                Text(
+                    text = "Sıralama",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // CENTER ELEVATED TAB: "Jener" (Parchment/Scroll Map Icon, Elevated Blue Container)
+        Box(
+            modifier = Modifier
+                .offset(y = (-10).dp)
+                .width(84.dp)
+                .height(68.dp)
+                .shadow(10.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF00E5FF))
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0xFF0091EA), Color(0xFF0D47A1))
+                    )
+                )
+                .border(2.5.dp, Color(0xFF40C4FF), RoundedCornerShape(18.dp))
+                .clickable(onClick = hapticClick(action = onOpenLevels))
+                .testTag("nav_tab_jener"),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Rolled Scroll / Map Graphic
+                ScrollParchmentArt()
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Jener",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+        }
+    }
+}
+
+// Dartboard Art for "Görevler"
+@Composable
+private fun DartboardArt() {
+    Canvas(modifier = Modifier.size(24.dp)) {
+        val radius = size.minDimension / 2f
+        val center = Offset(size.width / 2f, size.height / 2f)
+
+        // Outer red ring
+        drawCircle(color = Color(0xFFE51D24), radius = radius, center = center)
+        // White ring
+        drawCircle(color = Color.White, radius = radius * 0.72f, center = center)
+        // Red inner ring
+        drawCircle(color = Color(0xFFE51D24), radius = radius * 0.44f, center = center)
+        // White center dot
+        drawCircle(color = Color.White, radius = radius * 0.18f, center = center)
+    }
+}
+
+// Rolled Parchment Scroll Map for "Jener"
+@Composable
+private fun ScrollParchmentArt() {
+    Canvas(modifier = Modifier.size(28.dp)) {
+        val w = size.width
+        val h = size.height
+
+        // White/Ivory Rolled Parchment Paper
+        drawRoundRect(
+            brush = Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFECEFF1))),
+            topLeft = Offset(w * 0.16f, h * 0.12f),
+            size = Size(w * 0.68f, h * 0.58f),
+            cornerRadius = CornerRadius(6.dp.toPx())
+        )
+        // Golden/Orange Rolled Rod Ends
+        drawRoundRect(
+            color = Color(0xFFFF9800),
+            topLeft = Offset(w * 0.10f, h * 0.58f),
+            size = Size(w * 0.80f, h * 0.18f),
+            cornerRadius = CornerRadius(3.dp.toPx())
+        )
+        // Red Ribbon Seal
+        drawCircle(Color(0xFFE51D24), radius = 3.dp.toPx(), center = Offset(w * 0.24f, h * 0.67f))
+    }
+}
+
+/* ========================================================================== */
+/*           ANIMATED FLOWING CASUAL GAME BACKGROUND SYMBOLS (WATERMARKS)     */
+/* ========================================================================== */
+
+internal fun DrawScope.drawFlowingCasualGameSymbols(
+    canvasSize: Size,
+    flowProgress: Float,
+    pulseProgress: Float
+) {
+    val w = canvasSize.width
+    val h = canvasSize.height
+    if (w <= 0f || h <= 0f) return
+
+    val stepX = 100.dp.toPx()
+    val stepY = 100.dp.toPx()
+
+    // 8x8 periodic repetition period for the 8 cartoon symbols
+    val period = 8
+    val tileW = period * stepX
+    val tileH = period * stepY
+
+    // Perfectly continuous diagonal translation
+    // As flowProgress goes 0 -> 1, shift advances by exactly 1 full tile period!
+    val shiftX = flowProgress * tileW
+    val shiftY = -flowProgress * tileH
+
+    val margin = 50.dp.toPx()
+    val minCol = kotlin.math.floor((-margin - shiftX - stepX) / stepX).toInt() - 1
+    val maxCol = kotlin.math.ceil((w + margin - shiftX) / stepX).toInt() + 1
+    val minRow = kotlin.math.floor((-margin - shiftY) / stepY).toInt() - 1
+    val maxRow = kotlin.math.ceil((h + margin - shiftY) / stepY).toInt() + 1
+
+    val strokeWidth = 2.dp.toPx()
+    val strokeCap = StrokeCap.Round
+    val strokeJoin = StrokeJoin.Round
+    val stroke = Stroke(width = strokeWidth, cap = strokeCap, join = strokeJoin)
+
+    for (c in minCol..maxCol) {
+        for (r in minRow..maxRow) {
+            val staggeredX = if (Math.floorMod(r, 2) != 0) stepX * 0.5f else 0f
+            val posX = c * stepX + shiftX + staggeredX
+            val posY = r * stepY + shiftY
+
+            // Skip off-screen elements with comfortable padding
+            if (posX < -margin || posX > w + margin || posY < -margin || posY > h + margin) {
+                continue
+            }
+
+            val center = Offset(posX, posY)
+            // Periodic symbol index: (c * 3 + r * 7) mod 8
+            // When c shifts by -8 and r by +8, delta is -24 + 56 = +32, which is 0 mod 8!
+            val symbolIndex = Math.floorMod(c * 3 + r * 7, 8)
+
+            // Periodic rotation matching across tile boundaries
+            val baseRot = (((Math.floorMod(c, 8) * 17 + Math.floorMod(r, 8) * 29) % 30) - 15).toFloat()
+            val wobbleRot = kotlin.math.sin((flowProgress * 2 * kotlin.math.PI + Math.floorMod(c, 8)).toDouble()).toFloat() * 5f
+            val rotation = baseRot + wobbleRot
+
+            // Theme-appropriate cartoon colors with subtle watermark transparency
+            val (fillColor, strokeColor) = when (symbolIndex) {
+                // Trophies, Crowns, Coins, Stars: Warm Golden Yellow & Amber
+                0, 1, 3, 7 -> Pair(
+                    Color(0xFFFFD54F).copy(alpha = 0.055f * pulseProgress),
+                    Color(0xFFFFE082).copy(alpha = 0.13f * pulseProgress)
+                )
+                // Gamepads, Diamonds: Neon Cyan & Electric Azure
+                2, 4 -> Pair(
+                    Color(0xFF38BDF8).copy(alpha = 0.055f * pulseProgress),
+                    Color(0xFF7DD3FC).copy(alpha = 0.13f * pulseProgress)
+                )
+                // Lightning, Rockets: Vibrant Violet & Radiant Purple
+                else -> Pair(
+                    Color(0xFFA78BFA).copy(alpha = 0.055f * pulseProgress),
+                    Color(0xFFC4B5FD).copy(alpha = 0.13f * pulseProgress)
+                )
+            }
+
+            rotate(degrees = rotation, pivot = center) {
+                when (symbolIndex) {
+                    0 -> drawTrophySymbol(center, fillColor, strokeColor, stroke)
+                    1 -> drawCrownSymbol(center, fillColor, strokeColor, stroke)
+                    2 -> drawGamepadSymbol(center, fillColor, strokeColor, stroke)
+                    3 -> drawSparkleStarSymbol(center, fillColor, strokeColor, stroke)
+                    4 -> drawDiamondSymbol(center, fillColor, strokeColor, stroke)
+                    5 -> drawLightningSymbol(center, fillColor, strokeColor, stroke)
+                    6 -> drawRocketSymbol(center, fillColor, strokeColor, stroke)
+                    7 -> drawCoinSymbol(center, fillColor, strokeColor, stroke)
+                }
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawTrophySymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val cupPath = Path().apply {
+        moveTo(center.x - 11.dp.toPx(), center.y - 10.dp.toPx())
+        lineTo(center.x + 11.dp.toPx(), center.y - 10.dp.toPx())
+        lineTo(center.x + 7.dp.toPx(), center.y + 2.dp.toPx())
+        lineTo(center.x - 7.dp.toPx(), center.y + 2.dp.toPx())
+        close()
+    }
+    drawPath(cupPath, fill)
+    drawPath(cupPath, strokeColor, style = stroke)
+
+    val handleLeft = Path().apply {
+        moveTo(center.x - 10.dp.toPx(), center.y - 8.dp.toPx())
+        cubicTo(
+            center.x - 17.dp.toPx(), center.y - 8.dp.toPx(),
+            center.x - 17.dp.toPx(), center.y - 1.dp.toPx(),
+            center.x - 8.dp.toPx(), center.y + 1.dp.toPx()
+        )
+    }
+    val handleRight = Path().apply {
+        moveTo(center.x + 10.dp.toPx(), center.y - 8.dp.toPx())
+        cubicTo(
+            center.x + 17.dp.toPx(), center.y - 8.dp.toPx(),
+            center.x + 17.dp.toPx(), center.y - 1.dp.toPx(),
+            center.x + 8.dp.toPx(), center.y + 1.dp.toPx()
+        )
+    }
+    drawPath(handleLeft, strokeColor, style = stroke)
+    drawPath(handleRight, strokeColor, style = stroke)
+
+    val baseStem = Path().apply {
+        moveTo(center.x, center.y + 2.dp.toPx())
+        lineTo(center.x, center.y + 8.dp.toPx())
+        moveTo(center.x - 9.dp.toPx(), center.y + 8.dp.toPx())
+        lineTo(center.x + 9.dp.toPx(), center.y + 8.dp.toPx())
+    }
+    drawPath(baseStem, strokeColor, style = stroke)
+
+    drawCircle(strokeColor, radius = 2.dp.toPx(), center = Offset(center.x, center.y - 4.dp.toPx()))
+}
+
+private fun DrawScope.drawCrownSymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val crownPath = Path().apply {
+        moveTo(center.x - 12.dp.toPx(), center.y + 7.dp.toPx())
+        lineTo(center.x - 12.dp.toPx(), center.y - 4.dp.toPx())
+        lineTo(center.x - 6.dp.toPx(), center.y + 1.dp.toPx())
+        lineTo(center.x, center.y - 8.dp.toPx())
+        lineTo(center.x + 6.dp.toPx(), center.y + 1.dp.toPx())
+        lineTo(center.x + 12.dp.toPx(), center.y - 4.dp.toPx())
+        lineTo(center.x + 12.dp.toPx(), center.y + 7.dp.toPx())
+        close()
+    }
+    drawPath(crownPath, fill)
+    drawPath(crownPath, strokeColor, style = stroke)
+
+    drawCircle(strokeColor, radius = 2.dp.toPx(), center = Offset(center.x - 12.dp.toPx(), center.y - 5.dp.toPx()))
+    drawCircle(strokeColor, radius = 2.2.dp.toPx(), center = Offset(center.x, center.y - 9.dp.toPx()))
+    drawCircle(strokeColor, radius = 2.dp.toPx(), center = Offset(center.x + 12.dp.toPx(), center.y - 5.dp.toPx()))
+
+    drawLine(
+        color = strokeColor,
+        start = Offset(center.x - 9.dp.toPx(), center.y + 4.dp.toPx()),
+        end = Offset(center.x + 9.dp.toPx(), center.y + 4.dp.toPx()),
+        strokeWidth = stroke.width,
+        cap = StrokeCap.Round
+    )
+}
+
+private fun DrawScope.drawGamepadSymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val gw = 32.dp.toPx()
+    val gh = 20.dp.toPx()
+    drawRoundRect(
+        color = fill,
+        topLeft = Offset(center.x - gw / 2f, center.y - gh / 2f),
+        size = Size(gw, gh),
+        cornerRadius = CornerRadius(7.dp.toPx())
+    )
+    drawRoundRect(
+        color = strokeColor,
+        topLeft = Offset(center.x - gw / 2f, center.y - gh / 2f),
+        size = Size(gw, gh),
+        cornerRadius = CornerRadius(7.dp.toPx()),
+        style = stroke
+    )
+    val dpadSize = 3.dp.toPx()
+    val dpadCenter = Offset(center.x - 7.dp.toPx(), center.y)
+    drawLine(strokeColor, Offset(dpadCenter.x - dpadSize, dpadCenter.y), Offset(dpadCenter.x + dpadSize, dpadCenter.y), stroke.width, StrokeCap.Round)
+    drawLine(strokeColor, Offset(dpadCenter.x, dpadCenter.y - dpadSize), Offset(dpadCenter.x, dpadCenter.y + dpadSize), stroke.width, StrokeCap.Round)
+
+    drawCircle(strokeColor, radius = 1.8.dp.toPx(), center = Offset(center.x + 6.dp.toPx(), center.y - 3.dp.toPx()))
+    drawCircle(strokeColor, radius = 1.8.dp.toPx(), center = Offset(center.x + 8.5.dp.toPx(), center.y + 1.dp.toPx()))
+}
+
+private fun DrawScope.drawSparkleStarSymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val r = 13.dp.toPx()
+    val innerR = 3.5.dp.toPx()
+    val starPath = Path().apply {
+        moveTo(center.x, center.y - r)
+        quadraticTo(center.x, center.y, center.x + innerR, center.y - innerR)
+        lineTo(center.x + r, center.y)
+        quadraticTo(center.x, center.y, center.x + innerR, center.y + innerR)
+        lineTo(center.x, center.y + r)
+        quadraticTo(center.x, center.y, center.x - innerR, center.y + innerR)
+        lineTo(center.x - r, center.y)
+        quadraticTo(center.x, center.y, center.x - innerR, center.y - innerR)
+        close()
+    }
+    drawPath(starPath, fill)
+    drawPath(starPath, strokeColor, style = stroke)
+    drawCircle(strokeColor, radius = 2.dp.toPx(), center = center)
+}
+
+private fun DrawScope.drawDiamondSymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val gemPath = Path().apply {
+        moveTo(center.x - 7.dp.toPx(), center.y - 8.dp.toPx())
+        lineTo(center.x + 7.dp.toPx(), center.y - 8.dp.toPx())
+        lineTo(center.x + 13.dp.toPx(), center.y - 2.dp.toPx())
+        lineTo(center.x, center.y + 11.dp.toPx())
+        lineTo(center.x - 13.dp.toPx(), center.y - 2.dp.toPx())
+        close()
+    }
+    drawPath(gemPath, fill)
+    drawPath(gemPath, strokeColor, style = stroke)
+
+    val facets = Path().apply {
+        moveTo(center.x - 13.dp.toPx(), center.y - 2.dp.toPx())
+        lineTo(center.x + 13.dp.toPx(), center.y - 2.dp.toPx())
+        moveTo(center.x - 7.dp.toPx(), center.y - 8.dp.toPx())
+        lineTo(center.x - 4.dp.toPx(), center.y - 2.dp.toPx())
+        lineTo(center.x, center.y + 11.dp.toPx())
+        moveTo(center.x + 7.dp.toPx(), center.y - 8.dp.toPx())
+        lineTo(center.x + 4.dp.toPx(), center.y - 2.dp.toPx())
+        lineTo(center.x, center.y + 11.dp.toPx())
+    }
+    drawPath(facets, strokeColor, style = stroke)
+}
+
+private fun DrawScope.drawLightningSymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val boltPath = Path().apply {
+        moveTo(center.x + 2.dp.toPx(), center.y - 12.dp.toPx())
+        lineTo(center.x - 7.dp.toPx(), center.y)
+        lineTo(center.x - 1.dp.toPx(), center.y)
+        lineTo(center.x - 4.dp.toPx(), center.y + 12.dp.toPx())
+        lineTo(center.x + 8.dp.toPx(), center.y - 1.dp.toPx())
+        lineTo(center.x + 2.dp.toPx(), center.y - 1.dp.toPx())
+        close()
+    }
+    drawPath(boltPath, fill)
+    drawPath(boltPath, strokeColor, style = stroke)
+}
+
+private fun DrawScope.drawRocketSymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val rocketPath = Path().apply {
+        moveTo(center.x, center.y - 13.dp.toPx())
+        lineTo(center.x + 6.dp.toPx(), center.y + 4.dp.toPx())
+        lineTo(center.x - 6.dp.toPx(), center.y + 4.dp.toPx())
+        close()
+    }
+    drawPath(rocketPath, fill)
+    drawPath(rocketPath, strokeColor, style = stroke)
+
+    val finLeft = Path().apply {
+        moveTo(center.x - 6.dp.toPx(), center.y + 1.dp.toPx())
+        lineTo(center.x - 11.dp.toPx(), center.y + 8.dp.toPx())
+        lineTo(center.x - 6.dp.toPx(), center.y + 6.dp.toPx())
+        close()
+    }
+    val finRight = Path().apply {
+        moveTo(center.x + 6.dp.toPx(), center.y + 1.dp.toPx())
+        lineTo(center.x + 11.dp.toPx(), center.y + 8.dp.toPx())
+        lineTo(center.x + 6.dp.toPx(), center.y + 6.dp.toPx())
+        close()
+    }
+    drawPath(finLeft, strokeColor, style = stroke)
+    drawPath(finRight, strokeColor, style = stroke)
+
+    drawCircle(strokeColor, radius = 2.5.dp.toPx(), center = Offset(center.x, center.y - 3.dp.toPx()))
+}
+
+private fun DrawScope.drawCoinSymbol(center: Offset, fill: Color, strokeColor: Color, stroke: Stroke) {
+    val outerR = 10.dp.toPx()
+    val innerR = 6.5.dp.toPx()
+    drawCircle(fill, radius = outerR, center = center)
+    drawCircle(strokeColor, radius = outerR, center = center, style = stroke)
+    drawCircle(strokeColor, radius = innerR, center = center, style = stroke)
+    drawCircle(strokeColor, radius = 2.dp.toPx(), center = center)
+}

@@ -762,7 +762,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             prefs.isDarkTheme = userDark
             prefs.setCompletedLevelsRaw(userCompleted.map { it.toString() }.toSet())
 
-            val levelData = repo.getLevelData(userLevel + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[userLevel.coerceIn(0, 99)])
+            val levelData = repo.getLevelData(userLevel + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.getAllLevels()[userLevel.coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)])
 
             _uiState.update {
                 it.copy(
@@ -818,18 +818,27 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             viewModelScope.launch {
                 repo.resetAllProgress()
                 prefs.resetAllProgressForSeason2()
+                prefs.isSeason2WelcomeShown = true
+                prefs.isSeason2Initialized = true
+                prefs.isSeason2ThemeActive = true
+                prefs.addTokens(500)
+                prefs.addDiamonds(50)
+                prefs.addBreakers(5)
+                prefs.addTrophies(100)
                 val resetLevels = repo.getLevelData(1) ?: LevelCatalog.entityToLevelData(LevelCatalog.create100Levels()[0])
                 _uiState.update {
                     it.copy(
-                        isSeason2DialogVisible = true,
+                        isSeason2DialogVisible = false,
                         currentLevelIndex = 0,
                         level = resetLevels,
                         completedLevels = emptySet(),
-                        totalStars = 0
+                        totalStars = 0,
+                        tokens = prefs.tokens,
+                        diamonds = prefs.diamonds,
+                        echoBreakers = prefs.echoBreakers,
+                        trophies = prefs.trophies
                     )
                 }
-                com.example.audio.HarmonicAudioEngine.playVictoryCascade()
-                triggerHapticVictory()
             }
         }
     }
@@ -839,7 +848,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isSeason2Initialized = true
         prefs.isSeason2ThemeActive = true
         val activeSeasonTheme = com.example.model.Season2VisualTheme.fromId(prefs.selectedSeason2Theme)
-        // Season 2 Welcome Package: 500 Tokens, 50 Diamonds, 5 Lasers, 100 Trophies
+        // Welcome Package: 500 Tokens, 50 Diamonds, 5 Lasers, 100 Trophies
         prefs.addTokens(500)
         prefs.addDiamonds(50)
         prefs.addBreakers(5)
@@ -860,7 +869,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
         com.example.audio.HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
-        showToast("✨ Sezon 2 ${activeSeasonTheme.displayName} Teması ve Özel Arka Plan Deseni Aktif Edildi!")
+        showToast("✨ ${activeSeasonTheme.displayName} Teması ve Özel Arka Plan Deseni Aktif Edildi!")
     }
 
     fun setSeason2VisualTheme(theme: com.example.model.Season2VisualTheme) {
@@ -874,7 +883,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
         com.example.audio.HarmonicAudioEngine.playNodeVisited()
         triggerHapticLight()
-        showToast("✨ Sezon 2 Teması: ${theme.displayName} aktif!")
+        showToast("✨ Tema: ${theme.displayName} aktif!")
     }
 
     fun toggleSeason2BackgroundEffects() {
@@ -882,7 +891,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isSeason2BackgroundEffectsEnabled = next
         _uiState.update { it.copy(isSeason2BackgroundEffectsEnabled = next) }
         triggerHapticLight()
-        showToast(if (next) "✨ Sezon 2 Arka Plan Animasyonları Açık" else "Arka Plan Animasyonları Kapatıldı")
+        showToast(if (next) "✨ Arka Plan Animasyonları Açık" else "Arka Plan Animasyonları Kapatıldı")
     }
 
     fun toggleSeason2ThemeActive() {
@@ -890,7 +899,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isSeason2ThemeActive = next
         _uiState.update { it.copy(isSeason2ThemeActive = next) }
         triggerHapticLight()
-        showToast(if (next) "🌌 Sezon 2 Görsel Teması Açıldı" else "Klasik Tema Aktif")
+        showToast(if (next) "🌌 Görsel Tema Açıldı" else "Klasik Tema Aktif")
     }
 
     fun setSeason2ThemeSelectorVisible(visible: Boolean) {
@@ -2488,7 +2497,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     4 -> "+20 Jeton +4 Matkap"
                     5 -> "+25 Jeton +15💎"
                     6 -> "+35 Jeton +6 Matkap"
-                    else -> "Sezon 2 Mega Ödül"
+                    else -> "Mega Efsanevi Ödül"
                 },
                 tokens = tok,
                 breakers = brk,
@@ -2578,7 +2587,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
 
-        showToast("Sezon 2 Gün $streak Ödülü! (+$tok Jeton, +$brk Matkap, +$dia Elmas)")
+        showToast("Gün $streak Ödülü! (+$tok Jeton, +$brk Matkap, +$dia Elmas)")
         refreshDailySystems()
         _uiState.update {
             it.copy(
@@ -2748,7 +2757,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isDoubleRewardClaimedThisLevel = true
             )
         }
-        showToast("2X Sezon Ödülü! (+6 Jeton, +2 Matkap, +2 Elmas)")
+        showToast("2X Bonus Ödülü! (+6 Jeton, +2 Matkap, +2 Elmas)")
     }
 
     private fun findNodeAtPoint(point: Point, nodes: List<Node>): Node? {

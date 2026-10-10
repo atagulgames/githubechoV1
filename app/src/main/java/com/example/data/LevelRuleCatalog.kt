@@ -5,11 +5,11 @@ import com.example.model.VisualPreviewType
 
 object LevelRuleCatalog {
 
-    val MILESTONE_LEVELS = listOf(1, 4, 11, 21, 31, 41, 51, 61, 71, 81, 91, 100)
+    val MILESTONE_LEVELS = listOf(1, 4, 11, 21, 31, 41, 51, 61, 71, 81, 91, 100, 101, 111, 121, 131, 141, 150)
 
     fun isMilestone(levelId: Int): Boolean = levelId in MILESTONE_LEVELS
 
-    fun getTierForLevel(levelId: Int): Int = when (levelId.coerceIn(1, 100)) {
+    fun getTierForLevel(levelId: Int): Int = when (levelId.coerceIn(1, 150)) {
         in 1..3 -> 1
         in 4..10 -> 2
         in 11..20 -> 3
@@ -21,11 +21,17 @@ object LevelRuleCatalog {
         in 71..80 -> 9
         in 81..90 -> 10
         in 91..99 -> 11
-        else -> 12
+        100 -> 12
+        in 101..110 -> 13
+        in 111..120 -> 14
+        in 121..130 -> 15
+        in 131..140 -> 16
+        in 141..149 -> 17
+        else -> 18
     }
 
     fun getRuleForLevel(levelId: Int, isTurkish: Boolean = false): LevelRule {
-        val id = levelId.coerceIn(1, 100)
+        val id = levelId.coerceIn(1, 150)
         val tier = getTierForLevel(id)
         val isMajor = isMilestone(id)
 
@@ -345,7 +351,7 @@ object LevelRuleCatalog {
                     ruleKey = "CUMULATIVE_GHOSTS"
                 )
             }
-            else -> { // Level 100
+            12 -> { // Level 100
                 LevelRule(
                     levelId = 100,
                     milestoneId = 100,
@@ -364,6 +370,132 @@ object LevelRuleCatalog {
                     proStrategy = "60 saniyelik sürenin her saniyesini soğukkanlılıkla kullan. 24 düğümlü Omega yayını tamamlayarak Efsanevi Şampiyon unvanını kazan!",
                     visualPreviewType = VisualPreviewType.OMEGA_NEXUS,
                     ruleKey = "OMEGA_SYNTHESIS"
+                )
+            }
+            13 -> { // Levels 101..110: Hiper Akı Matrisi
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 101,
+                    isMajorMilestone = isMajor,
+                    tier = 13,
+                    tierName = "Hiper Akı Matrisi",
+                    ruleTitle = "Yüksek Hızlı Yansıma & Dönen Ağ",
+                    subtitle = "Bölüm $id • Hiper Akı Bölgesi",
+                    icon = "⚡",
+                    badgeColor = 0xFF8B5CF6,
+                    accentColor = 0xFFA78BFA,
+                    headline = "Işık Hızında Yansımalar ve Dönen Ağ!",
+                    summary = "Yankılar iki kat daha hızlı hareket eder ve ekran harmonik bir eksende döner.",
+                    mechanicRule = "Düğümler arası bağlantı kurarken yankılar ışık hızında yansır. Rotanı önceden planlaman hayati önem taşır.",
+                    echoHazard = "Dönen ağ üzerinde odak kaybetmek veya gecikmek yankı çarpışmasını tetikler.",
+                    proStrategy = "Merkezden dışa doğru hareket et, dönüş açısının yönünü takip et.",
+                    visualPreviewType = VisualPreviewType.ROTATING_CANVAS,
+                    ruleKey = "HYPER_FLUX"
+                )
+            }
+            14 -> { // Levels 111..120: Tekillik Boşluğu
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 111,
+                    isMajorMilestone = isMajor,
+                    tier = 14,
+                    tierName = "Tekillik Boşluğu",
+                    ruleTitle = "Yerçekimi Çekimi & Karadelik Yankıları",
+                    subtitle = "Bölüm $id • Olay Ufku",
+                    icon = "🕳️",
+                    badgeColor = 0xFF4F46E5,
+                    accentColor = 0xFF818CF8,
+                    headline = "Tekillik Alanı ve Gezen Hayaletler!",
+                    summary = "Yankılar karadelik girdabına çekilirken sahte düğümler rotanı saptırır.",
+                    mechanicRule = "Sahte hedeflerden kaçınırken yörüngedeki düğümleri sıralı birleştirmelisin.",
+                    echoHazard = "Sahte düğüme temas etmek doğrudan ek bir kırmızı yankı oluşturur.",
+                    proStrategy = "Numara etiketlerini dikkatle takip et ve girdap hızını gözlemle.",
+                    visualPreviewType = VisualPreviewType.WANDERING_ECHO_DRIFT,
+                    ruleKey = "SINGULARITY_VOID"
+                )
+            }
+            15 -> { // Levels 121..130: Dolanık Kuantum Geçitleri
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 121,
+                    isMajorMilestone = isMajor,
+                    tier = 15,
+                    tierName = "Dolanık Kuantum Geçitleri",
+                    ruleTitle = "Çoklu Anahtarlar & Tek Yönlü Kuantum Köprüleri",
+                    subtitle = "Bölüm $id • Dolanıklık Köprüsü",
+                    icon = "🌌",
+                    badgeColor = 0xFF06B6D4,
+                    accentColor = 0xFF22D3EE,
+                    headline = "Kuantum Anahtarları ve Yönlü Geçitler!",
+                    summary = "Birden çok kilitli kapı ve yalnızca ileri yönde izin veren ok işaretli hatlar.",
+                    mechanicRule = "Önce ilgili renkli anahtarı almalı, ardından tek yönlü kuantum kapısından geçmelisin.",
+                    echoHazard = "Ters yönde geçmeye çalışmak yolu bloke eder.",
+                    proStrategy = "Kapı numarasını ve anahtar eşleşmesini önizleme süresinde zihninde rota olarak çiz.",
+                    visualPreviewType = VisualPreviewType.DUAL_PORTAL,
+                    ruleKey = "QUANTUM_ENTANGLEMENT"
+                )
+            }
+            16 -> { // Levels 131..140: Zamansal Kırılma
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 131,
+                    isMajorMilestone = isMajor,
+                    tier = 16,
+                    tierName = "Zamansal Kırılma",
+                    ruleTitle = "Ultra Hızlı Sönen Düğümler & Kronos Baskısı",
+                    subtitle = "Bölüm $id • Zamansal Çöküş",
+                    icon = "⏳",
+                    badgeColor = 0xFFF59E0B,
+                    accentColor = 0xFFFBBF24,
+                    headline = "2 Saniyede Yok Olan Düğümler!",
+                    summary = "Düğümler dokunulduktan hemen sonra sönmeye başlar, tereddüt etme lüksün yok!",
+                    mechanicRule = "Dokunulan düğüm 2 saniye içinde silinir. Kesintisiz akıcı ritimle tüm rotayı bağla.",
+                    echoHazard = "Düğümün sönmesine yetişememek zinciri kırar ve hata sayılır.",
+                    proStrategy = "Ritmik ve kararlı sürüklemelerle parmağını duraksatmadan hareket ettir.",
+                    visualPreviewType = VisualPreviewType.DECAYING_RING,
+                    ruleKey = "CHRONO_STASIS"
+                )
+            }
+            17 -> { // Levels 141..149: Göksel Zirve
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 141,
+                    isMajorMilestone = isMajor,
+                    tier = 17,
+                    tierName = "Göksel Zirve",
+                    ruleTitle = "Titan Meydan Okuması",
+                    subtitle = "Bölüm $id • Evrensel Zirveye Adım",
+                    icon = "⭐",
+                    badgeColor = 0xFFEC4899,
+                    accentColor = 0xFFF472B6,
+                    headline = "38 Düğümlü Büyük Takımyıldız!",
+                    summary = "Zaman, yön, görünmez hatlar ve dönen evren bir arada.",
+                    mechanicRule = "Usta seviyesi bir puzzle alanı. Tüm reflekslerini ve zihinsel haritanı kullan.",
+                    echoHazard = "Herhangi bir geometrik temas anında yeni yankı doğurur.",
+                    proStrategy = "Önizlemede düğüm sırasını üçlü gruplar halinde ezberle.",
+                    visualPreviewType = VisualPreviewType.OMEGA_NEXUS,
+                    ruleKey = "CELESTIAL_APEX"
+                )
+            }
+            else -> { // Level 150: Kozmik Sonsuzluk: Nihai Zirve
+                LevelRule(
+                    levelId = 150,
+                    milestoneId = 150,
+                    isMajorMilestone = true,
+                    tier = 18,
+                    tierName = "Kozmik Sonsuzluk: Nihai Zirve",
+                    ruleTitle = "NİHAİ KOZMİK SONSUZLUK",
+                    subtitle = "Büyük Milat: Bölüm 150 • Efsanelerin Zirvesi",
+                    icon = "👑",
+                    badgeColor = 0xFFFFD700,
+                    accentColor = 0xFFFFF176,
+                    headline = "ECHO FLUX'UN MUTLAK NİHAİ ZİRVESİ: 40 Düğümlü Kozmik Sonsuzluk!",
+                    summary = "Evrenin tüm yasaları ve mekanikleri 40 düğümlü devasa mandalada birleşti!",
+                    mechanicRule = "150 bölümlük serüvenin mutlak zirvesi! 40 harmonik düğümü tek bir kusursuz nefeste birleştir ve ebedi şampiyonluk unvanını kazan!",
+                    echoHazard = "Hiçbir hataya yer yok. Tek bir temas veya geri dönüş şansını tüketir.",
+                    proStrategy = "Tüm deneyimini ortaya koy. Zihnini dingin tut ve yıldızların akışını parmak uçlarında hisset!",
+                    visualPreviewType = VisualPreviewType.OMEGA_NEXUS,
+                    ruleKey = "COSMIC_INFINITY"
                 )
             }
         }
@@ -678,7 +810,7 @@ object LevelRuleCatalog {
                     ruleKey = "CUMULATIVE_GHOSTS"
                 )
             }
-            else -> { // Level 100
+            12 -> { // Level 100
                 LevelRule(
                     levelId = 100,
                     milestoneId = 100,
@@ -699,6 +831,132 @@ object LevelRuleCatalog {
                     ruleKey = "OMEGA_SYNTHESIS"
                 )
             }
+            13 -> { // Levels 101..110: Hyper-Flux Matrix
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 101,
+                    isMajorMilestone = isMajor,
+                    tier = 13,
+                    tierName = "Hyper-Flux Matrix",
+                    ruleTitle = "Hyper-Speed Reflections & Rotating Field",
+                    subtitle = "Level $id • Hyper-Flux Domain",
+                    icon = "⚡",
+                    badgeColor = 0xFF8B5CF6,
+                    accentColor = 0xFFA78BFA,
+                    headline = "Light-Speed Reflections and Dynamic Rotation!",
+                    summary = "Echoes reflect twice as fast as the cosmic grid rotates continuously.",
+                    mechanicRule = "Connecting nodes requires rapid reactions. Pre-plan your route before making your move.",
+                    echoHazard = "Pausing during drawing risks collision with rapidly revolving echoes.",
+                    proStrategy = "Work from the core outward and synchronize with the rotation cadence.",
+                    visualPreviewType = VisualPreviewType.ROTATING_CANVAS,
+                    ruleKey = "HYPER_FLUX"
+                )
+            }
+            14 -> { // Levels 111..120: Singularity Void
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 111,
+                    isMajorMilestone = isMajor,
+                    tier = 14,
+                    tierName = "Singularity Void",
+                    ruleTitle = "Gravitational Pull & Wandering Singularities",
+                    subtitle = "Level $id • Event Horizon",
+                    icon = "🕳️",
+                    badgeColor = 0xFF4F46E5,
+                    accentColor = 0xFF818CF8,
+                    headline = "Singularity Void and Wandering Ghosts!",
+                    summary = "Gravitational vortex pulls echoes while phantom decoy nodes confuse your path.",
+                    mechanicRule = "Filter out deceptive decoy nodes and strictly link valid sequential targets.",
+                    echoHazard = "Contacting a decoy node immediately spawns an active crimson echo.",
+                    proStrategy = "Carefully note node numbers during preview and maintain steady speed.",
+                    visualPreviewType = VisualPreviewType.WANDERING_ECHO_DRIFT,
+                    ruleKey = "SINGULARITY_VOID"
+                )
+            }
+            15 -> { // Levels 121..130: Quantum Entanglement
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 121,
+                    isMajorMilestone = isMajor,
+                    tier = 15,
+                    tierName = "Quantum Entanglement",
+                    ruleTitle = "Multi-Keys & One-Way Quantum Bridges",
+                    subtitle = "Level $id • Entangled Gateways",
+                    icon = "🌌",
+                    badgeColor = 0xFF06B6D4,
+                    accentColor = 0xFF22D3EE,
+                    headline = "Quantum Keys and Directed Passages!",
+                    summary = "Multiple color-coded locked gates and strictly unidirectional arrows.",
+                    mechanicRule = "Collect keys in proper sequence before attempting to cross directional quantum gates.",
+                    echoHazard = "Attempting to traverse against one-way arrows blocks your stroke and causes failure.",
+                    proStrategy = "Trace gate sequences mentally during preview to ensure no deadlocks.",
+                    visualPreviewType = VisualPreviewType.DUAL_PORTAL,
+                    ruleKey = "QUANTUM_ENTANGLEMENT"
+                )
+            }
+            16 -> { // Levels 131..140: Chrono-Stasis Fracture
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 131,
+                    isMajorMilestone = isMajor,
+                    tier = 16,
+                    tierName = "Chrono-Stasis Fracture",
+                    ruleTitle = "Ultra-Fast Decaying Nodes & Chronos Pressure",
+                    subtitle = "Level $id • Temporal Collapse",
+                    icon = "⏳",
+                    badgeColor = 0xFFF59E0B,
+                    accentColor = 0xFFFBBF24,
+                    headline = "Nodes Vanish in 2 Seconds!",
+                    summary = "Touched nodes decay and vanish rapidly. Constant momentum is mandatory!",
+                    mechanicRule = "Each touched node disappears within 2 seconds. Connect all targets in one continuous rush.",
+                    echoHazard = "Letting a node vanish before connection breaks the circuit.",
+                    proStrategy = "Move decisively without hesitation. Practice the stroke geometry in advance.",
+                    visualPreviewType = VisualPreviewType.DECAYING_RING,
+                    ruleKey = "CHRONO_STASIS"
+                )
+            }
+            17 -> { // Levels 141..149: Celestial Apex
+                LevelRule(
+                    levelId = id,
+                    milestoneId = 141,
+                    isMajorMilestone = isMajor,
+                    tier = 17,
+                    tierName = "Celestial Apex",
+                    ruleTitle = "Titan Constellation Challenge",
+                    subtitle = "Level $id • Universal Zenith",
+                    icon = "⭐",
+                    badgeColor = 0xFFEC4899,
+                    accentColor = 0xFFF472B6,
+                    headline = "Grand 38-Node Constellation!",
+                    summary = "Time, directional flow, phantom ghosts, and rotation coalesce into the ultimate test.",
+                    mechanicRule = "Master-class puzzle field. Exercise all acquired reflexes and strategic intuition.",
+                    echoHazard = "Any geometric collision creates an instant echo penalty.",
+                    proStrategy = "Chunk the node order into sets of 3 during the 5-second preview.",
+                    visualPreviewType = VisualPreviewType.OMEGA_NEXUS,
+                    ruleKey = "CELESTIAL_APEX"
+                )
+            }
+            else -> { // Level 150: Cosmic Infinity: Ultimate Nexus
+                LevelRule(
+                    levelId = 150,
+                    milestoneId = 150,
+                    isMajorMilestone = true,
+                    tier = 18,
+                    tierName = "Cosmic Infinity: Ultimate Nexus",
+                    ruleTitle = "ABSOLUTE COSMIC INFINITY",
+                    subtitle = "Apex Milestone: Level 150 • The Sovereign Crown",
+                    icon = "👑",
+                    badgeColor = 0xFFFFD700,
+                    accentColor = 0xFFFFF176,
+                    headline = "THE ABSOLUTE PINNACLE OF ECHO FLUX: 40-Node Universal Mandala!",
+                    summary = "All harmonic laws of the ECHO cosmos converge in a breathtaking 40-node masterpiece!",
+                    mechanicRule = "The true crowning finale of the 150-level journey! Connect all 40 harmonic nodes in a single immaculate breath to become the Eternal Champion!",
+                    echoHazard = "Zero margin for error. A single contact or backtracking ends the run.",
+                    proStrategy = "Summon everything you've learned. Breathe calmly and let the constellation guide your hand!",
+                    visualPreviewType = VisualPreviewType.OMEGA_NEXUS,
+                    ruleKey = "COSMIC_INFINITY"
+                )
+            }
         }
     }
 
@@ -706,9 +964,11 @@ object LevelRuleCatalog {
         return MILESTONE_LEVELS.map { getRuleForLevel(it, isTurkish) }
     }
 
-    fun getAll100Rules(isTurkish: Boolean = false): List<LevelRule> {
-        return (1..100).map { getRuleForLevel(it, isTurkish) }
+    fun getAllRules(isTurkish: Boolean = false): List<LevelRule> {
+        return (1..LevelCatalog.TOTAL_LEVELS).map { getRuleForLevel(it, isTurkish) }
     }
+
+    fun getAll100Rules(isTurkish: Boolean = false): List<LevelRule> = getAllRules(isTurkish)
 
     private data class Tuple6<A, B, C, D, E, F>(
         val first: A,

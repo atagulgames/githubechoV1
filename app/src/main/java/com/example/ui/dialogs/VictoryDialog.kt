@@ -1,7 +1,15 @@
 package com.example.ui.dialogs
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,37 +25,45 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import com.example.audio.hapticClick
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.audio.hapticClick
+import com.example.model.TrophyRewardBreakdown
 
+/**
+ * Cartoon Game UI / Cartoony Game GUI Victory Screen.
+ * Chunky 3D golden plaques, giant celebratory cartoon stars,
+ * rich 3D reward cards, and vibrant arcade buttons.
+ */
 @Composable
 fun VictoryDialog(
     levelId: Int,
     echoCount: Int,
     parEchoes: Int,
-    trophyBreakdown: com.example.model.TrophyRewardBreakdown? = null,
+    trophyBreakdown: TrophyRewardBreakdown? = null,
     isDoubleClaimed: Boolean = false,
     onClaimDoubleReward: () -> Unit = {},
     onNextLevel: () -> Unit,
@@ -59,388 +75,436 @@ fun VictoryDialog(
         else -> 1
     }
 
+    val pulseTransition = rememberInfiniteTransition(label = "starPulse")
+    val starScale by pulseTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
     Dialog(onDismissRequest = { /* Modal choice required */ }) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(16.dp, RoundedCornerShape(24.dp))
+                .fillMaxWidth(0.95f)
+                .shadow(28.dp, RoundedCornerShape(26.dp))
                 .testTag("victory_dialog"),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+            shape = RoundedCornerShape(26.dp),
+            color = Color.Transparent,
+            border = BorderStroke(3.dp, Color(0xFF1B3B87))
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Trophy icon badge
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFEF3C7)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.EmojiEvents,
-                        contentDescription = "Zafer",
-                        tint = Color(0xFFD97706),
-                        modifier = Modifier.size(32.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF070F28),
+                                Color(0xFF0E1F4D),
+                                Color(0xFF0A1438)
+                            )
+                        )
                     )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Bölüm $levelId Tamamlandı!",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A),
-                    textAlign = TextAlign.Center
-                )
-
-                // Stars display
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    .padding(18.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    for (i in 1..3) {
-                        val isEarned = i <= stars
+                    // 1. TOP TROPHY BADGE WITH GLOW
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .shadow(8.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color(0xFFFFE082), Color(0xFFFFB300))
+                                )
+                            )
+                            .border(3.dp, Color(0xFFB45309), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = if (isEarned) "Yıldız $i" else null,
-                            tint = if (isEarned) Color(0xFFF59E0B) else Color(0xFFE2E8F0),
-                            modifier = Modifier
-                                .size(28.dp)
-                                .padding(horizontal = 2.dp)
+                            imageVector = Icons.Default.EmojiEvents,
+                            contentDescription = "Zafer",
+                            tint = Color(0xFF78350F),
+                            modifier = Modifier.size(38.dp)
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                // Stats badge: Yankı, Süre, Par
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF8FAFC),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                    // 2. CELEBRATORY TITLE
+                    Text(
+                        text = "BÖLÜM $levelId TAMAMLANDI!",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFFFFD54F),
+                        textAlign = TextAlign.Center,
+                        letterSpacing = 0.5.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 3. GIANT 3D CARTOON STARS
                     Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 4.dp)
+                            .scale(starScale)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Kullanılan Yankı",
-                                fontSize = 11.sp,
-                                color = Color(0xFF64748B)
-                            )
-                            Text(
-                                text = if (echoCount == 0) "0 (Kusursuz!)" else "$echoCount",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (echoCount == 0) Color(0xFF10B981) else Color(0xFF0284C7)
-                            )
-                        }
+                        for (i in 1..3) {
+                            val isEarned = i <= stars
+                            val starSize = if (i == 2) 46.dp else 38.dp
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Süre",
-                                fontSize = 11.sp,
-                                color = Color(0xFF64748B)
-                            )
-                            Text(
-                                text = "${trophyBreakdown?.timeTakenSec ?: 6.5f} sn",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF8B5CF6)
-                            )
-                        }
-
-                        if (parEchoes > 0) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = "Hedef Par",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFF64748B)
-                                )
-                                Text(
-                                    text = "$parEchoes",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF64748B)
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .size(starSize)
+                                    .shadow(if (isEarned) 6.dp else 0.dp, CircleShape)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isEarned) {
+                                            Brush.verticalGradient(listOf(Color(0xFFFFD700), Color(0xFFF59E0B)))
+                                        } else {
+                                            Brush.verticalGradient(listOf(Color(0xFF334155), Color(0xFF1E293B)))
+                                        }
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = if (isEarned) Color(0xFFB45309) else Color(0xFF475569),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = "Yıldız $i",
+                                    tint = if (isEarned) Color(0xFF78350F) else Color(0xFF64748B),
+                                    modifier = Modifier.size(if (i == 2) 30.dp else 24.dp)
                                 )
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Trophies Earned Card with Combo / 0-Echo Bonuses
-                if (trophyBreakdown != null) {
+                    // 4. STATS SUMMARY PLAQUE (Yankı, Süre, Par)
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFFFFBEB),
-                        border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF0F1E4A),
+                        border = BorderStroke(1.5.dp, Color(0xFF2563EB)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(10.dp)
+                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(text = "🏆", fontSize = 16.sp)
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Kazanılan Toplam Kupa",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF92400E)
-                                    )
-                                }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "+${trophyBreakdown.totalTrophies} 🏆",
+                                    text = "YANKI",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF60A5FA)
+                                )
+                                Text(
+                                    text = if (echoCount == 0) "KUSURSUZ!" else "$echoCount",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFFD97706)
+                                    color = if (echoCount == 0) Color(0xFF34D399) else Color(0xFF38BDF8)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "SÜRE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF60A5FA)
+                                )
+                                Text(
+                                    text = "${trophyBreakdown?.timeTakenSec ?: 6.5f}s",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFA78BFA)
+                                )
+                            }
 
-                            // Bonus chips breakdown
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                if (trophyBreakdown.zeroEchoBonus > 0) {
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = Color(0xFFDCFCE7),
-                                        modifier = Modifier.padding(vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = "0 Yankı +${trophyBreakdown.zeroEchoBonus}🏆",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF16A34A),
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                                if (trophyBreakdown.comboBonus > 0) {
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = Color(0xFFE0E7FF),
-                                        modifier = Modifier.padding(vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = "${trophyBreakdown.currentCombo}x Kombo +${trophyBreakdown.comboBonus}🏆",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF4338CA),
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                                if (trophyBreakdown.speedBonus > 0) {
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = Color(0xFFF3E8FF),
-                                        modifier = Modifier.padding(vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = "Hız +${trophyBreakdown.speedBonus}🏆",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF7E22CE),
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
+                            if (parEchoes > 0) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "HEDEF PAR",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF60A5FA)
+                                    )
+                                    Text(
+                                        text = "$parEchoes",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFFE2E8F0)
+                                    )
                                 }
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
-                }
 
-                // Base Level Reward Banner
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFEF3C7),
-                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
+                    // 5. TROPHIES EARNED CARD
+                    if (trophyBreakdown != null) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFF0F1E4A),
+                            border = BorderStroke(1.5.dp, Color(0xFFF59E0B)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "🏆", fontSize = 18.sp)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Kazanılan Kupa",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.White
+                                        )
+                                    }
+                                    Text(
+                                        text = "+${trophyBreakdown.totalTrophies} 🏆",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFFFFD54F)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (trophyBreakdown.zeroEchoBonus > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color(0xFF064E3B))
+                                                .border(1.dp, Color(0xFF10B981), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "0 Yankı +${trophyBreakdown.zeroEchoBonus}🏆",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color(0xFF34D399)
+                                            )
+                                        }
+                                    }
+                                    if (trophyBreakdown.comboBonus > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color(0xFF312E81))
+                                                .border(1.dp, Color(0xFF6366F1), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "${trophyBreakdown.currentCombo}x Kombo +${trophyBreakdown.comboBonus}🏆",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color(0xFFA5B4FC)
+                                            )
+                                        }
+                                    }
+                                    if (trophyBreakdown.speedBonus > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color(0xFF581C87))
+                                                .border(1.dp, Color(0xFFA855F7), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "Hız +${trophyBreakdown.speedBonus}🏆",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color(0xFFE9D5FF)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
+                    // 6. 2X REWARD BUTTON (CARTOON PURPLE 3D)
+                    if (isDoubleClaimed) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFF064E3B),
+                            border = BorderStroke(1.5.dp, Color(0xFF10B981)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF34D399),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "2X Ödül Alındı (+2 Jeton & +1 Matkap)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF34D399)
+                                )
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .shadow(4.dp, RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFFA855F7), Color(0xFF7E22CE))
+                                    )
+                                )
+                                .border(2.dp, Color(0xFF581C87), RoundedCornerShape(14.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(bounded = true, color = Color.White),
+                                    onClick = hapticClick(isHeavy = true, action = onClaimDoubleReward)
+                                )
+                                .testTag("victory_2x_reward_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.OndemandVideo,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "2X ÖDÜL KAZAN (+2 Jeton, +1 Matkap)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 7. HUGE CHUNKY 3D "SONRAKİ BÖLÜM" (NEXT LEVEL) BUTTON
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .height(54.dp)
+                            .shadow(6.dp, RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFFFFC700), Color(0xFFD98200))
+                                )
+                            )
+                            .border(2.5.dp, Color(0xFF944900), RoundedCornerShape(18.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(bounded = true, color = Color.White),
+                                onClick = hapticClick(isHeavy = true, action = onNextLevel)
+                            )
+                            .testTag("victory_next_level_button"),
+                        contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.Lightbulb,
+                                imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Kazanılan Ödül:",
-                                fontSize = 13.sp,
-                                color = Color(0xFF92400E)
-                            )
-                        }
-                        Text(
-                            text = "+1 İpucu Jetonu",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFB45309)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Option: 2X Ödül Çarpanı (İsteğe bağlı reklam)
-                if (isDoubleClaimed) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFDCFCE7),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = Color(0xFF15803D),
-                                modifier = Modifier.size(16.dp)
+                                tint = Color(0xFF451A03),
+                                modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "2X Ödül Alındı (+2 Jeton & +1 Matkap)",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF15803D)
+                                text = "SONRAKİ BÖLÜM",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF451A03),
+                                letterSpacing = 1.sp
                             )
                         }
                     }
-                } else {
-                    OutlinedButton(
-                        onClick = hapticClick(isHeavy = true, action = onClaimDoubleReward),
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 8. CHUNKY 3D "TEKRAR OYNA" (REPLAY) BUTTON
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("victory_2x_reward_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        border = BorderStroke(1.5.dp, Color(0xFF9333EA)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF9333EA)
-                        )
+                            .height(44.dp)
+                            .shadow(3.dp, RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFF334155), Color(0xFF1E293B))
+                                )
+                            )
+                            .border(1.5.dp, Color(0xFF475569), RoundedCornerShape(14.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(bounded = true, color = Color.White),
+                                onClick = hapticClick(action = onReplay)
+                            )
+                            .testTag("victory_replay_button"),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.OndemandVideo,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "2X Ödül (+2 Jeton, +1 Matkap)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Tekrar Oyna",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Option A: Sonraki Bölüm
-                Button(
-                    onClick = hapticClick(isHeavy = true, action = onNextLevel),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .shadow(4.dp, RoundedCornerShape(14.dp))
-                        .testTag("victory_next_level_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0284C7),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Sonraki Bölüm",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Option B: Tekrar Oyna
-                OutlinedButton(
-                    onClick = hapticClick(action = onReplay),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("victory_replay_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF334155)
-                    ),
-                    border = BorderStroke(1.dp, Color(0xFFCBD5E1))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Tekrar Oyna",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
                 }
             }
         }

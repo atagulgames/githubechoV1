@@ -555,15 +555,7 @@ fun EchoGameScreen(
                 )
             }
 
-            // 20. Sezon 2 Hoş Geldin & Sıfırlama Diyaloğu (Konfetili kutlama & Büyük Başlangıç Paketi)
-            if (state.isSeason2DialogVisible && state.screenState != ScreenState.INTRO) {
-                Season2WelcomeDialog(
-                    isDarkTheme = state.isDarkTheme,
-                    onClaimAndStart = {
-                        viewModel.claimSeason2WelcomeBonus()
-                    }
-                )
-            }
+            // 20. Sezon 2 Hoş Geldin & Sıfırlama Diyaloğu kaldırıldı (kullanıcı talebiyle)
         }
     }
 }

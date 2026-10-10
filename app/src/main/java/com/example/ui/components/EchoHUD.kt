@@ -1,14 +1,21 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,42 +35,35 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RemoveCircleOutline
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import com.example.audio.HapticEngine
-import com.example.audio.hapticClick
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.audio.HapticEngine
+import com.example.audio.hapticClick
 import com.example.viewmodel.EchoUiState
-import com.example.ui.dialogs.MechanicCatalog
 
+/**
+ * Cartoon Game UI / Cartoony Game GUI HUD components.
+ * Bold 3D chunky cartoon styling with rich vibrant gradients, thick borders,
+ * playful bevels, and distinct game action states.
+ */
 @Composable
 fun EchoTopHUD(
     state: EchoUiState,
@@ -74,22 +75,15 @@ fun EchoTopHUD(
     onToggleGhostRace: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val hudCardBg = if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
-    val textPrimary = if (state.isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
-    val textSecondary = if (state.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-    val hudBorder = if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
-
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .testTag("top_hud_bar"),
         color = Color.Transparent
     ) {
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val isCompact = maxWidth < 400.dp
-            val horizontalPadding = if (isCompact) 8.dp else 16.dp
+            val horizontalPadding = if (isCompact) 8.dp else 14.dp
 
             Column(
                 modifier = Modifier
@@ -98,61 +92,83 @@ fun EchoTopHUD(
                     .align(Alignment.Center)
                     .padding(horizontal = horizontalPadding, vertical = 6.dp)
             ) {
+                // ROW 1: Back Button & Level Plaque | Timer, Tokens, Trophies, Stars
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left: Back button & Level Title
+                    // Left: Chunky 3D Back button & Chunky Level Plaque
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 10.dp)
                     ) {
-                        IconButton(
-                            onClick = hapticClick(action = onBackToMenu),
+                        // 3D Cartoon Circular Back Button
+                        Box(
                             modifier = Modifier
-                                .size(if (isCompact) 36.dp else 40.dp)
-                                .shadow(2.dp, CircleShape)
+                                .size(if (isCompact) 38.dp else 42.dp)
+                                .shadow(4.dp, CircleShape)
                                 .clip(CircleShape)
-                                .background(hudCardBg)
-                                .border(1.dp, hudBorder, CircleShape)
-                                .testTag("back_to_menu_button")
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color(0xFF1E40AF), Color(0xFF0F172A))
+                                    )
+                                )
+                                .border(2.5.dp, Color(0xFF38BDF8), CircleShape)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(bounded = true, color = Color.White),
+                                    onClick = hapticClick(action = onBackToMenu)
+                                )
+                                .testTag("back_to_menu_button"),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Menüye Dön",
-                                tint = textPrimary,
-                                modifier = Modifier.size(if (isCompact) 18.dp else 20.dp)
+                                tint = Color.White,
+                                modifier = Modifier.size(if (isCompact) 20.dp else 22.dp)
                             )
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        // 3D Cartoon Level Plaque
+                        Box(
                             modifier = Modifier
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(hudCardBg)
-                                .border(1.dp, hudBorder, RoundedCornerShape(20.dp))
-                                .clickable { onOpenLevelSelect() }
+                                .shadow(4.dp, RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color(0xFFFFC700), Color(0xFFD97706))
+                                    )
+                                )
+                                .border(2.dp, Color(0xFF78350F), RoundedCornerShape(16.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(bounded = true, color = Color.White),
+                                    onClick = onOpenLevelSelect
+                                )
                                 .padding(
-                                    horizontal = if (isCompact) 8.dp else 14.dp,
+                                    horizontal = if (isCompact) 10.dp else 14.dp,
                                     vertical = if (isCompact) 5.dp else 7.dp
                                 )
-                                .testTag("level_select_button")
+                                .testTag("level_select_button"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.GridOn,
-                                contentDescription = "Bölüm Seç",
-                                tint = Color(0xFF0284C7),
-                                modifier = Modifier.size(if (isCompact) 14.dp else 16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(if (isCompact) 4.dp else 6.dp))
-                            Text(
-                                text = if (state.isDailyChallenge) "Günün" else "Bölüm ${state.level.levelId}",
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                fontSize = if (isCompact) 12.sp else 14.sp
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.GridOn,
+                                    contentDescription = "Bölüm Seç",
+                                    tint = Color(0xFF451A03),
+                                    modifier = Modifier.size(if (isCompact) 14.dp else 16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(
+                                    text = if (state.isDailyChallenge) "GÜNLÜK" else "BÖLÜM ${state.level.levelId}",
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF451A03),
+                                    fontSize = if (isCompact) 12.sp else 14.sp
+                                )
+                            }
                         }
                     }
 
@@ -160,23 +176,23 @@ fun EchoTopHUD(
                     val timerShake = rememberInfiniteTransition(label = "timerShake")
                     val timerShakeOffset by if (state.levelRemainingTimeSec <= 10) {
                         timerShake.animateFloat(
-                            initialValue = -4f,
-                            targetValue = 4f,
+                            initialValue = -3f,
+                            targetValue = 3f,
                             animationSpec = infiniteRepeatable(
-                                animation = tween(60, easing = LinearEasing),
+                                animation = tween(70, easing = LinearEasing),
                                 repeatMode = RepeatMode.Reverse
                             ),
                             label = "urgentShake"
                         )
                     } else {
                         timerShake.animateFloat(
-                            initialValue = -1.5f,
-                            targetValue = 1.5f,
+                            initialValue = 0f,
+                            targetValue = 0f,
                             animationSpec = infiniteRepeatable(
-                                animation = tween(120, easing = LinearEasing),
+                                animation = tween(1000),
                                 repeatMode = RepeatMode.Reverse
                             ),
-                            label = "regularShake"
+                            label = "steady"
                         )
                     }
 
@@ -184,342 +200,227 @@ fun EchoTopHUD(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 6.dp)
                     ) {
-                        // 60s Level Countdown Timer chip with Shake Animation & +15s ad extension
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        // 60s Level Countdown Timer 3D Pill
+                        val isUrgent = state.levelRemainingTimeSec <= 10
+                        Box(
                             modifier = Modifier
-                                .graphicsLayer {
-                                    translationX = timerShakeOffset
-                                }
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
+                                .graphicsLayer { translationX = timerShakeOffset }
+                                .shadow(3.dp, RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(
-                                    if (state.levelRemainingTimeSec <= 10)
-                                        (if (state.isDarkTheme) Color(0xFF7F1D1D) else Color(0xFFFEE2E2))
-                                    else hudCardBg
+                                    if (isUrgent) {
+                                        Brush.verticalGradient(listOf(Color(0xFFEF4444), Color(0xFF991B1B)))
+                                    } else {
+                                        Brush.verticalGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A)))
+                                    }
                                 )
                                 .border(
-                                    width = if (state.levelRemainingTimeSec <= 10) 1.5.dp else 1.dp,
-                                    color = if (state.levelRemainingTimeSec <= 10) Color(0xFFDC2626) else hudBorder,
-                                    shape = RoundedCornerShape(20.dp)
+                                    width = if (isUrgent) 2.dp else 1.5.dp,
+                                    color = if (isUrgent) Color(0xFFFCA5A5) else Color(0xFF334155),
+                                    shape = RoundedCornerShape(14.dp)
                                 )
                                 .clickable(enabled = onAddTimeWithAd != null) {
                                     onAddTimeWithAd?.invoke()
                                 }
                                 .padding(
-                                    horizontal = if (isCompact) 6.dp else 9.dp,
-                                    vertical = if (isCompact) 5.dp else 7.dp
+                                    horizontal = if (isCompact) 7.dp else 9.dp,
+                                    vertical = if (isCompact) 5.dp else 6.dp
                                 )
-                                .testTag("top_hud_timer_chip")
+                                .testTag("top_hud_timer_chip"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (state.levelRemainingTimeSec <= 10) "🔥" else "⏱️",
-                                fontSize = if (isCompact) 11.sp else 12.sp
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = "${state.levelRemainingTimeSec}s",
-                                fontWeight = FontWeight.Black,
-                                color = if (state.levelRemainingTimeSec <= 10) Color(0xFFEF4444) else textPrimary,
-                                fontSize = if (isCompact) 11.sp else 13.sp,
-                                maxLines = 1
-                            )
-                            if (onAddTimeWithAd != null && state.levelRemainingTimeSec <= 20) {
-                                Spacer(modifier = Modifier.width(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "+15s 🎬",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF10B981),
-                                    fontSize = if (isCompact) 9.sp else 10.sp,
-                                    maxLines = 1
+                                    text = if (isUrgent) "🔥" else "⏱️",
+                                    fontSize = if (isCompact) 11.sp else 12.sp
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "${state.levelRemainingTimeSec}s",
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    fontSize = if (isCompact) 11.sp else 13.sp
+                                )
+                                if (onAddTimeWithAd != null && state.levelRemainingTimeSec <= 20) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "+15s🎬",
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFF34D399),
+                                        fontSize = if (isCompact) 9.sp else 10.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Tokens 3D Chunky Pill
+                        Box(
+                            modifier = Modifier
+                                .shadow(3.dp, RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                                    )
+                                )
+                                .border(1.5.dp, Color(0xFFF59E0B), RoundedCornerShape(14.dp))
+                                .clickable { onOpenShop() }
+                                .padding(
+                                    horizontal = if (isCompact) 7.dp else 9.dp,
+                                    vertical = if (isCompact) 5.dp else 6.dp
+                                )
+                                .testTag("shop_token_chip"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = "🪙", fontSize = 11.sp)
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "${state.tokens}",
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFFD54F),
+                                    fontSize = if (isCompact) 11.sp else 13.sp
                                 )
                             }
                         }
 
-                        // Tokens chip
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        // Trophies 3D Chunky Pill
+                        Box(
                             modifier = Modifier
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(hudCardBg)
-                                .border(1.dp, hudBorder, RoundedCornerShape(20.dp))
-                                .clickable { onOpenShop() }
-                                .padding(
-                                    horizontal = if (isCompact) 7.dp else 10.dp,
-                                    vertical = if (isCompact) 5.dp else 7.dp
+                                .shadow(3.dp, RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                                    )
                                 )
-                                .testTag("shop_token_chip")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Diamond,
-                                contentDescription = "Jetonlar",
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(if (isCompact) 13.dp else 15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = "${state.tokens}",
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                fontSize = if (isCompact) 11.sp else 13.sp
-                            )
-                        }
-
-                        // Trophies chip
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(hudCardBg)
-                                .border(1.dp, hudBorder, RoundedCornerShape(20.dp))
+                                .border(1.5.dp, Color(0xFFF59E0B), RoundedCornerShape(14.dp))
                                 .padding(
                                     horizontal = if (isCompact) 6.dp else 8.dp,
-                                    vertical = if (isCompact) 5.dp else 7.dp
+                                    vertical = if (isCompact) 5.dp else 6.dp
                                 )
-                                .testTag("top_hud_trophies_chip")
+                                .testTag("top_hud_trophies_chip"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "${state.trophies} 🏆",
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD97706),
-                                fontSize = if (isCompact) 11.sp else 12.sp
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = "🏆", fontSize = 10.sp)
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "${state.trophies}",
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFFD54F),
+                                    fontSize = if (isCompact) 11.sp else 12.sp
+                                )
+                            }
                         }
 
-                        // Echo count & 3-Star status chip
+                        // Echo count & Star status 3D Pill
                         val currentStars = when {
                             state.echoCountForLevel == 0 -> 3
                             state.echoCountForLevel <= 2 -> 2
                             else -> 1
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Box(
                             modifier = Modifier
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (state.echoCountForLevel > 0) (if (state.isDarkTheme) Color(0xFF4C0519) else Color(0xFFFFF1F2)) else hudCardBg)
+                                .shadow(3.dp, RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (state.echoCountForLevel > 0) {
+                                        Brush.verticalGradient(listOf(Color(0xFF4C0519), Color(0xFF1F030A)))
+                                    } else {
+                                        Brush.verticalGradient(listOf(Color(0xFF0C4A6E), Color(0xFF032238)))
+                                    }
+                                )
                                 .border(
-                                    1.dp,
-                                    if (state.echoCountForLevel > 0) Color(0xFFE11D48) else hudBorder,
-                                    RoundedCornerShape(20.dp)
+                                    1.5.dp,
+                                    if (state.echoCountForLevel > 0) Color(0xFFFB7185) else Color(0xFF38BDF8),
+                                    RoundedCornerShape(14.dp)
                                 )
                                 .padding(
-                                    horizontal = if (isCompact) 6.dp else 10.dp,
-                                    vertical = if (isCompact) 5.dp else 7.dp
+                                    horizontal = if (isCompact) 6.dp else 9.dp,
+                                    vertical = if (isCompact) 5.dp else 6.dp
                                 )
-                                .testTag("echo_counter_chip")
+                                .testTag("echo_counter_chip"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(if (isCompact) 6.dp else 8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (state.echoCountForLevel > 0) Color(0xFFE11D48) else Color(0xFF0284C7))
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = if (isCompact) "${state.echoCountForLevel}" else "Yankı: ${state.echoCountForLevel}",
-                                fontWeight = FontWeight.Bold,
-                                color = if (state.echoCountForLevel > 0) Color(0xFFE11D48) else textPrimary,
-                                fontSize = if (isCompact) 11.sp else 13.sp,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = when (currentStars) {
-                                    3 -> "★★★"
-                                    2 -> "★★☆"
-                                    else -> "★☆☆"
-                                },
-                                color = if (currentStars == 3) Color(0xFFF59E0B) else if (currentStars == 2) Color(0xFFFBBF24) else Color(0xFF94A3B8),
-                                fontSize = if (isCompact) 10.sp else 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (isCompact) "${state.echoCountForLevel}" else "Yankı:${state.echoCountForLevel}",
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    fontSize = if (isCompact) 11.sp else 12.sp
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = when (currentStars) {
+                                        3 -> "★★★"
+                                        2 -> "★★☆"
+                                        else -> "★☆☆"
+                                    },
+                                    color = when (currentStars) {
+                                        3 -> Color(0xFFFFD700)
+                                        2 -> Color(0xFFFBBF24)
+                                        else -> Color(0xFF94A3B8)
+                                    },
+                                    fontSize = if (isCompact) 9.sp else 11.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Subtitle & Mechanic Info Pill - INSIDE Column to prevent any overlap
+                // ROW 2: Dynamic Level Rule & Onboarding Guide Pill (Notice: "2. Sezon" text completely removed!)
+                val levelRule = com.example.data.LevelRuleCatalog.getRuleForLevel(state.level.levelId, isTurkish = true)
+                val badgeColor = Color(levelRule.badgeColor)
+
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f, fill = false)
+                    Box(
+                        modifier = Modifier
+                            .shadow(2.dp, RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF0A1538).copy(alpha = 0.9f))
+                            .border(1.5.dp, badgeColor, RoundedCornerShape(12.dp))
+                            .clickable(enabled = onOpenMechanicGuide != null) { onOpenMechanicGuide?.invoke() }
+                            .padding(horizontal = 9.dp, vertical = 3.dp)
+                            .testTag("tier_mechanic_badge")
                     ) {
-                        Text(
-                            text = state.level.title,
-                            color = textSecondary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (state.currentCombo > 0) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFFEF4444).copy(alpha = 0.15f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "⚡ ${state.currentCombo}x Kombo",
-                                    color = Color(0xFFEF4444),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                        }
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 4.dp)
-                    ) {
-                        // Season 2 Cosmic Badge
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(end = 6.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF8B5CF6).copy(alpha = if (state.isDarkTheme) 0.25f else 0.15f))
-                                .border(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "✨ 2. Sezon",
-                                color = Color(0xFFA78BFA),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
-
-                        val levelRule = com.example.data.LevelRuleCatalog.getRuleForLevel(state.level.levelId, isTurkish = true)
-                        val badgeColor = Color(levelRule.badgeColor)
-
-                        // 1. Dynamic Level Rule & Onboarding Guide Pill
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(badgeColor.copy(alpha = if (state.isDarkTheme) 0.25f else 0.15f))
-                                .border(1.dp, badgeColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                .clickable(enabled = onOpenMechanicGuide != null) { onOpenMechanicGuide?.invoke() }
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                                .testTag("tier_mechanic_badge")
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "${levelRule.icon} Kural: ${levelRule.ruleTitle}",
                                 color = badgeColor,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                softWrap = false
+                                fontWeight = FontWeight.Black
                             )
-                            if (onOpenMechanicGuide != null) {
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(text = "ℹ️", fontSize = 10.sp)
-                            }
                         }
+                    }
 
-                        // 2. Echo Beast Status (if active)
-                        if (state.echoBeastState.level > 0) {
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(state.echoBeastState.color.copy(alpha = if (state.isDarkTheme) 0.35f else 0.18f))
-                                    .border(1.dp, state.echoBeastState.color.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    .testTag("echo_beast_chip")
-                            ) {
-                                Text(
-                                    text = "${state.echoBeastState.icon} ${state.echoBeastState.title}",
-                                    color = state.echoBeastState.color,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                        }
-
-                        // 3. Ghost Racing Toggle (if available)
-                        if (state.isGhostRaceAvailable) {
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (state.isGhostRaceActive) Color(0xFFFEF3C7) else (if (state.isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)))
-                                    .border(1.dp, if (state.isGhostRaceActive) Color(0xFFF59E0B) else Color(0xFF94A3B8), RoundedCornerShape(8.dp))
-                                    .clickable(enabled = onToggleGhostRace != null) { onToggleGhostRace?.invoke() }
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    .testTag("ghost_race_toggle_button")
-                            ) {
-                                Text(
-                                    text = if (state.isGhostRaceActive) "👻 Hayalet: AÇIK" else "👻 Hayalet: KAPALI",
-                                    color = if (state.isGhostRaceActive) Color(0xFFD97706) else textSecondary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                        }
-
+                    if (state.playerBehaviorInsight.isNotBlank()) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Color(0xFFF59E0B),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = "Hedef: ${state.level.parEchoes}",
-                            color = textSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
+                            text = "🧠 ${state.playerBehaviorInsight}",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
-                            softWrap = false
+                            overflow = TextOverflow.Ellipsis
                         )
-
-                        // 4. AI Real-Time Insight Badge
-                        if (state.playerBehaviorInsight.isNotBlank()) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "🧠 ${state.playerBehaviorInsight}",
-                                color = textSecondary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
                 }
             }
         }
     }
 }
+
+/* ========================================================================== */
+/*                          CARTOON BOTTOM HUD                                */
+/* ========================================================================== */
 
 @Composable
 fun EchoBottomHUD(
@@ -531,24 +432,18 @@ fun EchoBottomHUD(
     onHint: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bottomBg = if (state.isDarkTheme) Color(0xFF1E293B) else Color.White
-    val textPrimary = if (state.isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
-    val textSecondary = if (state.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-    val borderColor = if (state.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
-
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+            .shadow(16.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
             .testTag("bottom_hud_bar"),
-        color = bottomBg,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        color = Color(0xFF070F2B),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        border = BorderStroke(2.dp, Color(0xFF1E3A8A))
     ) {
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val isCompact = maxWidth < 400.dp
-            val horizontalPadding = if (isCompact) 10.dp else 16.dp
+            val horizontalPadding = if (isCompact) 8.dp else 14.dp
             val btnHeight = if (isCompact) 42.dp else 46.dp
 
             Column(
@@ -556,90 +451,92 @@ fun EchoBottomHUD(
                     .fillMaxWidth()
                     .widthIn(max = 640.dp)
                     .align(Alignment.Center)
-                    .padding(horizontal = horizontalPadding, vertical = if (isCompact) 8.dp else 12.dp)
+                    .padding(horizontal = horizontalPadding, vertical = if (isCompact) 8.dp else 10.dp)
             ) {
-                // Row 1: Tactical Power-ups (Matkap Lazer, Esnek Alan)
+                // ROW 1: TACTICAL POWER-UPS (Matkap Lazer & Esnek Alan)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 10.dp)
                 ) {
-                    // Echo Breaker (Matkap Lazer)
-                    FilledTonalButton(
+                    // 3D Cartoon Echo Breaker (Matkap Lazer)
+                    CartoonChunkyButton(
                         onClick = hapticClick(isHeavy = true, action = onUseBreaker),
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)
-                            .border(1.dp, if (state.echoBreakers > 0) Color(0xFFFED7AA) else borderColor, RoundedCornerShape(12.dp))
                             .testTag("echo_breaker_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = if (state.echoBreakers > 0) (if (state.isDarkTheme) Color(0xFF431407) else Color(0xFFFFF7ED)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
-                            contentColor = Color(0xFFF97316)
-                        )
+                        gradientColors = if (state.echoBreakers > 0) {
+                            listOf(Color(0xFFFF9800), Color(0xFFE65100))
+                        } else {
+                            listOf(Color(0xFF334155), Color(0xFF1E293B))
+                        },
+                        borderColor = if (state.echoBreakers > 0) Color(0xFF7C2D12) else Color(0xFF475569),
+                        textColor = Color.White
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = "Matkap Lazeri",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = "Matkap (${state.echoBreakers})",
-                            fontSize = if (isCompact) 11.sp else 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = "Matkap Lazeri",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Matkap (${state.echoBreakers})",
+                                fontSize = if (isCompact) 11.sp else 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
-                    // Echo Shrinker (Esnek Mod) - Valid for 1 level only
-                    FilledTonalButton(
+                    // 3D Cartoon Echo Shrinker (Esnek Mod)
+                    CartoonChunkyButton(
                         onClick = hapticClick(isHeavy = true, action = onActivateShrinker),
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)
-                            .border(
-                                1.5.dp,
-                                if (state.isEchoShrinkerActive) Color(0xFF22C55E) else borderColor,
-                                RoundedCornerShape(12.dp)
-                            )
                             .testTag("echo_shrinker_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = if (state.isEchoShrinkerActive) (if (state.isDarkTheme) Color(0xFF064E3B) else Color(0xFFDCFCE7)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
-                            contentColor = if (state.isEchoShrinkerActive) Color(0xFF22C55E) else textSecondary
-                        )
+                        gradientColors = if (state.isEchoShrinkerActive) {
+                            listOf(Color(0xFF22C55E), Color(0xFF15803D))
+                        } else {
+                            listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                        },
+                        borderColor = if (state.isEchoShrinkerActive) Color(0xFF14532D) else Color(0xFF334155),
+                        textColor = if (state.isEchoShrinkerActive) Color.White else Color(0xFF94A3B8)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterCenterFocus,
-                            contentDescription = "Esnek Mod",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = if (state.isEchoShrinkerActive) "🌟 Esnek Aktif" else "🌟 Esnek",
-                            fontSize = if (isCompact) 10.sp else 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.FilterCenterFocus,
+                                contentDescription = "Esnek Mod",
+                                tint = if (state.isEchoShrinkerActive) Color.White else Color(0xFF94A3B8),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (state.isEchoShrinkerActive) "🌟 Esnek Aktif" else "🌟 Esnek",
+                                fontSize = if (isCompact) 10.sp else 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (state.isEchoShrinkerActive) Color.White else Color(0xFF94A3B8),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 10.dp))
+                Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 8.dp))
 
-                // Row 2: Reset, Clear Echoes, Hint
+                // ROW 2: Reset, Clear Echoes, Hint
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // "Yeniden" (Reset)
-                    OutlinedButton(
+                    // 3D Cartoon "Yeniden" (Reset)
+                    CartoonChunkyButton(
                         onClick = {
                             HapticEngine.triggerButtonDoublePulse()
                             onReset()
@@ -648,31 +545,31 @@ fun EchoBottomHUD(
                             .weight(1f)
                             .height(btnHeight)
                             .testTag("reset_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = textPrimary
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+                        gradientColors = listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8)),
+                        borderColor = Color(0xFF1E3A8A),
+                        textColor = Color.White
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Yeniden Başla",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = "Yeniden",
-                            fontSize = if (isCompact) 11.sp else 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Yeniden Başla",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Yeniden",
+                                fontSize = if (isCompact) 11.sp else 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
-                    // "Yankı Sil" (Clear Echoes)
-                    FilledTonalButton(
+                    // 3D Cartoon "Yankı Sil" (Clear Echoes)
+                    CartoonChunkyButton(
                         onClick = {
                             HapticEngine.triggerButtonDoublePulse()
                             onClearEchoes()
@@ -680,66 +577,99 @@ fun EchoBottomHUD(
                         modifier = Modifier
                             .weight(1.3f)
                             .height(btnHeight)
-                            .border(
-                                1.dp,
-                                if (state.echoes.isNotEmpty()) Color(0xFFE11D48) else borderColor,
-                                RoundedCornerShape(12.dp)
-                            )
                             .testTag("clear_echoes_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = if (state.echoes.isNotEmpty()) (if (state.isDarkTheme) Color(0xFF4C0519) else Color(0xFFFFF1F2)) else (if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
-                            contentColor = if (state.echoes.isNotEmpty()) Color(0xFFE11D48) else textSecondary
-                        )
+                        gradientColors = if (state.echoes.isNotEmpty()) {
+                            listOf(Color(0xFFEF4444), Color(0xFFB91C1C))
+                        } else {
+                            listOf(Color(0xFF334155), Color(0xFF1E293B))
+                        },
+                        borderColor = if (state.echoes.isNotEmpty()) Color(0xFF7F1D1D) else Color(0xFF475569),
+                        textColor = Color.White
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.RemoveCircleOutline,
-                            contentDescription = "Yankı Sil",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = if (state.echoes.isNotEmpty()) "Yankı Sil (${state.echoes.size})" else "Yankı Sil",
-                            fontSize = if (isCompact) 11.sp else 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.RemoveCircleOutline,
+                                contentDescription = "Yankı Sil",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (state.echoes.isNotEmpty()) "Yankı Sil (${state.echoes.size})" else "Yankı Sil",
+                                fontSize = if (isCompact) 11.sp else 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
-                    // "İpucu" (Hint)
-                    Button(
+                    // 3D Cartoon "İpucu" (Hint)
+                    CartoonChunkyButton(
                         onClick = hapticClick(action = onHint),
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.1f)
                             .height(btnHeight)
                             .testTag("hint_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (isCompact) 4.dp else 8.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (state.isHintActive) Color(0xFFF59E0B) else Color(0xFF0284C7),
-                            contentColor = Color.White
-                        )
+                        gradientColors = if (state.isHintActive) {
+                            listOf(Color(0xFFFFD54F), Color(0xFFF59E0B))
+                        } else {
+                            listOf(Color(0xFF0284C7), Color(0xFF0369A1))
+                        },
+                        borderColor = if (state.isHintActive) Color(0xFFB45309) else Color(0xFF075985),
+                        textColor = if (state.isHintActive) Color(0xFF78350F) else Color.White
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = "İpucu",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = if (state.isHintActive) "💡 Aktif" else if (state.hintAdsWatched in 1..2) "İpucu (${state.hintAdsWatched}/3🎬)" else "İpucu",
-                            fontSize = if (isCompact) 10.sp else 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Lightbulb,
+                                contentDescription = "İpucu",
+                                tint = if (state.isHintActive) Color(0xFF78350F) else Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (state.isHintActive) "💡 Aktif" else if (state.hintAdsWatched in 1..2) "İpucu(${state.hintAdsWatched}/3)" else "İpucu",
+                                fontSize = if (isCompact) 10.sp else 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (state.isHintActive) Color(0xFF78350F) else Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/* ========================================================================== */
+/*                       REUSABLE CARTOON 3D BUTTON                           */
+/* ========================================================================== */
+
+@Composable
+private fun CartoonChunkyButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    gradientColors: List<Color>,
+    borderColor: Color,
+    textColor: Color,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .shadow(4.dp, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Brush.verticalGradient(colors = gradientColors))
+            .border(2.dp, borderColor, RoundedCornerShape(14.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true, color = Color.White),
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }

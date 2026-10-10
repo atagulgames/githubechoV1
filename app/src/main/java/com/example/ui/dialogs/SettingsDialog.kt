@@ -668,7 +668,7 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
-                    text = "ECHO FLUX • v1.2 (Sezon 2)",
+                    text = "ECHO FLUX • v1.2",
                     fontSize = 11.sp,
                     color = textSecondary,
                     modifier = Modifier

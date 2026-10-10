@@ -134,7 +134,7 @@ fun Season2ThemeDialog(
                 }
 
                 Text(
-                    text = "2. Sezon'a özel renk paletleri ve yaşayan dinamik arka plan desenleri",
+                    text = "Oyuna özel renk paletleri ve yaşayan dinamik arka plan desenleri",
                     fontSize = 12.sp,
                     color = textSecondary,
                     modifier = Modifier
@@ -142,7 +142,7 @@ fun Season2ThemeDialog(
                         .padding(top = 4.dp, bottom = 14.dp)
                 )
 
-                // Master Toggle: Sezon 2 Teması Aktif
+                // Master Toggle: Özel Tema Aktif
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -160,13 +160,13 @@ fun Season2ThemeDialog(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Sezon 2 Atmosferi",
+                                text = "Görsel Atmosfer",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
                             )
                             Text(
-                                text = if (isSeason2ThemeActive) "Özel Sezon 2 renk paleti aktif" else "Klasik tema aktif",
+                                text = if (isSeason2ThemeActive) "Özel görsel renk paleti aktif" else "Klasik tema aktif",
                                 fontSize = 11.sp,
                                 color = textSecondary
                             )

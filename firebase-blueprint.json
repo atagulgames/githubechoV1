@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated player profile document",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique Firebase Auth UID of the player"
+        },
+        "username": {
+          "type": "string",
+          "description": "Player display name or username"
+        },
+        "email": {
+          "type": "string",
+          "description": "Player email address"
+        },
+        "trophies": {
+          "type": "integer",
+          "description": "Total trophies earned by player"
+        },
+        "level": {
+          "type": "integer",
+          "description": "Highest level reached by player"
+        },
+        "stars": {
+          "type": "integer",
+          "description": "Total stars accumulated"
+        },
+        "tokens": {
+          "type": "integer",
+          "description": "Current player token balance"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last profile update timestamp"
+        }
+      },
+      "required": ["userId", "username"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of authenticated user profiles keyed by Firebase Auth UID"
+    }
+  }
+}
