@@ -25,23 +25,14 @@ data class UpdateInfo(
 
 /**
  * Robust, non-blocking Update Check Service.
- *
- * Checks https://echoflux-kbh9.onrender.com/version.json
- * (with fallback to https://githubechov1.onrender.com/version.json).
- *
- * Requirements:
- * - Runs entirely on Dispatchers.IO with strict timeout
- * - Never blocks the Main thread or game loop
- * - Tolerates network failure gracefully (silent fallback, no crashes, no technical error text)
- * - Compares latest_version with local BuildConfig.VERSION_CODE
  */
 class AppUpdateManager private constructor() {
 
     companion object {
         private const val TAG = "AppUpdateManager"
-        private const val PRIMARY_URL = "https://echoflux-kbh9.onrender.com/version.json"
-        private const val FALLBACK_URL = "https://githubechov1.onrender.com/version.json"
-        private const val DEFAULT_UPDATE_URL = "https://echoflux.apk.com"
+        private const val PRIMARY_URL = ""
+        private const val FALLBACK_URL = ""
+        private const val DEFAULT_UPDATE_URL = "https://play.google.com"
 
         @Volatile
         private var INSTANCE: AppUpdateManager? = null
@@ -64,6 +55,9 @@ class AppUpdateManager private constructor() {
      * Guaranteed to never throw an uncaught exception.
      */
     suspend fun checkForUpdate(currentVersionCode: Int = BuildConfig.VERSION_CODE): UpdateInfo? = withContext(Dispatchers.IO) {
+        if (PRIMARY_URL.isBlank() && FALLBACK_URL.isBlank()) {
+            return@withContext null
+        }
         // Attempt 1: Primary URL
         val primaryResult = queryVersionEndpoint(PRIMARY_URL, currentVersionCode)
         if (primaryResult != null) {

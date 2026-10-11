@@ -2,7 +2,7 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "Authenticated player profile document",
+      "description": "Authenticated player profile and full game progress cloud save",
       "type": "object",
       "properties": {
         "userId": {
@@ -21,6 +21,14 @@
           "type": "integer",
           "description": "Total trophies earned by player"
         },
+        "diamonds": {
+          "type": "integer",
+          "description": "Total diamonds owned by player"
+        },
+        "coins": {
+          "type": "integer",
+          "description": "Total coins owned by player"
+        },
         "level": {
           "type": "integer",
           "description": "Highest level reached by player"
@@ -31,7 +39,49 @@
         },
         "tokens": {
           "type": "integer",
-          "description": "Current player token balance"
+          "description": "Current player hint token balance"
+        },
+        "echoBreakers": {
+          "type": "integer",
+          "description": "Echo Breakers inventory count"
+        },
+        "strokeTheme": {
+          "type": "string",
+          "description": "Active equipped stroke theme identifier"
+        },
+        "echoTheme": {
+          "type": "string",
+          "description": "Active equipped echo theme identifier"
+        },
+        "season2Theme": {
+          "type": "string",
+          "description": "Active Season 2 theme"
+        },
+        "unlockedThemes": {
+          "type": "array",
+          "description": "List of unlocked theme identifiers",
+          "items": { "type": "string" }
+        },
+        "completedLevels": {
+          "type": "array",
+          "description": "List of completed level numbers",
+          "items": { "type": "integer" }
+        },
+        "levelStatsCsv": {
+          "type": "string",
+          "description": "Serialized CSV records of completed levels"
+        },
+        "maxCombo": {
+          "type": "integer",
+          "description": "Maximum combo reached"
+        },
+        "totalEchoes": {
+          "type": "integer",
+          "description": "Lifetime echoes drawn"
+        },
+        "totalPlayTimeSec": {
+          "type": "integer",
+          "description": "Total play time in seconds"
         },
         "createdAt": {
           "type": "string",

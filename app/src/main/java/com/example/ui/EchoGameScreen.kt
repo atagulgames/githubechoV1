@@ -280,7 +280,7 @@ fun EchoGameScreen(
                 )
             }
 
-            // 1.6. App Update Dialog (https://echoflux-kbh9.onrender.com/version.json)
+            // 1.6. App Update Dialog
             val currentUpdateInfo = state.updateInfo
             if (state.isUpdateDialogVisible && currentUpdateInfo != null) {
                 UpdateDialog(

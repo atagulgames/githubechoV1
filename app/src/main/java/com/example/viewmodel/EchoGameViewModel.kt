@@ -209,7 +209,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private val repo = EchoRepository(application)
     private val authRepo = com.example.data.AuthRepository(application)
     private val lootLocker = com.example.data.LootLockerManager.getInstance(application)
-    private val renderLeaderboard = com.example.data.RenderLeaderboardService.getInstance()
+    private val firestoreRepo = com.example.data.FirestoreUserRepository(application)
     private var lastSubmittedLevelIdForLeaderboard: Int = -1
 
     private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -270,8 +270,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         registerNetworkCallback()
 
         // Check if user has an active, remembered authenticated session
-        val currentToken = com.example.data.security.SecureTokenManager.getToken(application)
-        val hasValidSavedSession = prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank() && !currentToken.isNullOrBlank()
+        val hasValidSavedSession = prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank()
         if (hasValidSavedSession) {
             val user = prefs.authenticatedUsername
             _uiState.update {
@@ -283,11 +282,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             viewModelScope.launch {
                 authRepo.registerOrUpdateExternalUser(user, prefs.authenticatedEmail, user)
-                if (prefs.trophies > 0) {
-                    try {
-                        renderLeaderboard.submitScore(user, prefs.trophies)
-                    } catch (_: Exception) {}
-                }
+                try {
+                    com.example.data.CloudSaveSyncManager(application).syncOnLogin(user)
+                } catch (_: Exception) {}
             }
         } else {
             _uiState.update {
@@ -1296,16 +1293,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         if (lastSubmittedLevelIdForLeaderboard != state.level.levelId) {
             lastSubmittedLevelIdForLeaderboard = state.level.levelId
             viewModelScope.launch(Dispatchers.IO) {
-                if (currentUsername.isNotBlank()) {
-                    try {
-                        renderLeaderboard.submitScore(currentUsername, currentTrophies)
-                    } catch (e: Exception) {
-                        // Fail-safe: Game continues seamlessly without error
-                    }
-                }
                 try {
                     val app = getApplication<android.app.Application>()
-                    com.example.data.CloudSaveSyncManager(app).pushLocalToCloud()
+                    com.example.data.CloudSaveSyncManager(app).pushLocalToCloud(forceImmediate = true)
                 } catch (e: Exception) {
                     // Fail-safe: Cloud save sync failure doesn't disrupt game flow
                 }
@@ -2872,18 +2862,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(isLeaderboardRefreshing = true) }
             val username = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername }
 
-            // Submit current trophies if any
+            // Sync trophies to cloud if any
             if (username.isNotBlank() && prefs.trophies > 0) {
-                renderLeaderboard.submitScore(username, prefs.trophies)
                 lootLocker.submitScore(username, prefs.trophies)
             }
 
-            // Fetch live scores from Render PostgreSQL Leaderboard
-            val renderResult = renderLeaderboard.fetchLeaderboard(currentUsername = username)
-            val finalPlayers = if (renderResult.isSuccess && !renderResult.getOrNull().isNullOrEmpty()) {
-                val list = renderResult.getOrNull()!!.filter { it.trophies > 0 }
+            // Fetch live scores from Firebase Firestore Leaderboard
+            val firestoreResult = firestoreRepo.getLeaderboard(currentUsername = username)
+            val finalPlayers = if (firestoreResult.isSuccess && !firestoreResult.getOrNull().isNullOrEmpty()) {
+                val list = firestoreResult.getOrNull()!!.filter { it.trophies > 0 }
                 val hasMe = list.any { it.isCurrentUser }
-                // Yalnızca kupa kasan (> 0) kullanıcılar liderlik tablosuna dahil edilir
                 if (!hasMe && prefs.trophies > 0) {
                     val me = com.example.model.LeaderboardPlayer(
                         id = "current_user",
@@ -2904,7 +2892,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     list.sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
                 }
             } else {
-                // Secondary fallback: Try LootLocker or curated local players if Render is offline
+                // Secondary fallback: Try LootLocker or curated local players if Firestore query is empty
                 val remoteResult = lootLocker.fetchLeaderboard(count = 50, currentUsername = username)
                 if (remoteResult.isSuccess && !remoteResult.getOrNull().isNullOrEmpty()) {
                     val remoteList = remoteResult.getOrNull()!!.filter { it.trophies > 0 }

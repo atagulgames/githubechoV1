@@ -59,7 +59,8 @@ class FirebaseAuthManager(private val context: Context) {
         }
 
         val clientId = try {
-            context.getString(R.string.default_web_client_id)
+            val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+            if (resId != 0) context.getString(resId) else throw IllegalStateException("default_web_client_id not found")
         } catch (e: Exception) {
             Log.w(TAG, "default_web_client_id not found: ${e.message}")
             onUnauthenticated()
@@ -111,7 +112,8 @@ class FirebaseAuthManager(private val context: Context) {
         onCancelled: () -> Unit
     ) {
         val clientId = try {
-            context.getString(R.string.default_web_client_id)
+            val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+            if (resId != 0) context.getString(resId) else throw IllegalStateException("default_web_client_id not found")
         } catch (e: Exception) {
             val err = "Google Sign-In konfigürasyonu eksik (default_web_client_id)."
             Log.e(TAG, err, e)
@@ -256,16 +258,60 @@ class FirebaseAuthManager(private val context: Context) {
             Log.w(TAG, "Local account sync exception: ${e.message}")
         }
 
-        // Sync Firestore User profile
+        // Sync Firestore User profile and restore all remote properties (trophies, diamonds, level, tokens, etc.)
         try {
-            firestoreRepo.syncUserProfile(
+            val syncResult = firestoreRepo.syncUserProfile(
                 username = username,
                 email = email,
                 currentLevel = prefs.currentLevelIndex + 1,
                 trophies = prefs.trophies,
                 stars = prefs.getLevelRecords().sumOf { it.stars },
-                tokens = prefs.tokens
+                tokens = prefs.tokens,
+                diamonds = prefs.diamonds,
+                coins = prefs.coins,
+                echoBreakers = prefs.echoBreakers,
+                strokeTheme = prefs.strokeThemeName,
+                echoTheme = prefs.echoThemeName,
+                season2Theme = prefs.selectedSeason2Theme,
+                unlockedThemes = prefs.getUnlockedThemes(),
+                completedLevels = prefs.getCompletedLevels(),
+                levelStatsCsv = prefs.levelStatsCsv,
+                maxCombo = prefs.maxCombo,
+                totalEchoes = prefs.totalEchoes,
+                totalPlayTimeSec = prefs.totalPlayTimeSec,
+                forceImmediate = true
             )
+            val merged = syncResult.getOrNull()
+            if (merged != null) {
+                if (merged.trophies.toInt() > prefs.trophies) prefs.trophies = merged.trophies.toInt()
+                if (merged.diamonds.toInt() > prefs.diamonds) prefs.diamonds = merged.diamonds.toInt()
+                if (merged.coins.toInt() > prefs.coins) prefs.coins = merged.coins.toInt()
+                if (merged.tokens.toInt() > prefs.tokens) prefs.tokens = merged.tokens.toInt()
+                if (merged.echoBreakers.toInt() > prefs.echoBreakers) prefs.echoBreakers = merged.echoBreakers.toInt()
+                val lvlIdx = (merged.level.toInt() - 1).coerceAtLeast(0)
+                if (lvlIdx > prefs.currentLevelIndex) prefs.currentLevelIndex = lvlIdx
+
+                val remoteCompleted = merged.completedLevels.map { it.toInt() }.toSet()
+                val combined = (prefs.getCompletedLevels() + remoteCompleted).map { it.toString() }.toSet()
+                prefs.setCompletedLevelsRaw(combined)
+
+                merged.unlockedThemes.forEach { themeId ->
+                    if (themeId.isNotBlank()) prefs.unlockTheme(themeId)
+                }
+
+                if (merged.strokeTheme.isNotBlank()) prefs.strokeThemeName = merged.strokeTheme
+                if (merged.echoTheme.isNotBlank()) prefs.echoThemeName = merged.echoTheme
+                if (merged.season2Theme.isNotBlank()) prefs.selectedSeason2Theme = merged.season2Theme
+
+                localAuthRepo.saveActiveUserProgress(
+                    username = username,
+                    currentLevelIndex = prefs.currentLevelIndex,
+                    completedLevels = prefs.getCompletedLevels(),
+                    tokens = prefs.tokens,
+                    coins = prefs.coins,
+                    trophies = prefs.trophies
+                )
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Firestore sync failed: ${e.message}")
         }

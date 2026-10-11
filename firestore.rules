@@ -14,9 +14,21 @@ service cloud.firestore {
              data.username is string && data.username.size() >= 1 && data.username.size() <= 50 &&
              (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
              (!('trophies' in data) || data.trophies is int) &&
+             (!('diamonds' in data) || data.diamonds is int) &&
+             (!('coins' in data) || data.coins is int) &&
              (!('level' in data) || data.level is int) &&
              (!('stars' in data) || data.stars is int) &&
              (!('tokens' in data) || data.tokens is int) &&
+             (!('echoBreakers' in data) || data.echoBreakers is int) &&
+             (!('strokeTheme' in data) || (data.strokeTheme is string && data.strokeTheme.size() <= 50)) &&
+             (!('echoTheme' in data) || (data.echoTheme is string && data.echoTheme.size() <= 50)) &&
+             (!('season2Theme' in data) || (data.season2Theme is string && data.season2Theme.size() <= 50)) &&
+             (!('unlockedThemes' in data) || data.unlockedThemes is list) &&
+             (!('completedLevels' in data) || data.completedLevels is list) &&
+             (!('levelStatsCsv' in data) || (data.levelStatsCsv is string && data.levelStatsCsv.size() <= 20000)) &&
+             (!('maxCombo' in data) || data.maxCombo is int) &&
+             (!('totalEchoes' in data) || data.totalEchoes is int) &&
+             (!('totalPlayTimeSec' in data) || data.totalPlayTimeSec is int) &&
              (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
@@ -27,15 +39,13 @@ service cloud.firestore {
       allow create: if isOwner(userId) &&
                        request.resource.data.userId == request.auth.uid &&
                        request.resource.data.keys().hasAll(['userId', 'username', 'createdAt']) &&
-                       request.resource.data.keys().hasOnly(['userId', 'username', 'email', 'trophies', 'level', 'stars', 'tokens', 'createdAt', 'updatedAt']) &&
                        request.resource.data.createdAt is timestamp &&
                        isValidUser(request.resource.data);
 
       allow update: if isOwner(userId) &&
                        request.resource.data.userId == resource.data.userId &&
                        request.resource.data.createdAt == resource.data.createdAt &&
-                       isValidUser(request.resource.data) &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'email', 'trophies', 'level', 'stars', 'tokens', 'updatedAt']);
+                       isValidUser(request.resource.data);
 
       allow delete: if isOwner(userId);
     }

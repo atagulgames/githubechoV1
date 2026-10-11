@@ -254,11 +254,21 @@ class ExampleUnitTest {
   }
 
   @Test
-  fun testRenderLeaderboardServiceConfig() {
-    assertEquals("https://githubechov1.onrender.com", com.example.data.RenderLeaderboardService.BASE_URL)
-    assertEquals("https://githubechov1.onrender.com/leaderboard", com.example.data.RenderLeaderboardService.LEADERBOARD_URL)
-    val service = com.example.data.RenderLeaderboardService.getInstance()
-    assertNotNull(service)
+  fun testFirestoreUserConfig() {
+    val user = com.example.data.FirestoreUser(
+        userId = "test_uid",
+        username = "TestPlayer",
+        trophies = 150L,
+        diamonds = 5L,
+        coins = 200L,
+        level = 10L
+    )
+    assertEquals("test_uid", user.userId)
+    assertEquals("TestPlayer", user.username)
+    assertEquals(150L, user.trophies)
+    assertEquals(5L, user.diamonds)
+    assertEquals(200L, user.coins)
+    assertEquals(10L, user.level)
   }
 }
 
