@@ -910,6 +910,31 @@ fun LoginScreen(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // --- MİSAFİR OLARAK OYNA (HIZLI BAŞLA) ---
+                        Proportional3DButton(
+                            text = "MİSAFİR OLARAK OYNA (Hemen Başla)",
+                            icon = Icons.Default.Person,
+                            primaryColor = Color(0xFF0F266A),
+                            highlightColor = Color(0xFF1E3A8A),
+                            shadowColor = Color(0xFF06143D),
+                            borderColor = Color(0xFF38BDF8),
+                            isLoading = isLoading,
+                            onClick = {
+                                if (isLoading) return@Proportional3DButton
+                                val guestName = "Player_${(1000..9999).random()}"
+                                coroutineScope.launch {
+                                    prefs.rememberMe = true
+                                    prefs.isAuthenticated = true
+                                    prefs.authenticatedUsername = guestName
+                                    HarmonicAudioEngine.playParty()
+                                    onLoginSuccess(guestName, true)
+                                }
+                            },
+                            testTag = "play_as_guest_button"
+                        )
                     }
                 }
 

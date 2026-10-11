@@ -60,11 +60,10 @@ class FirebaseAuthManager(private val context: Context) {
 
         val clientId = try {
             val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
-            if (resId != 0) context.getString(resId) else throw IllegalStateException("default_web_client_id not found")
+            if (resId != 0) context.getString(resId) else FALLBACK_WEB_CLIENT_ID
         } catch (e: Exception) {
-            Log.w(TAG, "default_web_client_id not found: ${e.message}")
-            onUnauthenticated()
-            return
+            Log.w(TAG, "Using fallback web client id: ${e.message}")
+            FALLBACK_WEB_CLIENT_ID
         }
 
         val googleIdOption = GetGoogleIdOption.Builder()
@@ -113,12 +112,9 @@ class FirebaseAuthManager(private val context: Context) {
     ) {
         val clientId = try {
             val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
-            if (resId != 0) context.getString(resId) else throw IllegalStateException("default_web_client_id not found")
-        } catch (e: Exception) {
-            val err = "Google Sign-In konfigürasyonu eksik (default_web_client_id)."
-            Log.e(TAG, err, e)
-            onError(err)
-            return
+            if (resId != 0) context.getString(resId) else FALLBACK_WEB_CLIENT_ID
+        } catch (_: Exception) {
+            FALLBACK_WEB_CLIENT_ID
         }
 
         val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
@@ -442,5 +438,6 @@ class FirebaseAuthManager(private val context: Context) {
 
     companion object {
         private const val TAG = "FirebaseAuthManager"
+        private const val FALLBACK_WEB_CLIENT_ID = "957115629567-ftc7efn7glv29hn8tli4tlf0kj9c5979.apps.googleusercontent.com"
     }
 }

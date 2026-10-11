@@ -92,6 +92,11 @@ object AdBlockDetector {
      */
     suspend fun checkAdHealth(context: Context): AdHealthResult = withContext(Dispatchers.IO) {
         try {
+            // In emulator or development environments, do not block app execution
+            if (StartIoManager.isEmulator()) {
+                return@withContext AdHealthResult.Healthy
+            }
+
             // 1. Instant check: Connectivity manager capabilities (< 1ms)
             if (!hasNetworkCapability(context)) {
                 return@withContext AdHealthResult.NoInternet()

@@ -20,21 +20,41 @@ class MainActivity : ComponentActivity() {
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     enableEdgeToEdge()
 
-    // Initialize Start.io Ads SDK with App ID: 208838202 in 100% Live Ads Mode
-    val echoPrefs = com.example.data.EchoPreferences(this)
-    echoPrefs.isTestAdsEnabled = false
-    StartIoManager.initialize(this, testMode = false)
-    com.example.audio.HarmonicAudioEngine.setIntroActive(true)
-    com.example.audio.HarmonicAudioEngine.init(this)
-    com.example.audio.HapticEngine.init(this)
+    try {
+      val echoPrefs = com.example.data.EchoPreferences(this)
+      echoPrefs.isTestAdsEnabled = false
+      StartIoManager.initialize(this, testMode = false)
+    } catch (e: Exception) {
+      android.util.Log.e("MainActivity", "StartIoManager error", e)
+    }
 
-    // Schedule 10 daily game motivation notifications
-    com.example.notifications.EchoNotificationScheduler.scheduleAllDailyNotifications(this)
+    try {
+      com.example.audio.HarmonicAudioEngine.setIntroActive(true)
+      com.example.audio.HarmonicAudioEngine.init(this)
+    } catch (e: Exception) {
+      android.util.Log.e("MainActivity", "HarmonicAudioEngine error", e)
+    }
+
+    try {
+      com.example.audio.HapticEngine.init(this)
+    } catch (e: Exception) {
+      android.util.Log.e("MainActivity", "HapticEngine error", e)
+    }
+
+    try {
+      com.example.notifications.EchoNotificationScheduler.scheduleAllDailyNotifications(this)
+    } catch (e: Exception) {
+      android.util.Log.e("MainActivity", "NotificationScheduler error", e)
+    }
 
     // Request notification permission on Android 13+ (API 33)
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-      if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+      try {
+        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+          requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+        }
+      } catch (e: Exception) {
+        android.util.Log.e("MainActivity", "Permission error", e)
       }
     }
 

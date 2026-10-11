@@ -58,11 +58,16 @@ fun AdBlockerWarningOverlay(
     details: String = "",
     isChecking: Boolean,
     onRecheck: () -> Unit,
+    onContinue: (() -> Unit)? = null,
     onExitApp: () -> Unit
 ) {
-    // Intercept hardware back button so user cannot bypass ad check
+    // Intercept hardware back button
     BackHandler {
-        onExitApp()
+        if (onContinue != null) {
+            onContinue()
+        } else {
+            onExitApp()
+        }
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -270,6 +275,28 @@ fun AdBlockerWarningOverlay(
                             text = "Tekrar Kontrol Et",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                if (onContinue != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = onContinue,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("adblock_continue_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF10B981)
+                        )
+                    ) {
+                        Text(
+                            text = "Oyuna Devam Et",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
                 }

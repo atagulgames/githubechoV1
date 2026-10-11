@@ -42,7 +42,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,11 +76,12 @@ fun PortraitRequiredOverlay(
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val isLandscapeConfig = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var isDismissedManually by remember { mutableStateOf(false) }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         // Also check actual aspect ratio of available window space (handles foldables/tablets)
         val isLandscapeAspect = maxWidth > maxHeight
-        val isLandscape = isLandscapeConfig || isLandscapeAspect
+        val isLandscape = (isLandscapeConfig || isLandscapeAspect) && !isDismissedManually
 
         // Main app content
         content()
@@ -253,6 +256,20 @@ fun PortraitRequiredOverlay(
                             text = "Dikey Moda Çevir",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    androidx.compose.material3.TextButton(
+                        onClick = { isDismissedManually = true },
+                        modifier = Modifier.testTag("portrait_continue_anyway_button")
+                    ) {
+                        Text(
+                            text = "Yine de Devam Et",
+                            color = Color(0xFF38BDF8),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }

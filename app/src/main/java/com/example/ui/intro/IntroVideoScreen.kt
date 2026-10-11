@@ -5,8 +5,16 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.VideoView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.R
 import com.example.audio.HarmonicAudioEngine
@@ -33,6 +44,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - The video plays exactly ONCE from beginning to end without restarting.
  * - Background music (BGM) is strictly suppressed until the intro has completed.
  * - Single-execution guard prevents multiple completion triggers.
+ * - Allows instant skipping via skip button or tap to prevent blocking startup.
  */
 @Composable
 fun IntroVideoScreen(
@@ -44,7 +56,7 @@ fun IntroVideoScreen(
     var isFinishedState by remember { mutableStateOf(false) }
     var videoViewInstance by remember { mutableStateOf<VideoView?>(null) }
 
-    // Direct, compile-time verified resource URI for intro.mp4 (duration: ~11s)
+    // Direct, compile-time verified resource URI for intro.mp4
     val videoUriToPlay: Uri = remember(context) {
         Uri.parse("android.resource://${context.packageName}/${R.raw.intro}")
     }
@@ -74,10 +86,9 @@ fun IntroVideoScreen(
         }
     }
 
-    // Watchdog timer: Automatically advance after 14 seconds if VideoView completion stalls
-    // Video is 11s, so 14s gives plenty of buffer without trapping the user
+    // Watchdog timer: Automatically advance after 5 seconds if VideoView completion stalls or in emulator
     LaunchedEffect(Unit) {
-        delay(14_000L)
+        delay(5_000L)
         finishOnce()
     }
 
@@ -85,6 +96,10 @@ fun IntroVideoScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { finishOnce() }
             .testTag("intro_video_container"),
         contentAlignment = Alignment.Center
     ) {
@@ -116,10 +131,34 @@ fun IntroVideoScreen(
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = {
-                    // DO NOT restart the video in update callback!
-                    // Recomposition must never re-trigger video playback.
+                    // DO NOT restart the video in update callback
                 }
             )
+        }
+
+        // Always-available Skip Button to prevent getting stuck
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(16.dp)
+        ) {
+            Button(
+                onClick = finishOnce,
+                modifier = Modifier.testTag("skip_intro_button"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Black.copy(alpha = 0.65f),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+            ) {
+                Text(
+                    text = "ATLA  ✕",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
         }
     }
 }

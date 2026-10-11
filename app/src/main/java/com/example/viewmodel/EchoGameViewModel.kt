@@ -430,21 +430,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
             return
         }
-        if (!AdBlockDetector.hasNetworkCapability(getApplication())) {
-            _uiState.update {
-                it.copy(
-                    isAdBlockerDetected = true,
-                    adBlockerTitle = "No Internet Connection",
-                    adBlockerSubtitle = "Ads cannot run",
-                    adBlockerDetails = "ECHO is completely free and supported by ads. Please turn on Wi-Fi or Mobile Data to continue."
-                )
-            }
-            return
-        }
         val targetIdx = (levelIndex ?: _uiState.value.currentLevelIndex).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
         viewModelScope.launch {
             loadAndStartLevel(targetIdx)
         }
+    }
+
+    fun dismissAdBlockerWarning() {
+        _uiState.update { it.copy(isAdBlockerDetected = false) }
     }
 
     private suspend fun loadAndStartLevel(targetIdx: Int) {

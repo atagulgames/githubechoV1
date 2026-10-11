@@ -533,6 +533,7 @@ fun EchoGameScreen(
                     details = state.adBlockerDetails,
                     isChecking = state.isCheckingAdBlocker,
                     onRecheck = { viewModel.checkInternetAndAdHealth() },
+                    onContinue = { viewModel.dismissAdBlockerWarning() },
                     onExitApp = {
                         val activity = context as? Activity
                         activity?.finishAffinity()
