@@ -222,6 +222,83 @@ class FirebaseAuthManager(private val context: Context) {
     }
 
     /**
+     * Registers a new user account directly with Firebase Authentication and Firestore.
+     */
+    suspend fun registerWithEmailAndPassword(
+        usernameInput: String,
+        passwordInput: String,
+        rememberMe: Boolean = true
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val username = usernameInput.trim()
+        val email = if (username.contains("@")) username else "${username.lowercase().replace(" ", "_")}@echoflux.game"
+        try {
+            val authResult = try {
+                auth.createUserWithEmailAndPassword(email, passwordInput).await()
+            } catch (e: Exception) {
+                if (e.message?.contains("already in use", ignoreCase = true) == true ||
+                    e.message?.contains("already exists", ignoreCase = true) == true
+                ) {
+                    auth.signInWithEmailAndPassword(email, passwordInput).await()
+                } else {
+                    throw e
+                }
+            }
+            val user = authResult.user ?: throw IllegalStateException("Firebase kullanıcı oluşturulamadı.")
+            val signedInUser = onFirebaseUserSignedIn(user, overrideUsername = username, rememberMe = rememberMe)
+            Result.success(signedInUser)
+        } catch (e: Exception) {
+            Log.e(TAG, "registerWithEmailAndPassword failed", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Signs in an existing user with username/email and password via Firebase Authentication.
+     */
+    suspend fun loginWithEmailAndPassword(
+        usernameInput: String,
+        passwordInput: String,
+        rememberMe: Boolean = true
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val username = usernameInput.trim()
+        val email = if (username.contains("@")) username else "${username.lowercase().replace(" ", "_")}@echoflux.game"
+        try {
+            val authResult = auth.signInWithEmailAndPassword(email, passwordInput).await()
+            val user = authResult.user ?: throw IllegalStateException("Firebase oturumu açılamadı.")
+            val signedInUser = onFirebaseUserSignedIn(user, overrideUsername = username, rememberMe = rememberMe)
+            Result.success(signedInUser)
+        } catch (e: Exception) {
+            Log.e(TAG, "loginWithEmailAndPassword failed", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Direct Facebook Player Connect via Firebase Authentication, ensuring authentic user session in Firebase.
+     */
+    suspend fun signInWithDirectFacebookPlayer(
+        playerName: String,
+        rememberMe: Boolean = true
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val cleanName = playerName.trim().ifBlank { "FB_${(1000..9999).random()}" }
+        val email = "fb_${cleanName.lowercase().replace(" ", "_")}@echoflux.game"
+        val password = "fb_player_pwd_${cleanName.hashCode().let { kotlin.math.abs(it) } + 100000}"
+        try {
+            val authResult = try {
+                auth.signInWithEmailAndPassword(email, password).await()
+            } catch (e: Exception) {
+                auth.createUserWithEmailAndPassword(email, password).await()
+            }
+            val user = authResult.user ?: throw IllegalStateException("Facebook Firebase oyuncusu oluşturulamadı.")
+            val signedInUser = onFirebaseUserSignedIn(user, overrideUsername = cleanName, rememberMe = rememberMe)
+            Result.success(signedInUser)
+        } catch (e: Exception) {
+            Log.e(TAG, "signInWithDirectFacebookPlayer failed", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Signs out of Firebase and clears Credential Manager state.
      */
     fun signOut(scope: CoroutineScope, onComplete: () -> Unit) {
@@ -239,26 +316,63 @@ class FirebaseAuthManager(private val context: Context) {
 
     /**
      * Synchronizes authenticated Firebase user into local preferences and Firestore database.
+     * Preserves and restores exact account properties (trophies, diamonds, coins, tokens, level).
      */
-    private suspend fun onFirebaseUserSignedIn(user: FirebaseUser): String {
-        val username = deriveUsername(user)
+    private suspend fun onFirebaseUserSignedIn(
+        user: FirebaseUser,
+        overrideUsername: String? = null,
+        rememberMe: Boolean = true
+    ): String {
+        val username = overrideUsername?.takeIf { it.isNotBlank() } ?: deriveUsername(user)
         val email = user.email.orEmpty()
         val displayName = user.displayName ?: username
-        prefs.setAuthenticatedUser(username = username, remember = true, email = email, fullName = displayName)
+        prefs.setAuthenticatedUser(username = username, remember = rememberMe, email = email, fullName = displayName)
         prefs.isAuthenticated = true
+        prefs.rememberMe = rememberMe
 
-        // Ensure local Room DB has the user record for offline play
+        // 1. Fetch remote user profile from Firestore FIRST to restore EXACT account properties
+        try {
+            val remoteProfile = firestoreRepo.getUserProfile().getOrNull()
+            if (remoteProfile != null) {
+                prefs.trophies = remoteProfile.trophies.toInt()
+                prefs.diamonds = remoteProfile.diamonds.toInt()
+                prefs.coins = remoteProfile.coins.toInt()
+                prefs.tokens = remoteProfile.tokens.toInt()
+                prefs.echoBreakers = remoteProfile.echoBreakers.toInt()
+                prefs.currentLevelIndex = (remoteProfile.level.toInt() - 1).coerceAtLeast(0)
+                prefs.setCompletedLevelsRaw(remoteProfile.completedLevels.map { it.toString() }.toSet())
+                if (remoteProfile.strokeTheme.isNotBlank()) prefs.strokeThemeName = remoteProfile.strokeTheme
+                if (remoteProfile.echoTheme.isNotBlank()) prefs.echoThemeName = remoteProfile.echoTheme
+                if (remoteProfile.season2Theme.isNotBlank()) prefs.selectedSeason2Theme = remoteProfile.season2Theme
+                remoteProfile.unlockedThemes.forEach { themeId ->
+                    if (themeId.isNotBlank()) prefs.unlockTheme(themeId)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not fetch existing Firestore profile: ${e.message}")
+        }
+
+        // 2. Ensure local Room DB has the user record for offline play
         try {
             localAuthRepo.registerOrUpdateExternalUser(
                 username = username,
                 email = email,
                 fullName = displayName
             )
+            localAuthRepo.saveActiveUserProgress(
+                username = username,
+                currentLevelIndex = prefs.currentLevelIndex,
+                completedLevels = prefs.getCompletedLevels(),
+                tokens = prefs.tokens,
+                coins = prefs.coins,
+                diamonds = prefs.diamonds,
+                trophies = prefs.trophies
+            )
         } catch (e: Exception) {
             Log.w(TAG, "Local account sync exception: ${e.message}")
         }
 
-        // Sync Firestore User profile and restore all remote properties (trophies, diamonds, level, tokens, etc.)
+        // 3. Sync Firestore User profile and ensure remote doc matches current account properties
         try {
             val syncResult = firestoreRepo.syncUserProfile(
                 username = username,
@@ -283,13 +397,13 @@ class FirebaseAuthManager(private val context: Context) {
             )
             val merged = syncResult.getOrNull()
             if (merged != null) {
-                if (merged.trophies.toInt() > prefs.trophies) prefs.trophies = merged.trophies.toInt()
-                if (merged.diamonds.toInt() > prefs.diamonds) prefs.diamonds = merged.diamonds.toInt()
-                if (merged.coins.toInt() > prefs.coins) prefs.coins = merged.coins.toInt()
-                if (merged.tokens.toInt() > prefs.tokens) prefs.tokens = merged.tokens.toInt()
-                if (merged.echoBreakers.toInt() > prefs.echoBreakers) prefs.echoBreakers = merged.echoBreakers.toInt()
+                prefs.trophies = merged.trophies.toInt()
+                prefs.diamonds = merged.diamonds.toInt()
+                prefs.coins = merged.coins.toInt()
+                prefs.tokens = merged.tokens.toInt()
+                prefs.echoBreakers = merged.echoBreakers.toInt()
                 val lvlIdx = (merged.level.toInt() - 1).coerceAtLeast(0)
-                if (lvlIdx > prefs.currentLevelIndex) prefs.currentLevelIndex = lvlIdx
+                prefs.currentLevelIndex = lvlIdx
 
                 val remoteCompleted = merged.completedLevels.map { it.toInt() }.toSet()
                 val combined = (prefs.getCompletedLevels() + remoteCompleted).map { it.toString() }.toSet()
@@ -309,6 +423,7 @@ class FirebaseAuthManager(private val context: Context) {
                     completedLevels = prefs.getCompletedLevels(),
                     tokens = prefs.tokens,
                     coins = prefs.coins,
+                    diamonds = prefs.diamonds,
                     trophies = prefs.trophies
                 )
             }

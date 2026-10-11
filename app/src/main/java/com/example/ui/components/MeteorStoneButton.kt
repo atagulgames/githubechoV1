@@ -162,78 +162,106 @@ fun MeteorStoneButton(
             .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
-        // Meteor Stone Surface Details: Plasma Veins, Crater Texture & Bevel Highlight
+        // Fantastic Crystalline Gem Surface Details: Prismatic Facets, Star Glints & Specular Gem Lighting
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
 
-            // 1. Glowing Magma / Plasma Vein Fissures inside the rock
-            val veinPath = Path().apply {
-                moveTo(w * 0.12f, 0f)
-                lineTo(w * 0.28f, h * 0.45f)
-                lineTo(w * 0.52f, h * 0.38f)
-                lineTo(w * 0.88f, h)
+            // 1. Prismatic Crystal Facet Lines (Geometric Gem Planes)
+            val facetPath1 = Path().apply {
+                moveTo(w * 0.08f, 0f)
+                lineTo(w * 0.25f, h * 0.52f)
+                lineTo(w * 0.62f, h * 0.40f)
+                lineTo(w * 0.92f, h)
             }
             drawPath(
-                path = veinPath,
-                color = effectiveVein.copy(alpha = if (enabled) 0.35f else 0.15f),
-                style = Stroke(width = 2.5f, cap = StrokeCap.Round)
+                path = facetPath1,
+                color = effectiveVein.copy(alpha = if (enabled) 0.45f else 0.15f),
+                style = Stroke(width = 2.2f, cap = StrokeCap.Round)
             )
 
-            val veinBranch = Path().apply {
-                moveTo(w * 0.52f, h * 0.38f)
-                lineTo(w * 0.72f, h * 0.15f)
-                lineTo(w * 0.85f, 0f)
+            val facetPath2 = Path().apply {
+                moveTo(w * 0.25f, h * 0.52f)
+                lineTo(w * 0.45f, h)
             }
             drawPath(
-                path = veinBranch,
-                color = effectiveVein.copy(alpha = if (enabled) 0.25f else 0.10f),
+                path = facetPath2,
+                color = effectiveVein.copy(alpha = if (enabled) 0.35f else 0.12f),
+                style = Stroke(width = 1.6f, cap = StrokeCap.Round)
+            )
+
+            val facetPath3 = Path().apply {
+                moveTo(w * 0.62f, h * 0.40f)
+                lineTo(w * 0.78f, 0f)
+            }
+            drawPath(
+                path = facetPath3,
+                color = effectiveRim.copy(alpha = if (enabled) 0.40f else 0.12f),
                 style = Stroke(width = 1.8f, cap = StrokeCap.Round)
             )
 
-            // 2. Cosmic Stardust / Meteor Mineral Specks
-            val speckles = listOf(
-                Offset(w * 0.18f, h * 0.75f),
-                Offset(w * 0.38f, h * 0.22f),
-                Offset(w * 0.65f, h * 0.82f),
-                Offset(w * 0.82f, h * 0.32f),
-                Offset(w * 0.48f, h * 0.68f)
+            // 2. Crystal Sparkle / Diamond Glint (4-pointed star reflection at top-left)
+            val glintCenter = Offset(w * 0.18f, h * 0.28f)
+            val glintRadius = 7f
+            drawLine(
+                color = Color.White.copy(alpha = if (enabled) 0.85f else 0.3f),
+                start = Offset(glintCenter.x - glintRadius, glintCenter.y),
+                end = Offset(glintCenter.x + glintRadius, glintCenter.y),
+                strokeWidth = 1.8f
             )
-            speckles.forEach { sp ->
+            drawLine(
+                color = Color.White.copy(alpha = if (enabled) 0.85f else 0.3f),
+                start = Offset(glintCenter.x, glintCenter.y - glintRadius),
+                end = Offset(glintCenter.x, glintCenter.y + glintRadius),
+                strokeWidth = 1.8f
+            )
+            drawCircle(
+                color = Color.White.copy(alpha = if (enabled) 0.95f else 0.4f),
+                radius = 2.2f,
+                center = glintCenter
+            )
+
+            // 3. Cosmic Crystalline Star Specks
+            val crystalDust = listOf(
+                Offset(w * 0.36f, h * 0.22f),
+                Offset(w * 0.72f, h * 0.78f),
+                Offset(w * 0.85f, h * 0.28f),
+                Offset(w * 0.52f, h * 0.72f)
+            )
+            crystalDust.forEach { pt ->
                 drawCircle(
-                    color = effectiveVein.copy(alpha = if (enabled) 0.55f else 0.2f),
+                    color = effectiveRim.copy(alpha = if (enabled) 0.65f else 0.25f),
                     radius = 1.5f,
-                    center = sp
+                    center = pt
                 )
             }
 
-            // 3. Faceted Crystalline Rim Border
-            val rimStroke = Stroke(width = 1.5f)
-            // Top and left bevel highlight
+            // 4. Faceted Gem Specular Bevel Borders
+            // Top & Left gem edge highlight
             drawLine(
-                color = effectiveRim.copy(alpha = if (enabled) 0.75f else 0.3f),
+                color = effectiveRim.copy(alpha = if (enabled) 0.80f else 0.35f),
                 start = Offset(0f, 0f),
                 end = Offset(w, 0f),
-                strokeWidth = 2f
+                strokeWidth = 2.2f
             )
             drawLine(
-                color = effectiveRim.copy(alpha = if (enabled) 0.60f else 0.25f),
+                color = effectiveRim.copy(alpha = if (enabled) 0.65f else 0.25f),
                 start = Offset(0f, 0f),
                 end = Offset(0f, h),
-                strokeWidth = 2f
+                strokeWidth = 2.2f
             )
-            // Bottom and right shadow rim
+            // Bottom & Right shadow facet
             drawLine(
-                color = Color.Black.copy(alpha = 0.65f),
+                color = Color.Black.copy(alpha = 0.70f),
                 start = Offset(0f, h),
                 end = Offset(w, h),
-                strokeWidth = 2.5f
+                strokeWidth = 2.8f
             )
             drawLine(
-                color = Color.Black.copy(alpha = 0.55f),
+                color = Color.Black.copy(alpha = 0.60f),
                 start = Offset(w, 0f),
                 end = Offset(w, h),
-                strokeWidth = 2f
+                strokeWidth = 2.2f
             )
         }
 
@@ -282,4 +310,32 @@ fun MeteorStoneButton(
             }
         }
     }
+}
+
+/**
+ * CrystalGemButton: Alias for fantastic crystal buttons across the application.
+ */
+@Composable
+fun CrystalGemButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    subtitle: String? = null,
+    stoneTheme: MeteorStoneTheme = MeteorStoneTheme.CYAN_PULSE,
+    enabled: Boolean = true,
+    height: Dp = 54.dp,
+    testTag: String = "crystal_gem_button"
+) {
+    MeteorStoneButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        icon = icon,
+        subtitle = subtitle,
+        stoneTheme = stoneTheme,
+        enabled = enabled,
+        height = height,
+        testTag = testTag
+    )
 }

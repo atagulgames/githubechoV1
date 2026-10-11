@@ -162,36 +162,19 @@ class CloudSaveSyncManager(private val context: Context) {
 
     private suspend fun applyFirestoreUserToLocal(user: FirestoreUser) {
         val newLevelIndex = (user.level.toInt() - 1).coerceAtLeast(0)
-        if (newLevelIndex > prefs.currentLevelIndex) {
-            prefs.currentLevelIndex = newLevelIndex
-        }
+        prefs.currentLevelIndex = newLevelIndex
 
         val remoteCompleted = user.completedLevels.map { it.toInt() }.toSet()
-        val localCompleted = prefs.getCompletedLevels()
-        val combinedCompleted = (localCompleted + remoteCompleted).map { it.toString() }.toSet()
+        val combinedCompleted = (prefs.getCompletedLevels() + remoteCompleted).map { it.toString() }.toSet()
         prefs.setCompletedLevelsRaw(combinedCompleted)
 
-        if (user.trophies.toInt() > prefs.trophies) {
-            prefs.trophies = user.trophies.toInt()
-        }
-        if (user.diamonds.toInt() > prefs.diamonds) {
-            prefs.diamonds = user.diamonds.toInt()
-        }
-        if (user.coins.toInt() > prefs.coins) {
-            prefs.coins = user.coins.toInt()
-        }
-        if (user.tokens.toInt() > prefs.tokens) {
-            prefs.tokens = user.tokens.toInt()
-        }
-        if (user.echoBreakers.toInt() > prefs.echoBreakers) {
-            prefs.echoBreakers = user.echoBreakers.toInt()
-        }
-        if (user.maxCombo.toInt() > prefs.maxCombo) {
-            prefs.maxCombo = user.maxCombo.toInt()
-        }
-        if (user.totalEchoes.toInt() > prefs.totalEchoes) {
-            prefs.totalEchoes = user.totalEchoes.toInt()
-        }
+        prefs.trophies = user.trophies.toInt()
+        prefs.diamonds = user.diamonds.toInt()
+        prefs.coins = user.coins.toInt()
+        prefs.tokens = user.tokens.toInt()
+        prefs.echoBreakers = user.echoBreakers.toInt()
+        prefs.maxCombo = maxOf(prefs.maxCombo, user.maxCombo.toInt())
+        prefs.totalEchoes = maxOf(prefs.totalEchoes, user.totalEchoes.toInt())
         if (user.totalPlayTimeSec > prefs.totalPlayTimeSec) {
             prefs.totalPlayTimeSec = user.totalPlayTimeSec
         }
@@ -204,7 +187,7 @@ class CloudSaveSyncManager(private val context: Context) {
             if (themeId.isNotBlank()) prefs.unlockTheme(themeId)
         }
 
-        if (user.levelStatsCsv.isNotBlank() && user.levelStatsCsv.length > prefs.levelStatsCsv.length) {
+        if (user.levelStatsCsv.isNotBlank() && user.levelStatsCsv.length >= prefs.levelStatsCsv.length) {
             prefs.levelStatsCsv = user.levelStatsCsv
         }
 
@@ -216,6 +199,7 @@ class CloudSaveSyncManager(private val context: Context) {
                 completedLevels = prefs.getCompletedLevels(),
                 tokens = prefs.tokens,
                 coins = prefs.coins,
+                diamonds = prefs.diamonds,
                 trophies = prefs.trophies
             )
         }

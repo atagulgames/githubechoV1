@@ -276,8 +276,9 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
      */
     suspend fun getLeaderboard(currentUsername: String, forceRefresh: Boolean = false): Result<List<LeaderboardPlayer>> {
         val now = System.currentTimeMillis()
-        if (!forceRefresh && cachedLeaderboard != null && (now - cachedLeaderboardTime < LEADERBOARD_CACHE_TTL_MS)) {
-            Log.d(TAG, "Serving leaderboard from in-memory cache to conserve Firestore read quota")
+        // If forceRefresh is false, allow brief 3-second debounce to prevent spam, otherwise fetch fresh live data
+        if (!forceRefresh && cachedLeaderboard != null && (now - cachedLeaderboardTime < 3_000L)) {
+            Log.d(TAG, "Serving leaderboard from brief in-memory cache")
             return Result.success(cachedLeaderboard!!)
         }
 

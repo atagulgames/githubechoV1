@@ -500,9 +500,47 @@ private fun DrawScope.drawGridBackground(
             cap = StrokeCap.Round
         )
     } else {
-        val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
-        drawRect(color = bgColor)
-        val dotColor = if (isDarkTheme) Color(0x33475569) else Color(0x3394A3B8)
+        // Fantastic Cosmic Crystal Atmosphere for all game levels
+        val bgBrush = if (isDarkTheme) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color(0xFF04061A),
+                    Color(0xFF090E2E),
+                    Color(0xFF13092E),
+                    Color(0xFF0A173B)
+                ),
+                startY = 0f,
+                endY = h
+            )
+        } else {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color(0xFFF1F5F9),
+                    Color(0xFFE2E8F0),
+                    Color(0xFFE0E7FF),
+                    Color(0xFFF8FAFC)
+                ),
+                startY = 0f,
+                endY = h
+            )
+        }
+        drawRect(brush = bgBrush, size = Size(w, h))
+
+        // Ambient glowing starlight nebula pocket
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    (if (isDarkTheme) Color(0xFF6366F1) else Color(0xFF818CF8)).copy(alpha = 0.12f),
+                    Color.Transparent
+                ),
+                center = Offset(w / 2f, h * 0.45f),
+                radius = min(w, h) * 0.65f
+            ),
+            radius = min(w, h) * 0.65f,
+            center = Offset(w / 2f, h * 0.45f)
+        )
+
+        val dotColor = if (isDarkTheme) Color(0x4460A5FA) else Color(0x336366F1)
         drawPoints(
             points = gridPoints,
             pointMode = PointMode.Points,
@@ -817,8 +855,8 @@ private fun DrawScope.drawNodes(
             node.id.toString()
         }
 
-        // Draw Meteor-shaped node button
-        drawMeteorNode(
+        // Draw Fantastic Crystal node button
+        drawCrystalNode(
             pos = pos,
             node = node,
             baseRadius = baseRadius,
@@ -866,12 +904,12 @@ private fun DrawScope.drawNodes(
     }
 }
 
-private val METEOR_UNIT_FACETS: Array<FloatArray> = Array(64) { id ->
+private val CRYSTAL_UNIT_FACETS: Array<FloatArray> = Array(16) { id ->
     val arr = FloatArray(16)
     for (i in 0 until 8) {
-        val angle = (i.toFloat() / 8f) * (2f * Math.PI.toFloat()) - 0.25f
-        val irregularity = sin(id * 7.7f + i * 2.1f) * 0.16f + cos(id * 3.3f + i * 4.3f) * 0.08f
-        val mult = (1f + irregularity)
+        val angle = (i.toFloat() / 8f) * (2f * Math.PI.toFloat()) - (Math.PI.toFloat() / 8f)
+        // Elegant symmetrical facet geometry for gem-cut crystals
+        val mult = if (i % 2 == 0) 1.08f else 0.94f
         arr[i * 2] = (cos(angle) * mult)
         arr[i * 2 + 1] = (sin(angle) * mult)
     }
@@ -879,11 +917,11 @@ private val METEOR_UNIT_FACETS: Array<FloatArray> = Array(64) { id ->
 }
 
 /**
- * Meteor şeklinde düğme/düğüm çizimi (Meteor Stone Node).
- * 1 2 3 diye sürükleyip birleştirdiğimiz düğmeler için kraterli,
- * lav çatlaklı, fasetli asteroid/meteor gövdesi ve net okunur numara.
+ * Fantastic Crystal node drawing (Kristal Düğüm Çizimi).
+ * Replaces meteor stones with luminous, multi-faceted cosmic crystals,
+ * sparkling prismatic facets, glowing gem refractions, specular highlights, and clear numerals.
  */
-private fun DrawScope.drawMeteorNode(
+private fun DrawScope.drawCrystalNode(
     pos: Offset,
     node: Node,
     baseRadius: Float,
@@ -900,225 +938,245 @@ private fun DrawScope.drawMeteorNode(
     displayText: String,
     textPaint: android.graphics.Paint
 ) {
-    val rBase = baseRadius * 1.12f
-    val facets = METEOR_UNIT_FACETS[node.id.coerceIn(0, 63)]
-    val meteorPath = Path()
+    val rBase = baseRadius * 1.15f
+    val facets = CRYSTAL_UNIT_FACETS[node.id % 16]
+    val crystalPath = Path()
+    val vertexPoints = ArrayList<Offset>(8)
 
-    // Her düğümün ID'sine özel önceden hesaplanmış fasetli meteor silüeti (0 ms CPU)
     for (i in 0 until 8) {
         val vx = pos.x + facets[i * 2] * rBase
         val vy = pos.y + facets[i * 2 + 1] * rBase
-        if (i == 0) meteorPath.moveTo(vx, vy) else meteorPath.lineTo(vx, vy)
+        vertexPoints.add(Offset(vx, vy))
+        if (i == 0) crystalPath.moveTo(vx, vy) else crystalPath.lineTo(vx, vy)
     }
-    meteorPath.close()
+    crystalPath.close()
 
-    // 1. Dış Atmosferik Giriş & Termal Korona Işıltısı
+    // 1. Fantastic Ethereal Crystal Halo & Magical Aura
+    val haloRadius = rBase * (if (isCharacterStart || isVisited) 1.75f else 1.45f)
     if (isVisited) {
-        // Ateşlenmiş ve bağlanmış yıldız meteoru
-        drawPath(
-            path = meteorPath,
-            color = strokeTheme.glowColor.copy(alpha = 0.45f),
-            style = Stroke(width = baseRadius * 0.50f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
         drawCircle(
-            color = strokeTheme.glowColor.copy(alpha = 0.25f * pulseAlpha),
-            radius = baseRadius * 1.6f,
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    strokeTheme.glowColor.copy(alpha = 0.55f * pulseAlpha),
+                    strokeTheme.primaryColor.copy(alpha = 0.25f),
+                    Color.Transparent
+                ),
+                center = pos,
+                radius = haloRadius
+            ),
+            radius = haloRadius,
             center = pos
         )
     } else if (isCharacterStart) {
-        // Node 1 (Karakter başlangıcı) parlayan kozmik mavi korona
         drawCircle(
-            color = Color(0xFF00E5FF).copy(alpha = 0.32f * pulseAlpha),
-            radius = baseRadius * (1.75f + 0.25f * (1f - pulseAlpha)),
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF38BDF8).copy(alpha = 0.65f * pulseAlpha),
+                    Color(0xFF0284C7).copy(alpha = 0.30f),
+                    Color.Transparent
+                ),
+                center = pos,
+                radius = haloRadius * (1.1f + 0.15f * (1f - pulseAlpha))
+            ),
+            radius = haloRadius * (1.1f + 0.15f * (1f - pulseAlpha)),
             center = pos
-        )
-        drawPath(
-            path = meteorPath,
-            color = Color(0xFF00E5FF).copy(alpha = 0.85f),
-            style = Stroke(width = 3.5f, join = StrokeJoin.Round)
         )
     } else if (isNextTarget) {
-        // Sıradaki hedef meteor için uyarı/rehber plazma aurası
         drawCircle(
-            color = Color(0xFFF59E0B).copy(alpha = 0.35f * pulseAlpha),
-            radius = baseRadius * (1.65f + 0.25f * (1f - pulseAlpha)),
-            center = pos
-        )
-        drawPath(
-            path = meteorPath,
-            color = Color(0xFFF59E0B).copy(alpha = 0.90f),
-            style = Stroke(width = 3.2f, join = StrokeJoin.Round)
-        )
-    } else if (dimColor != null) {
-        // Çift boyut (Dual Entangled) aurası
-        drawCircle(
-            color = dimColor.copy(alpha = 0.25f),
-            radius = baseRadius * 1.55f,
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFBBF24).copy(alpha = 0.60f * pulseAlpha),
+                    Color(0xFFD97706).copy(alpha = 0.25f),
+                    Color.Transparent
+                ),
+                center = pos,
+                radius = haloRadius * 1.1f
+            ),
+            radius = haloRadius * 1.1f,
             center = pos
         )
     } else {
-        // Doğal uzay tozu ve hafif termal sis
-        val hazeAlpha = (sin(timeSec * 2f + node.id) * 0.04f + 0.07f).coerceIn(0.02f, 0.15f)
+        val ambientAura = (sin(timeSec * 2.5f + node.id) * 0.05f + 0.12f).coerceIn(0.05f, 0.20f)
         drawCircle(
-            color = Color(0xFF38BDF8).copy(alpha = hazeAlpha),
-            radius = baseRadius * 1.35f,
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    (dimColor ?: Color(0xFF67E8F9)).copy(alpha = ambientAura),
+                    Color.Transparent
+                ),
+                center = pos,
+                radius = haloRadius
+            ),
+            radius = haloRadius,
             center = pos
         )
     }
 
-    // 2. Meteorit Taş Gövdesi Renklendirmesi (Bazalt / Obsidiyen / Plazma Çekirdek)
+    // 2. Crystal Gem Body Coloring with Refractive Prismatic Layers
     val isUnlockedGate = node.type == NodeType.GATE && (
         collectedKeyIds.contains(node.keyForGateId) ||
         collectedKeyIds.contains(node.id) ||
         (node.keyForGateId == -1 && collectedKeyIds.isNotEmpty())
     )
 
-    val bodyBrush = when {
+    val crystalBodyBrush = when {
         isVisited -> Brush.radialGradient(
             colors = listOf(
                 Color.White,
+                Color(0xFFE0F2FE),
                 strokeTheme.primaryColor,
-                strokeTheme.glowColor.copy(alpha = 0.90f),
-                Color(0xFF0F172A)
+                strokeTheme.glowColor,
+                Color(0xFF0C1938)
             ),
-            center = pos,
-            radius = rBase * 1.25f
+            center = Offset(pos.x - rBase * 0.25f, pos.y - rBase * 0.25f),
+            radius = rBase * 1.4f
         )
         node.type == NodeType.KEY -> {
             val isCollected = collectedKeyIds.contains(node.keyForGateId)
             if (isCollected) {
                 Brush.radialGradient(
-                    colors = listOf(Color.White, strokeTheme.primaryColor, Color(0xFF1E293B)),
-                    center = pos,
-                    radius = rBase * 1.2f
+                    colors = listOf(Color.White, Color(0xFFFDE68A), Color(0xFFD97706), Color(0xFF451A03)),
+                    center = Offset(pos.x - rBase * 0.2f, pos.y - rBase * 0.2f),
+                    radius = rBase * 1.3f
                 )
             } else {
                 Brush.linearGradient(
-                    colors = listOf(Color(0xFFFEF08A), Color(0xFFF59E0B), Color(0xFF78350F)),
+                    colors = listOf(Color(0xFFFFFBEB), Color(0xFFFDE047), Color(0xFFEAB308), Color(0xFF78350F)),
                     start = Offset(pos.x - rBase, pos.y - rBase),
                     end = Offset(pos.x + rBase, pos.y + rBase)
                 )
             }
         }
         node.type == NodeType.GATE -> {
-            val gateColor1 = if (isUnlockedGate) Color(0xFF065F46) else Color(0xFF450A0A)
-            val gateColor2 = if (isUnlockedGate) Color(0xFF047857) else Color(0xFF1E1015)
-            Brush.linearGradient(
-                colors = listOf(gateColor2, gateColor1, Color(0xFF0F0A0C)),
-                start = Offset(pos.x - rBase, pos.y - rBase),
-                end = Offset(pos.x + rBase, pos.y + rBase)
-            )
-        }
-        isCharacterStart -> Brush.linearGradient(
-            colors = listOf(Color(0xFFE0F2FE), Color(0xFF0284C7), Color(0xFF0369A1)),
-            start = Offset(pos.x - rBase, pos.y - rBase),
-            end = Offset(pos.x + rBase, pos.y + rBase)
-        )
-        else -> {
-            if (isDarkTheme) {
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFF334155), Color(0xFF1E293B), Color(0xFF0F172A)),
-                    start = Offset(pos.x - rBase, pos.y - rBase),
-                    end = Offset(pos.x + rBase, pos.y + rBase)
+            if (isUnlockedGate) {
+                Brush.radialGradient(
+                    colors = listOf(Color(0xFFECFDF5), Color(0xFF34D399), Color(0xFF059669), Color(0xFF022C22)),
+                    center = Offset(pos.x - rBase * 0.2f, pos.y - rBase * 0.2f),
+                    radius = rBase * 1.3f
                 )
             } else {
                 Brush.linearGradient(
-                    colors = listOf(Color(0xFFF1F5F9), Color(0xFFCBD5E1), Color(0xFF64748B)),
+                    colors = listOf(Color(0xFFFFF1F2), Color(0xFFF43F5E), Color(0xFFBE123C), Color(0xFF4C0519)),
                     start = Offset(pos.x - rBase, pos.y - rBase),
                     end = Offset(pos.x + rBase, pos.y + rBase)
                 )
             }
         }
-    }
-
-    // Meteorit gövdesini çiz
-    drawPath(path = meteorPath, brush = bodyBrush)
-
-    // 3. Kraterler (Göktaşı üzerindeki çukurlar ve ışık yansımaları)
-    val c1 = Offset(pos.x - rBase * 0.35f, pos.y - rBase * 0.30f)
-    val cr1 = rBase * 0.20f
-    val c2 = Offset(pos.x + rBase * 0.36f, pos.y + rBase * 0.32f)
-    val cr2 = rBase * 0.16f
-
-    val craterShadow = Color.Black.copy(alpha = if (isVisited) 0.18f else 0.45f)
-    val craterRim = (if (isVisited) Color.White else Color(0xFF94A3B8)).copy(alpha = 0.35f)
-
-    drawCircle(color = craterShadow, radius = cr1, center = c1)
-    drawArc(
-        color = craterRim,
-        startAngle = 120f,
-        sweepAngle = 140f,
-        useCenter = false,
-        topLeft = Offset(c1.x - cr1, c1.y - cr1),
-        size = Size(cr1 * 2f, cr1 * 2f),
-        style = Stroke(width = 1.4f)
-    )
-
-    drawCircle(color = craterShadow, radius = cr2, center = c2)
-    drawArc(
-        color = craterRim,
-        startAngle = 120f,
-        sweepAngle = 140f,
-        useCenter = false,
-        topLeft = Offset(c2.x - cr2, c2.y - cr2),
-        size = Size(cr2 * 2f, cr2 * 2f),
-        style = Stroke(width = 1.4f)
-    )
-
-    // 4. Lav / Plazma Enerji Çatlağı (Meteor damarları)
-    val fissurePath = Path().apply {
-        moveTo(pos.x - rBase * 0.68f, pos.y + rBase * 0.15f)
-        lineTo(pos.x - rBase * 0.20f, pos.y + rBase * 0.05f)
-        lineTo(pos.x + rBase * 0.12f, pos.y - rBase * 0.28f)
-        lineTo(pos.x + rBase * 0.58f, pos.y - rBase * 0.35f)
-    }
-    val fissureColor = when {
-        isVisited -> Color.White.copy(alpha = 0.90f)
-        isCharacterStart -> Color(0xFFE0F2FE).copy(alpha = 0.85f)
-        node.type == NodeType.KEY -> Color(0xFFFEF3C7).copy(alpha = 0.90f)
-        node.type == NodeType.GATE -> if (isUnlockedGate) Color(0xFF34D399).copy(alpha = 0.80f) else Color(0xFFEF4444).copy(alpha = 0.80f)
-        else -> (dimColor ?: strokeTheme.glowColor).copy(alpha = if (isDarkTheme) 0.60f else 0.40f)
-    }
-    drawPath(
-        path = fissurePath,
-        color = fissureColor,
-        style = Stroke(width = 1.8f * (scale / 1.5f).coerceAtLeast(1f), cap = StrokeCap.Round)
-    )
-
-    // 5. Fasetli Dış Kenarlık & Taş Kesimi Vurgusu
-    val rimColor = when {
-        isVisited -> Color.White.copy(alpha = 0.95f)
-        isCharacterStart -> Color(0xFF38BDF8)
-        node.type == NodeType.KEY -> ColorKeyGold
-        node.type == NodeType.GATE -> if (isUnlockedGate) ColorGateUnlocked else ColorGateLocked
-        else -> dimColor ?: if (isDarkTheme) Color(0xFF64748B) else Color(0xFF94A3B8)
-    }
-    drawPath(
-        path = meteorPath,
-        color = rimColor,
-        style = Stroke(width = if (isVisited || isCharacterStart) 3.2f else 2.2f, join = StrokeJoin.Round)
-    )
-
-    // Anahtar / Kapı simgeleri
-    if (node.type == NodeType.KEY) {
-        val diamondPath = Path().apply {
-            moveTo(pos.x, pos.y - baseRadius * 0.50f)
-            lineTo(pos.x + baseRadius * 0.50f, pos.y)
-            lineTo(pos.x, pos.y + baseRadius * 0.50f)
-            lineTo(pos.x - baseRadius * 0.50f, pos.y)
-            close()
+        isCharacterStart -> Brush.radialGradient(
+            colors = listOf(Color.White, Color(0xFFBAE6FD), Color(0xFF0284C7), Color(0xFF034A73)),
+            center = Offset(pos.x - rBase * 0.25f, pos.y - rBase * 0.25f),
+            radius = rBase * 1.35f
+        )
+        isNextTarget -> Brush.radialGradient(
+            colors = listOf(Color.White, Color(0xFFFEF3C7), Color(0xFFF59E0B), Color(0xFF78350F)),
+            center = Offset(pos.x - rBase * 0.2f, pos.y - rBase * 0.2f),
+            radius = rBase * 1.3f
+        )
+        else -> {
+            if (isDarkTheme) {
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF38BDF8).copy(alpha = 0.9f),
+                        Color(0xFF0369A1),
+                        Color(0xFF1E293B),
+                        Color(0xFF0F172A)
+                    ),
+                    center = Offset(pos.x - rBase * 0.3f, pos.y - rBase * 0.3f),
+                    radius = rBase * 1.35f
+                )
+            } else {
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color.White,
+                        Color(0xFFBAE6FD),
+                        Color(0xFF38BDF8),
+                        Color(0xFF0369A1)
+                    ),
+                    center = Offset(pos.x - rBase * 0.3f, pos.y - rBase * 0.3f),
+                    radius = rBase * 1.35f
+                )
+            }
         }
-        drawPath(diamondPath, color = Color(0xFFFEF3C7).copy(alpha = 0.45f))
-    } else if (node.type == NodeType.GATE) {
-        val gateSymbolColor = if (isUnlockedGate) ColorGateUnlocked else ColorGateLocked
-        drawCircle(
-            color = gateSymbolColor.copy(alpha = 0.35f),
-            radius = baseRadius * 0.42f,
-            center = pos
+    }
+
+    // Draw crystal main gem body
+    drawPath(path = crystalPath, brush = crystalBodyBrush)
+
+    // 3. Faceted Gem Lines (Internal Crystal Planes)
+    val facetLineColor = when {
+        isVisited -> Color.White.copy(alpha = 0.85f)
+        isCharacterStart -> Color(0xFFE0F2FE).copy(alpha = 0.75f)
+        node.type == NodeType.KEY -> Color(0xFFFEF9C3).copy(alpha = 0.75f)
+        node.type == NodeType.GATE -> if (isUnlockedGate) Color(0xFFA7F3D0).copy(alpha = 0.70f) else Color(0xFFFECDD3).copy(alpha = 0.70f)
+        else -> (dimColor ?: Color(0xFF7DD3FC)).copy(alpha = if (isDarkTheme) 0.55f else 0.40f)
+    }
+
+    // Connect vertices to center apex to create 3D gemstone refraction facets
+    val apexCenter = Offset(pos.x, pos.y)
+    for (i in 0 until 8 step 2) {
+        drawLine(
+            color = facetLineColor,
+            start = apexCenter,
+            end = vertexPoints[i],
+            strokeWidth = 1.6f,
+            cap = StrokeCap.Round
         )
     }
 
-    // 6. Meteor Üzerindeki Numara (1, 2, 3...) - Net ve Yüksek Kontrastlı
+    // Upper Specular Reflection Glaze (Facet Shimmer)
+    val sheenPath = Path().apply {
+        moveTo(vertexPoints[7].x, vertexPoints[7].y)
+        lineTo(vertexPoints[0].x, vertexPoints[0].y)
+        lineTo(vertexPoints[1].x, vertexPoints[1].y)
+        lineTo(apexCenter.x, apexCenter.y)
+        close()
+    }
+    drawPath(
+        path = sheenPath,
+        color = Color.White.copy(alpha = if (isVisited) 0.50f else 0.28f)
+    )
+
+    // 4. Brilliant Outer Gem Bevel Rim
+    val rimColor = when {
+        isVisited -> Color.White
+        isCharacterStart -> Color(0xFF38BDF8)
+        node.type == NodeType.KEY -> ColorKeyGold
+        node.type == NodeType.GATE -> if (isUnlockedGate) ColorGateUnlocked else ColorGateLocked
+        else -> dimColor ?: if (isDarkTheme) Color(0xFF67E8F9) else Color(0xFF0284C7)
+    }
+    drawPath(
+        path = crystalPath,
+        color = rimColor.copy(alpha = if (isVisited || isCharacterStart) 0.95f else 0.75f),
+        style = Stroke(width = if (isVisited || isCharacterStart) 3.0f else 2.0f, join = StrokeJoin.Round)
+    )
+
+    // 5. Sparkle Star Glint on Hero Crystals (Visited, Start, or Next Target)
+    if (isVisited || isCharacterStart || isNextTarget) {
+        val glintCenter = Offset(pos.x - rBase * 0.5f, pos.y - rBase * 0.5f)
+        val glintSize = rBase * 0.55f
+        val glintColor = Color.White.copy(alpha = (sin(timeSec * 5f + node.id) * 0.3f + 0.7f).coerceIn(0.4f, 1f))
+
+        drawLine(
+            color = glintColor,
+            start = Offset(glintCenter.x - glintSize, glintCenter.y),
+            end = Offset(glintCenter.x + glintSize, glintCenter.y),
+            strokeWidth = 1.8f,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = glintColor,
+            start = Offset(glintCenter.x, glintCenter.y - glintSize),
+            end = Offset(glintCenter.x, glintCenter.y + glintSize),
+            strokeWidth = 1.8f,
+            cap = StrokeCap.Round
+        )
+        drawCircle(
+            color = Color.White,
+            radius = 2.2f,
+            center = glintCenter
+        )
+    }
+
+    // 6. Crystal Numerals (1, 2, 3...) - Ultra Crisp & Glowing
     val textColor = when {
         isVisited -> android.graphics.Color.WHITE
         isCharacterStart -> android.graphics.Color.WHITE
@@ -1130,11 +1188,11 @@ private fun DrawScope.drawMeteorNode(
     textPaint.textSize = baseRadius * 1.05f
     val textY = pos.y - ((textPaint.descent() + textPaint.ascent()) / 2f)
 
-    // Taş dokusu üzerinde net okunabilirlik için gölge
+    // Crystal Depth Shadow
     val shadowPaint = android.graphics.Paint(textPaint).apply {
-        color = android.graphics.Color.argb(170, 0, 0, 0)
+        color = android.graphics.Color.argb(190, 2, 8, 28)
     }
-    drawContext.canvas.nativeCanvas.drawText(displayText, pos.x + 1f, textY + 1.2f, shadowPaint)
+    drawContext.canvas.nativeCanvas.drawText(displayText, pos.x + 1f, textY + 1.4f, shadowPaint)
 
     textPaint.color = textColor
     drawContext.canvas.nativeCanvas.drawText(displayText, pos.x, textY, textPaint)

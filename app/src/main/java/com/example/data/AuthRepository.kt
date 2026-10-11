@@ -339,6 +339,7 @@ class AuthRepository(context: Context) {
     }
 
     private fun loadUserProgressIntoPreferences(user: UserAccountEntity) {
+        preferences.resetSessionProgressToDefaults()
         preferences.currentLevelIndex = user.currentLevelIndex
         preferences.tokens = user.tokens
         preferences.echoBreakers = user.echoBreakers

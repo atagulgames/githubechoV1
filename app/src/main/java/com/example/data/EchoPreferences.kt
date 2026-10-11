@@ -337,6 +337,26 @@ class EchoPreferences(context: Context) {
         }
     }
 
+    /**
+     * Resets active in-memory session progress to clean defaults.
+     * Called before loading a new user's profile to prevent cross-account pollution.
+     */
+    fun resetSessionProgressToDefaults() {
+        prefs.edit()
+            .putInt(KEY_CURRENT_LEVEL, 0)
+            .putInt(KEY_TOKENS, 10)
+            .putInt(KEY_ECHO_BREAKERS, 3)
+            .putInt(KEY_COINS, 50)
+            .putInt(KEY_DIAMONDS, 1)
+            .putInt(KEY_TROPHIES, 0)
+            .putInt(KEY_TOTAL_ECHOES, 0)
+            .putInt(KEY_MAX_COMBO, 0)
+            .putLong(KEY_TOTAL_PLAY_TIME, 0L)
+            .putString(KEY_LEVEL_STATS_CSV, "")
+            .putStringSet(KEY_COMPLETED_LEVELS, emptySet())
+            .apply()
+    }
+
     var languageCode: String
         get() = prefs.getString(KEY_LANGUAGE, "en") ?: "en"
         set(value) = prefs.edit().putString(KEY_LANGUAGE, value).apply()

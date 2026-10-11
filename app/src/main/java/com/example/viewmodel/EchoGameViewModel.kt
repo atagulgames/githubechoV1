@@ -693,25 +693,58 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isKvkkConsentAccepted = true
 
         val app = getApplication<android.app.Application>()
-        val token = com.example.data.security.SecureTokenManager.getToken(app)
-        val hasSavedSession = prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank() && !token.isNullOrBlank()
+        val firebaseAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        val hasSavedSession = (prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank()) ||
+                (firebaseAuth.currentUser != null && prefs.rememberMe)
 
         if (hasSavedSession) {
+            val savedUsername = prefs.authenticatedUsername.ifBlank {
+                firebaseAuth.currentUser?.displayName ?: "Player"
+            }
             _uiState.update {
                 it.copy(
                     screenState = ScreenState.MAIN_MENU,
                     isAuthenticated = true,
-                    authenticatedUser = prefs.authenticatedUsername,
+                    authenticatedUser = savedUsername,
+                    rememberMe = true,
                     isKvkkConsentAccepted = true
                 )
             }
             HarmonicAudioEngine.startBgm()
             checkSeason2Status()
             viewModelScope.launch {
-                com.example.data.CloudSaveSyncManager(app).syncOnLogin(token)
+                // Restore local user account if present
+                val user = authRepo.getUserAccount(savedUsername)
+                if (user != null) {
+                    prefs.currentLevelIndex = user.currentLevelIndex
+                    prefs.tokens = user.tokens
+                    prefs.diamonds = user.diamonds
+                    prefs.coins = user.coins
+                    prefs.trophies = user.trophies
+                    _uiState.update { s ->
+                        s.copy(
+                            currentLevelIndex = user.currentLevelIndex,
+                            tokens = user.tokens,
+                            diamonds = user.diamonds,
+                            coins = user.coins,
+                            trophies = user.trophies
+                        )
+                    }
+                }
+                // Synchronize with Firebase Firestore
+                com.example.data.CloudSaveSyncManager(app).syncOnLogin(savedUsername)
+                _uiState.update { s ->
+                    s.copy(
+                        tokens = prefs.tokens,
+                        diamonds = prefs.diamonds,
+                        coins = prefs.coins,
+                        trophies = prefs.trophies,
+                        currentLevelIndex = prefs.currentLevelIndex
+                    )
+                }
             }
         } else {
-            // "ilk başta herkes giriş yapmak ve kayıt olmak zorunda kalsın."
+            // First time or logged out: redirect to login
             _uiState.update {
                 it.copy(
                     screenState = ScreenState.LOGIN,
@@ -733,17 +766,18 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             HarmonicAudioEngine.startBgm()
             val user = authRepo.getUserAccount(username)
             val actualUsername = user?.username ?: username
-            val userLevel = (user?.currentLevelIndex ?: 0).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
-            val userTokens = user?.tokens ?: 10
-            val userBreakers = user?.echoBreakers ?: 3
-            val userDiamonds = user?.diamonds ?: 1
-            val userCoins = user?.coins ?: 50
-            val userEchoes = user?.totalEchoes ?: 0
-            val userStars = user?.totalStars ?: 0
+            val userLevel = (user?.currentLevelIndex ?: prefs.currentLevelIndex).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
+            val userTokens = user?.tokens ?: prefs.tokens
+            val userBreakers = user?.echoBreakers ?: prefs.echoBreakers
+            val userDiamonds = user?.diamonds ?: prefs.diamonds
+            val userCoins = user?.coins ?: prefs.coins
+            val userEchoes = user?.totalEchoes ?: prefs.totalEchoes
+            val userStars = user?.totalStars ?: prefs.getLevelRecords().sumOf { it.stars }
             val userDark = user?.isDarkTheme ?: prefs.isDarkTheme
             val userCompleted = user?.completedLevelsCsv?.split(",")
                 ?.mapNotNull { it.trim().toIntOrNull() }
-                ?.toSet() ?: emptySet()
+                ?.toSet() ?: prefs.getCompletedLevels()
+            val userTrophies = user?.trophies ?: prefs.trophies
 
             prefs.setAuthenticatedUser(actualUsername, rememberMe)
             prefs.currentLevelIndex = userLevel
@@ -752,34 +786,39 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             prefs.diamonds = userDiamonds
             prefs.coins = userCoins
             prefs.totalEchoes = userEchoes
-            prefs.trophies = user?.trophies ?: 0
-            prefs.totalPlayTimeSec = user?.totalPlayTimeSec ?: 0L
-            prefs.maxCombo = user?.maxCombo ?: 0
-            prefs.levelStatsCsv = user?.levelStatsCsv ?: ""
+            prefs.trophies = userTrophies
+            prefs.totalPlayTimeSec = user?.totalPlayTimeSec ?: prefs.totalPlayTimeSec
+            prefs.maxCombo = user?.maxCombo ?: prefs.maxCombo
+            prefs.levelStatsCsv = user?.levelStatsCsv ?: prefs.levelStatsCsv
             prefs.isDarkTheme = userDark
             prefs.setCompletedLevelsRaw(userCompleted.map { it.toString() }.toSet())
 
-            val levelData = repo.getLevelData(userLevel + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.getAllLevels()[userLevel.coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)])
+            // Sync with Firebase Firestore
+            val app = getApplication<android.app.Application>()
+            com.example.data.CloudSaveSyncManager(app).syncOnLogin(actualUsername)
+
+            val finalLevelIdx = prefs.currentLevelIndex.coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
+            val levelData = repo.getLevelData(finalLevelIdx + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.getAllLevels()[finalLevelIdx])
 
             _uiState.update {
                 it.copy(
                     isAuthenticated = true,
                     authenticatedUser = actualUsername,
                     rememberMe = rememberMe,
-                    currentLevelIndex = userLevel,
+                    currentLevelIndex = finalLevelIdx,
                     level = levelData,
-                    tokens = userTokens,
-                    echoBreakers = userBreakers,
-                    diamonds = userDiamonds,
-                    coins = userCoins,
-                    totalEchoes = userEchoes,
+                    tokens = prefs.tokens,
+                    echoBreakers = prefs.echoBreakers,
+                    diamonds = prefs.diamonds,
+                    coins = prefs.coins,
+                    totalEchoes = prefs.totalEchoes,
                     totalStars = userStars,
                     trophies = prefs.trophies,
                     totalPlayTimeSec = prefs.totalPlayTimeSec,
                     maxCombo = prefs.maxCombo,
                     currentCombo = prefs.currentCombo,
                     isDarkTheme = userDark,
-                    completedLevels = userCompleted,
+                    completedLevels = prefs.getCompletedLevels(),
                     screenState = ScreenState.MAIN_MENU
                 )
             }
@@ -788,14 +827,39 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onLogout() {
+        val u = prefs.authenticatedUsername
+        if (u.isNotBlank()) {
+            viewModelScope.launch {
+                authRepo.saveActiveUserProgress(
+                    username = u,
+                    currentLevelIndex = prefs.currentLevelIndex,
+                    completedLevels = prefs.getCompletedLevels(),
+                    tokens = prefs.tokens,
+                    echoBreakers = prefs.echoBreakers,
+                    coins = prefs.coins,
+                    diamonds = prefs.diamonds,
+                    totalEchoes = prefs.totalEchoes,
+                    trophies = prefs.trophies
+                )
+                com.example.data.CloudSaveSyncManager(getApplication()).pushLocalToCloud(forceImmediate = true)
+            }
+        }
         prefs.clearAuthentication()
+        prefs.resetSessionProgressToDefaults()
+        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
         com.example.data.security.SecureTokenManager.clearToken(getApplication())
         _uiState.update {
             it.copy(
                 isAuthenticated = false,
                 authenticatedUser = "",
                 rememberMe = false,
-                screenState = ScreenState.LOGIN
+                screenState = ScreenState.LOGIN,
+                trophies = 0,
+                diamonds = 1,
+                tokens = 10,
+                coins = 50,
+                currentLevelIndex = 0,
+                completedLevels = emptySet()
             )
         }
     }
@@ -1277,28 +1341,46 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val comboBonus = if (newCombo > 1) (newCombo * 3).coerceAtMost(15) else 0
         val speedBonus = if (durationSeconds <= 12f) 5 else 0
         val isDoubleBoosterActive = System.currentTimeMillis() < prefs.doubleTrophiesExpiresAt
-        val rawTrophies = baseTrophies + zeroEchoBonus + comboBonus + speedBonus
-        val totalLevelTrophies = if (isDoubleBoosterActive) rawTrophies * 2 else rawTrophies
 
-        prefs.addTrophies(totalLevelTrophies)
+        // User gameplay rule: replaying completed level awards NO trophies, EXCEPT Level 150 (which can be replayed repeatedly for trophies)
+        val isLevel150 = state.level.levelId == 150 || state.currentLevelIndex == 149
+        val isLevelAlreadyCompleted = prefs.getCompletedLevels().contains(state.level.levelId) ||
+                prefs.getCompletedLevels().contains(state.currentLevelIndex) ||
+                prefs.getCompletedLevels().contains(state.level.levelId - 1)
+        val canEarnTrophiesThisRun = !isLevelAlreadyCompleted || isLevel150
+
+        val rawTrophies = if (canEarnTrophiesThisRun) {
+            baseTrophies + zeroEchoBonus + comboBonus + speedBonus
+        } else {
+            0
+        }
+        val totalLevelTrophies = if (isDoubleBoosterActive && canEarnTrophiesThisRun) rawTrophies * 2 else rawTrophies
+
+        if (totalLevelTrophies > 0) {
+            prefs.addTrophies(totalLevelTrophies)
+        } else if (isLevelAlreadyCompleted && !isLevel150) {
+            showToast("Bölüm daha önce tamamlandı. Kupalar yalnızca ilk tamamlamada veya 150. Bölümde verilir!")
+        }
         prefs.addPlayTime(durationSeconds.toLong())
 
-        // Automatically submit score to Render PostgreSQL Leaderboard (and keep LootLocker sync)
+        // Instant cloud update to Firebase Firestore and leaderboard on every victory
         val currentTrophies = prefs.trophies
         val currentUsername = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername }
         if (currentUsername.isNotBlank()) {
             lootLocker.submitScore(currentUsername, currentTrophies)
         }
 
-        if (lastSubmittedLevelIdForLeaderboard != state.level.levelId) {
-            lastSubmittedLevelIdForLeaderboard = state.level.levelId
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val app = getApplication<android.app.Application>()
-                    com.example.data.CloudSaveSyncManager(app).pushLocalToCloud(forceImmediate = true)
-                } catch (e: Exception) {
-                    // Fail-safe: Cloud save sync failure doesn't disrupt game flow
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val app = getApplication<android.app.Application>()
+                com.example.data.CloudSaveSyncManager(app).pushLocalToCloud(forceImmediate = true)
+                // Instant live refresh of leaderboard
+                val firestoreResult = firestoreRepo.getLeaderboard(currentUsername = currentUsername, forceRefresh = true)
+                if (firestoreResult.isSuccess) {
+                    _uiState.update { s -> s.copy(leaderboardPlayers = firestoreResult.getOrNull().orEmpty()) }
                 }
+            } catch (e: Exception) {
+                // Fail-safe
             }
         }
         prefs.recordLevelResult(
@@ -2868,7 +2950,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
 
             // Fetch live scores from Firebase Firestore Leaderboard
-            val firestoreResult = firestoreRepo.getLeaderboard(currentUsername = username)
+            val firestoreResult = firestoreRepo.getLeaderboard(currentUsername = username, forceRefresh = true)
             val finalPlayers = if (firestoreResult.isSuccess && !firestoreResult.getOrNull().isNullOrEmpty()) {
                 val list = firestoreResult.getOrNull()!!.filter { it.trophies > 0 }
                 val hasMe = list.any { it.isCurrentUser }
