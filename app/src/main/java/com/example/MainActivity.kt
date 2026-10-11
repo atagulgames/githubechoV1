@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
     com.example.audio.HarmonicAudioEngine.init(this)
     com.example.audio.HapticEngine.init(this)
 
-    // Schedule 4 daily game motivation notifications (Sabah 09:00, Öğle 13:00, İkindi 17:00, Akşam 21:00)
+    // Schedule 10 daily game motivation notifications
     com.example.notifications.EchoNotificationScheduler.scheduleAllDailyNotifications(this)
 
     // Request notification permission on Android 13+ (API 33)

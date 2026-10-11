@@ -130,7 +130,7 @@ fun VictoryDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = "Zafer",
+                            contentDescription = "Victory",
                             tint = Color(0xFF78350F),
                             modifier = Modifier.size(38.dp)
                         )
@@ -140,7 +140,7 @@ fun VictoryDialog(
 
                     // 2. CELEBRATORY TITLE
                     Text(
-                        text = "BÖLÜM $levelId TAMAMLANDI!",
+                        text = "LEVEL $levelId COMPLETED!",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
                         color = Color(0xFFFFD54F),
@@ -184,7 +184,7 @@ fun VictoryDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Star,
-                                    contentDescription = "Yıldız $i",
+                                    contentDescription = "Star $i",
                                     tint = if (isEarned) Color(0xFF78350F) else Color(0xFF64748B),
                                     modifier = Modifier.size(if (i == 2) 30.dp else 24.dp)
                                 )
@@ -194,7 +194,7 @@ fun VictoryDialog(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // 4. STATS SUMMARY PLAQUE (Yankı, Süre, Par)
+                    // 4. STATS SUMMARY PLAQUE (Echo, Time, Par)
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = Color(0xFF0F1E4A),
@@ -210,13 +210,13 @@ fun VictoryDialog(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "YANKI",
+                                    text = "ECHO",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF60A5FA)
                                 )
                                 Text(
-                                    text = if (echoCount == 0) "KUSURSUZ!" else "$echoCount",
+                                    text = if (echoCount == 0) "FLAWLESS!" else "$echoCount",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Black,
                                     color = if (echoCount == 0) Color(0xFF34D399) else Color(0xFF38BDF8)
@@ -225,7 +225,7 @@ fun VictoryDialog(
 
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "SÜRE",
+                                    text = "TIME",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF60A5FA)
@@ -281,7 +281,7 @@ fun VictoryDialog(
                                         Text(text = "🏆", fontSize = 18.sp)
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Kazanılan Kupa",
+                                            text = "Trophies Earned",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Black,
                                             color = Color.White
@@ -310,7 +310,7 @@ fun VictoryDialog(
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = "0 Yankı +${trophyBreakdown.zeroEchoBonus}🏆",
+                                                text = "0 Echo +${trophyBreakdown.zeroEchoBonus}🏆",
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Black,
                                                 color = Color(0xFF34D399)
@@ -326,7 +326,7 @@ fun VictoryDialog(
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = "${trophyBreakdown.currentCombo}x Kombo +${trophyBreakdown.comboBonus}🏆",
+                                                text = "${trophyBreakdown.currentCombo}x Combo +${trophyBreakdown.comboBonus}🏆",
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Black,
                                                 color = Color(0xFFA5B4FC)
@@ -342,7 +342,7 @@ fun VictoryDialog(
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = "Hız +${trophyBreakdown.speedBonus}🏆",
+                                                text = "Speed +${trophyBreakdown.speedBonus}🏆",
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Black,
                                                 color = Color(0xFFE9D5FF)
@@ -379,7 +379,7 @@ fun VictoryDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "2X Ödül Alındı (+2 Jeton & +1 Matkap)",
+                                    text = "2X Reward Claimed (+2 Tokens & +1 Drill)",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFF34D399)
@@ -416,7 +416,7 @@ fun VictoryDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "2X ÖDÜL KAZAN (+2 Jeton, +1 Matkap)",
+                                    text = "EARN 2X REWARD (+2 Tokens, +1 Drill)",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
@@ -427,7 +427,7 @@ fun VictoryDialog(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // 7. HUGE CHUNKY 3D "SONRAKİ BÖLÜM" (NEXT LEVEL) BUTTON
+                    // 7. HUGE CHUNKY 3D "NEXT LEVEL" BUTTON
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -457,7 +457,7 @@ fun VictoryDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "SONRAKİ BÖLÜM",
+                                text = "NEXT LEVEL",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color(0xFF451A03),
@@ -468,7 +468,7 @@ fun VictoryDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // 8. CHUNKY 3D "TEKRAR OYNA" (REPLAY) BUTTON
+                    // 8. CHUNKY 3D "REPLAY" BUTTON
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -498,7 +498,7 @@ fun VictoryDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Tekrar Oyna",
+                                text = "Replay",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White

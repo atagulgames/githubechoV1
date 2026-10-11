@@ -115,14 +115,14 @@ fun DailyQuestsDialog(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "GÜNLÜK GÖREVLER",
+                                    text = "DAILY QUESTS",
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFFFFD54F),
                                     letterSpacing = 0.5.sp
                                 )
                                 Text(
-                                    text = "Her gün 00:00'da yenilenir",
+                                    text = "Resets every day at 00:00",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF38BDF8)
@@ -151,7 +151,7 @@ fun DailyQuestsDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Kapat",
+                                contentDescription = "Close",
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -310,7 +310,7 @@ private fun QuestCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "İlerleme",
+                            text = "Progress",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF60A5FA)
@@ -356,7 +356,7 @@ private fun QuestCard(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Alındı",
+                                    text = "Claimed",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFF34D399)
@@ -385,7 +385,7 @@ private fun QuestCard(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "ÖDÜLÜ AL",
+                                text = "CLAIM REWARD",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White
@@ -403,7 +403,7 @@ private fun QuestCard(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Devam Ediyor",
+                                text = "In Progress",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF94A3B8)

@@ -249,7 +249,7 @@ fun Season2WelcomeDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "✨ SEZON 2 BAŞLADI ✨",
+                                text = "✨ SEASON 2 LAUNCHED ✨",
                                 color = Color.Black,
                                 fontWeight = FontWeight.Black,
                                 fontSize = 13.sp,
@@ -261,7 +261,7 @@ fun Season2WelcomeDialog(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "YENİ ÇAĞ: YANKI EVRENİ",
+                        text = "NEW ERA: ECHO UNIVERSE",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = textPrimary,
@@ -271,7 +271,7 @@ fun Season2WelcomeDialog(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Tüm bölümler ve ilerleme Sezon 2 için sıfırlandı! Yepyeni 100 bölüm, taze geometriler ve katlanan ödüller seni bekliyor.",
+                        text = "All levels and progress have been reset for Season 2! 100 brand new levels, fresh geometries, and multiplied rewards await you.",
                         fontSize = 13.sp,
                         color = textSecondary,
                         textAlign = TextAlign.Center,
@@ -293,26 +293,26 @@ fun Season2WelcomeDialog(
                         Season2FeatureRow(
                             icon = Icons.Default.Refresh,
                             iconTint = Color(0xFF38BDF8),
-                            title = "Her Şey Sıfırlandı & Yenilendi",
-                            desc = "Yeni sezonla birlikte yıldızlar ve aşamalar baştan başladı; zirveye tırman!"
+                            title = "Everything Reset & Refreshed",
+                            desc = "Stars and stages start anew with the season; climb to the top!"
                         )
                         Season2FeatureRow(
                             icon = Icons.Default.AutoAwesome,
                             iconTint = Color(0xFFFFB703),
-                            title = "100 Yeni & Benzersiz Bölüm",
-                            desc = "Sezon 2'ye özel farklı açılar, yenilenen düğüm dizilimleri ve rotasyonlar."
+                            title = "100 New & Unique Levels",
+                            desc = "Distinct angles, refreshed node placements, and rotations crafted for Season 2."
                         )
                         Season2FeatureRow(
                             icon = Icons.Default.EmojiEvents,
                             iconTint = Color(0xFF10B981),
-                            title = "Katlanan Sezon Ödülleri",
-                            desc = "Bölüm zaferleri, günlük sandıklar ve görev hediyeleri 2.5 kat artırıldı."
+                            title = "Multiplied Season Rewards",
+                            desc = "Level victories, daily chests, and quest rewards increased by 2.5x."
                         )
                         Season2FeatureRow(
                             icon = Icons.Default.Palette,
                             iconTint = Color(0xFFA855F7),
-                            title = "Yeni Sezon 2 Görsel Temaları",
-                            desc = "Başladığınız an aktifleşen özel renk paletleri ve yaşayan dinamik arka plan desenleri."
+                            title = "New Visual Themes",
+                            desc = "Special palettes and living dynamic background patterns activated on start."
                         )
                     }
 
@@ -320,7 +320,7 @@ fun Season2WelcomeDialog(
 
                     // Welcome Starter Pack Box
                     Text(
-                        text = "🎁 SEZON 2 BAŞLANGIÇ PAKETİ",
+                        text = "🎁 SEASON 2 STARTER PACK",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFB703),
@@ -336,28 +336,28 @@ fun Season2WelcomeDialog(
                         Season2RewardPill(
                             icon = "🪙",
                             amount = "+500",
-                            label = "Jeton",
+                            label = "Tokens",
                             modifier = Modifier.weight(1f),
                             isDark = isDarkTheme
                         )
                         Season2RewardPill(
                             icon = "💎",
                             amount = "+50",
-                            label = "Elmas",
+                            label = "Diamonds",
                             modifier = Modifier.weight(1f),
                             isDark = isDarkTheme
                         )
                         Season2RewardPill(
                             icon = "⚡",
                             amount = "+5",
-                            label = "Kırıcı",
+                            label = "Drills",
                             modifier = Modifier.weight(1f),
                             isDark = isDarkTheme
                         )
                         Season2RewardPill(
                             icon = "🏆",
                             amount = "+100",
-                            label = "Kupa",
+                            label = "Trophies",
                             modifier = Modifier.weight(1f),
                             isDark = isDarkTheme
                         )
@@ -383,7 +383,7 @@ fun Season2WelcomeDialog(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "SEZON 2'YE BAŞLA! 🚀",
+                                text = "START SEASON 2! 🚀",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White

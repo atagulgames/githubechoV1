@@ -28,80 +28,80 @@ object EchoNotificationScheduler {
             hour = 9,
             minute = 0,
             requestCode = 2001,
-            title = "☀️ Günaydın Yankı Ustası!",
-            message = "Güne zihnini açarak başla! 3 saatlik ödülün hazır, hemen kap!"
+            title = "☀️ Good Morning Echo Master!",
+            message = "Start your day sharpening your mind! Your 3-hour reward is ready, grab it now!"
         ),
         EchoNotificationSlot(
             slotId = "SLOT_12_00",
             hour = 12,
             minute = 0,
             requestCode = 2002,
-            title = "⚡ 3 Saatlik Ödülün Hazır!",
-            message = "Ödül süren doldu! Yeni jetonlarını ve matkabını alıp rekor kır."
+            title = "⚡ Your 3-Hour Reward is Ready!",
+            message = "Cooldown expired! Claim your new tokens and drill to set a new record."
         ),
         EchoNotificationSlot(
             slotId = "SLOT_13_00",
             hour = 13,
             minute = 0,
             requestCode = 2003,
-            title = "🎯 Öğle Molası Zeka Turu!",
-            message = "Kısa bir odaklanma molasına ne dersin? Günlük görevler seni bekliyor."
+            title = "🎯 Lunch Break Brain Teaser!",
+            message = "How about a quick focus break? Daily quests are waiting for you."
         ),
         EchoNotificationSlot(
             slotId = "SLOT_16_00",
             hour = 16,
             minute = 0,
             requestCode = 2004,
-            title = "✨ 3 Saatlik Ödülün Yenilendi!",
-            message = "Yeni ödülün sandıkta seni bekliyor! Hemen giriş yap ve matkap lazerini al."
+            title = "✨ 3-Hour Reward Refreshed!",
+            message = "A fresh reward awaits in the chest! Jump in and grab your drill laser."
         ),
         EchoNotificationSlot(
             slotId = "SLOT_17_00",
             hour = 17,
             minute = 0,
             requestCode = 2005,
-            title = "🔥 İkindi Rezonansı & Liderlik!",
-            message = "Liderlik tablosunda yükselme zamanı! Rakiplerini geride bırak ve zirveye çık."
+            title = "🔥 Afternoon Resonance & Leaderboard!",
+            message = "Time to climb the ranks! Outperform rivals and reach the summit."
         ),
         EchoNotificationSlot(
             slotId = "SLOT_19_00",
             hour = 19,
             minute = 0,
             requestCode = 2006,
-            title = "🎁 Akşam Ödülü Açıldı!",
-            message = "3 saatlik ücretsiz ödülün tekrar hazır! Hemen kapıp maceraya devam et."
+            title = "🎁 Evening Reward Unlocked!",
+            message = "Your 3-hour free reward is ready again! Claim it and continue your journey."
         ),
         EchoNotificationSlot(
             slotId = "SLOT_19_30",
             hour = 19,
             minute = 30,
             requestCode = 2007,
-            title = "💎 Özel Akşam Mücadelesi!",
-            message = "Yankı labirentinde ustalaş! Akşam turunda yıldızları toplayıp kombonu yükselt."
+            title = "💎 Special Evening Challenge!",
+            message = "Master the echo maze! Collect stars and boost your combo in tonight's round."
         ),
         EchoNotificationSlot(
             slotId = "SLOT_20_00",
             hour = 20,
             minute = 0,
             requestCode = 2008,
-            title = "🎵 ECHO Melodi Vakti!",
-            message = "Günün yorgunluğunu minimalist ses dalgaları ve harmonik bulmacalarla at."
+            title = "🎵 ECHO Melody Time!",
+            message = "Unwind with minimalist harmonic soundscapes and relaxing puzzles."
         ),
         EchoNotificationSlot(
             slotId = "SLOT_21_00",
             hour = 21,
             minute = 0,
             requestCode = 2009,
-            title = "🏆 Zirve Kapışması!",
-            message = "Günün en yüksek skorunu yapmaya hazır mısın? Kupalarını 2'ye katla!"
+            title = "🏆 Summit Showdown!",
+            message = "Ready to set today's high score? Double your trophies tonight!"
         ),
         EchoNotificationSlot(
             slotId = "SLOT_22_00",
             hour = 22,
             minute = 0,
             requestCode = 2010,
-            title = "🌙 Gece Huzuru & Son 3 Saatlik Ödül!",
-            message = "Günün son 3 saatlik ödülünü al, rahatlatıcı ses dalgalarıyla günü tamamla."
+            title = "🌙 Night Serenity & Final 3-Hour Reward!",
+            message = "Claim your final 3-hour reward of the day and relax with soothing waves."
         )
     )
 

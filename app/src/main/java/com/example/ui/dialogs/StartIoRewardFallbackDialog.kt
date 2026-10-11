@@ -82,7 +82,7 @@ fun StartIoRewardFallbackDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = "Close",
                             tint = Color(0xFF94A3B8)
                         )
                     }
@@ -119,7 +119,7 @@ fun StartIoRewardFallbackDialog(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
-                    text = "Ödülünüz Hazırlanıyor",
+                    text = "Preparing Your Reward",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF0F172A)
@@ -129,9 +129,9 @@ fun StartIoRewardFallbackDialog(
 
                 Text(
                     text = if (countdownSeconds > 0)
-                        "Ödülünüzün aktarılmasına $countdownSeconds saniye kaldı..."
+                        "Your reward will be ready in $countdownSeconds seconds..."
                     else
-                        "Ödülünüz başarıyla tanımlanıyor!",
+                        "Claiming your reward!",
                     fontSize = 13.sp,
                     color = Color(0xFF64748B),
                     textAlign = TextAlign.Center
@@ -146,7 +146,7 @@ fun StartIoRewardFallbackDialog(
                         .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = "Ücretsiz Video Bonusu",
+                        text = "Free Video Bonus",
                         fontSize = 11.sp,
                         color = Color(0xFF16A34A),
                         fontWeight = FontWeight.SemiBold

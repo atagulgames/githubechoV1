@@ -143,7 +143,7 @@ fun PlayerProfileDialog(
                             if (currentAvatarUri.isNotBlank()) {
                                 AsyncImage(
                                     model = currentAvatarUri,
-                                    contentDescription = "Profil Resmi",
+                                    contentDescription = "Profile Picture",
                                     modifier = Modifier
                                         .size(56.dp)
                                         .clip(CircleShape),
@@ -462,7 +462,7 @@ fun PlayerProfileDialog(
                     )
                 ) {
                     Text(
-                        text = "Tamam",
+                        text = "Done",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

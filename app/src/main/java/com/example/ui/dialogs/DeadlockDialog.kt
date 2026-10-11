@@ -70,7 +70,7 @@ fun DeadlockDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Warning,
-                        contentDescription = "Uyarı",
+                        contentDescription = "Warning",
                         tint = Color(0xFFE11D48),
                         modifier = Modifier.size(34.dp)
                     )
@@ -79,7 +79,7 @@ fun DeadlockDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = if (isTimeUp) "Süre Doldu! Kaybettin" else "Yol Kapandı!",
+                    text = if (isTimeUp) "Time's Up! You Lost" else "Path Blocked!",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF0F172A)
@@ -89,9 +89,9 @@ fun DeadlockDialog(
 
                 Text(
                     text = if (isTimeUp)
-                        "60 saniyelik süreniz sona erdi. Bölümü tekrar deneyerek daha hızlı tamamlayabilirsiniz!"
+                        "Your 60-second timer has expired. Replay the level to complete it faster!"
                     else
-                        "Bölgede $echoCount adet kırmızı yankı bariyeri birikti. Çizgi çekmek imkansızlaştı.",
+                        "$echoCount red echo barriers accumulated. Drawing a path has become impossible.",
                     fontSize = 14.sp,
                     color = Color(0xFF64748B),
                     textAlign = TextAlign.Center,
@@ -100,7 +100,7 @@ fun DeadlockDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // User request: "eğer reklam izlersen 15 sn ek süre eklensin."
+                // Watch Ad for +15s Extra Time
                 if (isTimeUp && onAddTimeWithAd != null) {
                     Button(
                         onClick = hapticClick(isHeavy = true, action = onAddTimeWithAd),
@@ -123,7 +123,7 @@ fun DeadlockDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "🎬 Reklam İzle & +15 Sn Ek Süre",
+                            text = "🎬 Watch Ad & +15s Extra Time",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -133,7 +133,7 @@ fun DeadlockDialog(
                     Spacer(modifier = Modifier.height(10.dp))
                 }
 
-                // Option: Tekrar Oyna
+                // Option: Replay
                 Button(
                     onClick = hapticClick(action = onRestartLevel),
                     modifier = Modifier
@@ -155,7 +155,7 @@ fun DeadlockDialog(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Tekrar Oyna",
+                        text = "Try Again",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -188,7 +188,7 @@ fun DeadlockDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Reklam ile Temizle & +1 Jeton",
+                            text = "Clear with Ad & +1 Token",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,

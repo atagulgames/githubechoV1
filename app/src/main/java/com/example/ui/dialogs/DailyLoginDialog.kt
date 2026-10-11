@@ -94,13 +94,13 @@ fun DailyLoginDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "7 Günlük Giriş Takvimi",
+                                text = "7-Day Login Calendar",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF0F172A)
                             )
                             Text(
-                                text = "Seri: $currentStreak. Gün",
+                                text = "Streak: Day $currentStreak",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFFD97706)
@@ -114,7 +114,7 @@ fun DailyLoginDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = "Close",
                             tint = Color(0xFF64748B)
                         )
                     }
@@ -158,7 +158,7 @@ fun DailyLoginDialog(
                         )
                     ) {
                         Text(
-                            text = "Bugünkü Ödülü Al",
+                            text = "Claim Today's Reward",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -176,7 +176,7 @@ fun DailyLoginDialog(
                         )
                     ) {
                         Text(
-                            text = "Yarın Tekrar Gel (Bugün Alındı)",
+                            text = "Come Back Tomorrow (Claimed)",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -215,7 +215,7 @@ private fun DailyDayCard(day: DailyLoginDay) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "${day.dayNumber}. Gün",
+                text = "Day ${day.dayNumber}",
                 fontSize = 12.sp,
                 fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Medium,
                 color = if (day.isToday) Color(0xFF0284C7) else Color(0xFF64748B)
@@ -239,7 +239,7 @@ private fun DailyDayCard(day: DailyLoginDay) {
                 if (day.isClaimed) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Alındı",
+                        contentDescription = "Claimed",
                         tint = Color(0xFF15803D),
                         modifier = Modifier.size(20.dp)
                     )
@@ -304,7 +304,7 @@ private fun Day7SpecialCard(day: DailyLoginDay) {
                     if (day.isClaimed) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Alındı",
+                            contentDescription = "Claimed",
                             tint = Color(0xFF15803D),
                             modifier = Modifier.size(24.dp)
                         )
@@ -323,7 +323,7 @@ private fun Day7SpecialCard(day: DailyLoginDay) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "7. Gün Büyük Ödülü",
+                            text = "Day 7 Grand Reward",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF92400E)
@@ -334,7 +334,7 @@ private fun Day7SpecialCard(day: DailyLoginDay) {
                             color = Color(0xFFFDE68A)
                         ) {
                             Text(
-                                text = "Efsanevi",
+                                text = "Legendary",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFB45309),
@@ -344,7 +344,7 @@ private fun Day7SpecialCard(day: DailyLoginDay) {
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "+10 Jeton, +5 Matkap Lazeri & 'Altın Lazer' Teması",
+                        text = "+10 Hint Tokens, +5 Drills & 'Golden Laser' Theme",
                         fontSize = 11.sp,
                         color = Color(0xFFB45309)
                     )

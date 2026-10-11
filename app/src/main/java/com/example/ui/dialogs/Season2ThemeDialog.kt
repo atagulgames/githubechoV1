@@ -114,7 +114,7 @@ fun Season2ThemeDialog(
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Görsel Temalar",
+                            text = "Visual Themes",
                             fontSize = 19.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary
@@ -127,14 +127,14 @@ fun Season2ThemeDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = "Close",
                             tint = textSecondary
                         )
                     }
                 }
 
                 Text(
-                    text = "Oyuna özel renk paletleri ve yaşayan dinamik arka plan desenleri",
+                    text = "Special color palettes and living dynamic background patterns",
                     fontSize = 12.sp,
                     color = textSecondary,
                     modifier = Modifier
@@ -160,13 +160,13 @@ fun Season2ThemeDialog(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Görsel Atmosfer",
+                                text = "Visual Atmosphere",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
                             )
                             Text(
-                                text = if (isSeason2ThemeActive) "Özel görsel renk paleti aktif" else "Klasik tema aktif",
+                                text = if (isSeason2ThemeActive) "Custom color palette active" else "Classic theme active",
                                 fontSize = 11.sp,
                                 color = textSecondary
                             )
@@ -201,13 +201,13 @@ fun Season2ThemeDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Canlı Arka Plan Deseni",
+                                    text = "Live Background Pattern",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = textPrimary
                                 )
                                 Text(
-                                    text = if (isBackgroundEffectsEnabled) "Takımyıldız, dalga ve kuantum efektleri açık" else "Pil tasarrufu için sabit arka plan",
+                                    text = if (isBackgroundEffectsEnabled) "Constellation, wave, and quantum effects active" else "Static background for battery saver",
                                     fontSize = 11.sp,
                                     color = textSecondary
                                 )
@@ -296,7 +296,7 @@ fun Season2ThemeDialog(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Check,
-                                                contentDescription = "Seçildi",
+                                                contentDescription = "Selected",
                                                 tint = Color.White,
                                                 modifier = Modifier.size(16.dp)
                                             )
@@ -335,10 +335,10 @@ fun Season2ThemeDialog(
 
                                     // Pattern Tag
                                     val patternLabel = when (theme.patternType) {
-                                        Season2PatternType.COSMIC_CONSTELLATION -> "🌌 Takımyıldız"
-                                        Season2PatternType.AURORA_WAVES -> "✨ Kutup Dalgaları"
-                                        Season2PatternType.SOLAR_RINGS -> "☀️ Güneş Koronası"
-                                        Season2PatternType.QUANTUM_GRID -> "🔮 Kuantum Izgarası"
+                                        Season2PatternType.COSMIC_CONSTELLATION -> "🌌 Constellation"
+                                        Season2PatternType.AURORA_WAVES -> "✨ Aurora Waves"
+                                        Season2PatternType.SOLAR_RINGS -> "☀️ Solar Rings"
+                                        Season2PatternType.QUANTUM_GRID -> "🔮 Quantum Grid"
                                     }
 
                                     Box(

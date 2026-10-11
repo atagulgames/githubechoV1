@@ -139,9 +139,9 @@ fun RateAppDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title: "ECHOFLUX'u değerlendir"
+                // Title: "Rate ECHOFLUX"
                 Text(
-                    text = "ECHOFLUX'u değerlendir",
+                    text = "Rate ECHOFLUX",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -150,9 +150,9 @@ fun RateAppDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Description: "Deneyiminizi bizimle paylaşın."
+                // Description: "Share your experience with us."
                 Text(
-                    text = "Deneyiminizi bizimle paylaşın.",
+                    text = "Share your experience with us.",
                     fontSize = 14.sp,
                     color = Color(0xFFCBD5E1),
                     textAlign = TextAlign.Center
@@ -192,7 +192,7 @@ fun RateAppDialog(
                         ) {
                             Icon(
                                 imageVector = if (isSelected) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                                contentDescription = "$starIndex Yıldız",
+                                contentDescription = "$starIndex Stars",
                                 tint = if (isSelected) Color(0xFFF59E0B) else Color(0xFF64748B),
                                 modifier = Modifier.size(32.dp)
                             )
@@ -220,11 +220,11 @@ fun RateAppDialog(
 
                 Spacer(modifier = Modifier.height(22.dp))
 
-                // Main Button: "Gönder"
+                // Main Button: "Submit"
                 Button(
                     onClick = hapticClick(isHeavy = true) {
                         if (selectedStars == 0) {
-                            errorMessage = "Lütfen bir puan seçin."
+                            errorMessage = "Please select a rating."
                             return@hapticClick
                         }
 
@@ -236,7 +236,7 @@ fun RateAppDialog(
                         // 2. Notify view model & close dialog
                         onRateSubmitted(selectedStars)
 
-                        // 3. Open APKPure review page safely without crash
+                        // 3. Open review page safely without crash
                         try {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reviewUrl)).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -258,7 +258,7 @@ fun RateAppDialog(
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
                 ) {
                     Text(
-                        text = "Gönder",
+                        text = "Submit",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -266,7 +266,7 @@ fun RateAppDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Secondary Text Button: "Daha sonra" (subtle, small, underlined)
+                // Secondary Text Button: "Maybe later" (subtle, small, underlined)
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -282,7 +282,7 @@ fun RateAppDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Daha sonra",
+                        text = "Maybe later",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Normal,
                         color = Color(0xFF94A3B8),

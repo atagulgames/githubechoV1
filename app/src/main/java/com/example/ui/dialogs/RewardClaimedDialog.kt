@@ -95,7 +95,7 @@ fun RewardClaimedDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Star,
-                        contentDescription = "Ödül Kazanıldı",
+                        contentDescription = "Reward Claimed",
                         tint = Color.White,
                         modifier = Modifier.size(44.dp)
                     )
@@ -146,7 +146,7 @@ fun RewardClaimedDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "+$tokensAdded İpucu Jetonu",
+                                    text = "+$tokensAdded Hint Tokens",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp,
                                     color = Color(0xFF0369A1)
@@ -173,7 +173,7 @@ fun RewardClaimedDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "+$breakersAdded Matkap",
+                                    text = "+$breakersAdded Drills",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp,
                                     color = Color(0xFFBE185D)
@@ -187,7 +187,7 @@ fun RewardClaimedDialog(
 
                 // Current balances preview
                 Text(
-                    text = "Mevcut: $currentTokens Jeton • $currentBreakers Matkap",
+                    text = "Current: $currentTokens Tokens • $currentBreakers Drills",
                     fontSize = 12.sp,
                     color = Color(0xFF94A3B8),
                     fontWeight = FontWeight.Medium
@@ -208,7 +208,7 @@ fun RewardClaimedDialog(
                     )
                 ) {
                     Text(
-                        text = "HARİKA!",
+                        text = "AWESOME!",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = Color.White

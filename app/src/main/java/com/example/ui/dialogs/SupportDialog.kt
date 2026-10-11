@@ -154,7 +154,7 @@ fun SupportDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = if (isTr) "Kapat" else "Close",
                             tint = textSecondary
                         )
                     }

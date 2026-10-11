@@ -114,7 +114,7 @@ fun SkinsDialog(
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = "$totalStars Yıldız Toplandı",
+                                    text = "$totalStars Stars Collected",
                                     fontSize = 12.sp,
                                     color = textSecondary
                                 )
@@ -128,7 +128,7 @@ fun SkinsDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = "Close",
                             tint = textSecondary
                         )
                     }
@@ -138,7 +138,7 @@ fun SkinsDialog(
 
                 // User Requirement: "tema dark/white sadece iki tane seçenek olacak"
                 Text(
-                    text = "Arayüz Teması (Dark / White)",
+                    text = "UI Theme (Dark / White)",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary
@@ -165,14 +165,14 @@ fun SkinsDialog(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Açık (White)",
+                                text = "Light (White)",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = if (!isDarkTheme) Color(0xFF0284C7) else textSecondary
                             )
                             if (!isDarkTheme) {
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("Seçildi ✓", fontSize = 11.sp, color = Color(0xFF0284C7), fontWeight = FontWeight.Bold)
+                                Text("Selected ✓", fontSize = 11.sp, color = Color(0xFF0284C7), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -194,14 +194,14 @@ fun SkinsDialog(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Koyu (Dark)",
+                                text = "Dark",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = if (isDarkTheme) Color(0xFF38BDF8) else textSecondary
                             )
                             if (isDarkTheme) {
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("Seçildi ✓", fontSize = 11.sp, color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold)
+                                Text("Selected ✓", fontSize = 11.sp, color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -211,7 +211,7 @@ fun SkinsDialog(
 
                 // Section 1: Stroke Themes
                 Text(
-                    text = "Çizgi Rengi",
+                    text = "Stroke Color",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary
@@ -285,7 +285,7 @@ fun SkinsDialog(
                                         }
                                         if (!isUnlocked) {
                                             Text(
-                                                text = if (theme.requiredStars > 0) "${theme.requiredStars} Yıldız ile açılır" else "Giriş / Sandık Ödülü",
+                                                text = if (theme.requiredStars > 0) "Unlocked at ${theme.requiredStars} Stars" else "Login / Chest Reward",
                                                 fontSize = 10.sp,
                                                 color = Color(0xFF94A3B8)
                                             )
@@ -296,14 +296,14 @@ fun SkinsDialog(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Seçili",
+                                        contentDescription = "Selected",
                                         tint = Color(0xFF22C55E),
                                         modifier = Modifier.size(20.dp)
                                     )
                                 } else if (!isUnlocked) {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
-                                        contentDescription = "Kilitli",
+                                        contentDescription = "Locked",
                                         tint = Color(0xFF94A3B8),
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -317,7 +317,7 @@ fun SkinsDialog(
 
                 // Section 2: Echo Barrier Themes
                 Text(
-                    text = "Yankı Bariyeri Rengi",
+                    text = "Echo Barrier Color",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF334155)
@@ -391,7 +391,7 @@ fun SkinsDialog(
                                         }
                                         if (!isUnlocked) {
                                             Text(
-                                                text = if (theme.requiredStars > 0) "${theme.requiredStars} Yıldız ile açılır" else "Giriş / Sandık Ödülü",
+                                                text = if (theme.requiredStars > 0) "Unlocked at ${theme.requiredStars} Stars" else "Login / Chest Reward",
                                                 fontSize = 10.sp,
                                                 color = Color(0xFF94A3B8)
                                             )
@@ -402,14 +402,14 @@ fun SkinsDialog(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Seçili",
+                                        contentDescription = "Selected",
                                         tint = Color(0xFF22C55E),
                                         modifier = Modifier.size(20.dp)
                                     )
                                 } else if (!isUnlocked) {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
-                                        contentDescription = "Kilitli",
+                                        contentDescription = "Locked",
                                         tint = Color(0xFF94A3B8),
                                         modifier = Modifier.size(16.dp)
                                     )

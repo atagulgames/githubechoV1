@@ -167,18 +167,18 @@ class RenderLeaderboardService private constructor() {
                     )
                 } else {
                     Log.w(TAG, "submitScore failed with HTTP $statusCode: $bodyString")
-                    Result.failure(IOException("Bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin."))
+                    Result.failure(IOException("Connection failed. Please check your internet connection."))
                 }
             }
         } catch (e: UnknownHostException) {
             Log.w(TAG, "submitScore network unreachable (offline): ${e.message}")
-            Result.failure(IOException("Çevrimdışısınız. Skorunuz yerel olarak kaydedildi."))
+            Result.failure(IOException("You are offline. Your score has been saved locally."))
         } catch (e: SocketTimeoutException) {
             Log.w(TAG, "submitScore timed out waiting for server: ${e.message}")
-            Result.failure(IOException("Bağlantı zaman aşımına uğradı."))
+            Result.failure(IOException("Connection timed out."))
         } catch (e: Exception) {
             Log.w(TAG, "submitScore exception: ${e.message}")
-            Result.failure(IOException("Skor senkronize edilemedi."))
+            Result.failure(IOException("Score could not be synced."))
         }
     }
 
@@ -240,11 +240,11 @@ class RenderLeaderboardService private constructor() {
                                 itemUsername.equals(sanitizedCurrentUser, ignoreCase = true)
 
                         val title = when {
-                            itemScore >= 2500 -> "🌟 Galaktik Efsane"
-                            itemScore >= 1500 -> "🏆 Yankı Ustası"
-                            itemScore >= 800 -> "⚡ Frekans Ustası"
-                            itemScore >= 300 -> "🔷 Ses Kaşifi"
-                            else -> "🌱 Çaylak"
+                            itemScore >= 2500 -> "🌟 Galactic Legend"
+                            itemScore >= 1500 -> "🏆 Echo Master"
+                            itemScore >= 800 -> "⚡ Frequency Master"
+                            itemScore >= 300 -> "🔷 Sound Explorer"
+                            else -> "🌱 Novice"
                         }
 
                         resultList.add(
@@ -281,18 +281,18 @@ class RenderLeaderboardService private constructor() {
                     Result.success(rankedList)
                 } else {
                     Log.w(TAG, "fetchLeaderboard failed with HTTP $statusCode: $bodyString")
-                    Result.failure(IOException("Şu anda çevrimiçi sıralamaya ulaşılamıyor. Lütfen biraz sonra tekrar deneyin."))
+                    Result.failure(IOException("Online leaderboard is currently unavailable. Please try again later."))
                 }
             }
         } catch (e: UnknownHostException) {
             Log.w(TAG, "fetchLeaderboard network unreachable (offline): ${e.message}")
-            Result.failure(IOException("Çevrimdışısınız. Lütfen internet bağlantınızı kontrol edin."))
+            Result.failure(IOException("You are offline. Please check your internet connection."))
         } catch (e: SocketTimeoutException) {
             Log.w(TAG, "fetchLeaderboard timed out: ${e.message}")
-            Result.failure(IOException("Bağlantı zaman aşımına uğradı."))
+            Result.failure(IOException("Connection timed out."))
         } catch (e: Exception) {
             Log.w(TAG, "fetchLeaderboard exception: ${e.message}")
-            Result.failure(IOException("Şu anda çevrimiçi sıralamaya ulaşılamıyor."))
+            Result.failure(IOException("Online leaderboard is currently unavailable."))
         }
     }
 
@@ -308,7 +308,7 @@ class RenderLeaderboardService private constructor() {
             }
             Result.success(exists)
         } else {
-            Result.failure(result.exceptionOrNull() ?: IOException("Sunucuya ulaşılamadı."))
+            Result.failure(result.exceptionOrNull() ?: IOException("Server unreachable."))
         }
     }
 
@@ -324,7 +324,7 @@ class RenderLeaderboardService private constructor() {
             }
             Result.success(player)
         } else {
-            Result.failure(result.exceptionOrNull() ?: IOException("Sunucuya ulaşılamadı."))
+            Result.failure(result.exceptionOrNull() ?: IOException("Server unreachable."))
         }
     }
 

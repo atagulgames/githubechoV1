@@ -88,6 +88,7 @@ fun SettingsDialog(
         val textPrimary = if (isDarkTheme) Color.White else Color(0xFF0F172A)
         val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
         val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+        val isTr = currentLanguage == Language.TR
 
         Surface(
             modifier = Modifier
@@ -140,7 +141,7 @@ fun SettingsDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = if (isTr) "Kapat" else "Close",
                             tint = textSecondary
                         )
                     }
@@ -365,7 +366,7 @@ fun SettingsDialog(
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "Akıllı müzik kısma (ducking) aktif",
+                                text = if (isTr) "Akıllı müzik kısma (ducking) aktif" else "Smart music ducking active",
                                 color = textSecondary,
                                 fontSize = 11.sp
                             )
@@ -417,7 +418,7 @@ fun SettingsDialog(
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "Düğmeler ve bağlantı titreşim geri bildirimi",
+                                text = if (isTr) "Düğmeler ve bağlantı titreşim geri bildirimi" else "Haptic feedback for buttons & connections",
                                 color = textSecondary,
                                 fontSize = 11.sp
                             )
@@ -466,13 +467,13 @@ fun SettingsDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Ödüllü Reklamlar",
+                                text = if (isTr) "Ödüllü Reklamlar" else "Rewarded Ads",
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "Ödüllü video ve bonuslar hazır",
+                                text = if (isTr) "Ödüllü video ve bonuslar hazır" else "Rewarded video & bonuses ready",
                                 color = Color(0xFF16A34A),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -489,7 +490,7 @@ fun SettingsDialog(
                             .testTag("test_ads_toggle")
                     ) {
                         Text(
-                            text = "AKTİF",
+                            text = if (isTr) "AKTİF" else "ACTIVE",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF16A34A)
@@ -523,13 +524,13 @@ fun SettingsDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Dünya Sıralaması",
+                                text = if (isTr) "Dünya Sıralaması" else "Global Leaderboard",
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "Skorlar senkronize ediliyor",
+                                text = if (isTr) "Skorlar senkronize ediliyor" else "Scores syncing",
                                 color = textSecondary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -545,7 +546,7 @@ fun SettingsDialog(
                             .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Text(
-                            text = "BAĞLI",
+                            text = if (isTr) "BAĞLI" else "CONNECTED",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF16A34A)
@@ -576,7 +577,7 @@ fun SettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Güncellemeleri Denetle",
+                        text = if (isTr) "Güncellemeleri Denetle" else "Check for Updates",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -604,7 +605,7 @@ fun SettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Destek & İletişim (E-posta)",
+                        text = if (isTr) "Destek & İletişim (E-posta)" else "Support & Contact (Email)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -635,7 +636,7 @@ fun SettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Tüm İlerlemeyi Sıfırla (Bölüm 1'e Dön)",
+                        text = if (isTr) "Tüm İlerlemeyi Sıfırla (Bölüm 1'e Dön)" else "Reset All Progress (Return to Level 1)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -659,7 +660,7 @@ fun SettingsDialog(
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1))
                     ) {
                         Text(
-                            text = "Oturumu Kapat / Çıkış Yap",
+                            text = if (isTr) "Oturumu Kapat / Çıkış Yap" else "Log Out / Sign Out",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )

@@ -108,13 +108,13 @@ fun ShopDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Ödül & Takas Merkezi",
+                                text = "Rewards & Exchange Center",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
                             )
                             Text(
-                                text = "Reklam İzle & Anında Kazan",
+                                text = "Watch Ads & Earn Instantly",
                                 fontSize = 11.sp,
                                 color = Color(0xFF10B981),
                                 fontWeight = FontWeight.SemiBold
@@ -128,7 +128,7 @@ fun ShopDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = "Close",
                             tint = textSecondary
                         )
                     }
@@ -160,7 +160,7 @@ fun ShopDialog(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "$currentDiamonds Elmas",
+                                text = "$currentDiamonds Diamonds",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
@@ -177,7 +177,7 @@ fun ShopDialog(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "$currentTokens Jeton",
+                                text = "$currentTokens Tokens",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
@@ -194,7 +194,7 @@ fun ShopDialog(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "$currentBreakers Matkap",
+                                text = "$currentBreakers Drills",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
@@ -205,7 +205,7 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // SECTION 1: REKLAM İZLE & KAZAN
+                // SECTION 1: WATCH ADS & EARN
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -218,7 +218,7 @@ fun ShopDialog(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "REKLAM İZLE & ÖDÜL KAZAN",
+                        text = "WATCH ADS & CLAIM REWARDS",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF3B82F6),
@@ -226,7 +226,7 @@ fun ShopDialog(
                     )
                 }
 
-                // 3 TANE İZLE & AL MEKANİĞİ
+                // 3 ADS REWARD MECHANIC
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = if (isDarkTheme) Color(0xFF1E1B4B) else Color(0xFFEEF2FF),
@@ -240,7 +240,7 @@ fun ShopDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "🎁 3 TANE İZLE & AL: MEGA SANDIK",
+                                text = "🎁 WATCH 3 ADS: MEGA CHEST",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF818CF8)
@@ -260,7 +260,7 @@ fun ShopDialog(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "3 reklam izle; dev ödül paketini kap! (+3 💎, +500 🪙, +3 ⚡, +5 Jeton ve 15 Dk 2x Kupa)",
+                            text = "Watch 3 ads to unlock the mega bundle! (+3 💎, +500 🪙, +3 ⚡, +5 Tokens & 15m 2x Trophies)",
                             fontSize = 11.sp,
                             color = textSecondary
                         )
@@ -277,7 +277,7 @@ fun ShopDialog(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text(
-                                        text = if (isDone) "✓ $slot. İzlendi" else "$slot. Reklam",
+                                        text = if (isDone) "✓ $slot. Watched" else "Ad $slot",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isDone) Color.White else if (isDarkTheme) Color(0xFFA5B4FC) else Color(0xFF3730A3),
@@ -306,12 +306,12 @@ fun ShopDialog(
                         ) {
                             Text(
                                 text = if (isMegaCooldown) {
-                                    "⏳ 3 Saat Bekleme Süresinde ($megaCooldownFormatted)"
+                                    "⏳ 3-Hour Cooldown ($megaCooldownFormatted)"
                                 } else {
                                     when (multiAdWatchCount) {
-                                        0 -> "1. Reklamı İzle (1/3)"
-                                        1 -> "2. Reklamı İzle (2/3)"
-                                        else -> "🎉 Son Reklamı İzle & Mega Sandığı Aç! (3/3)"
+                                        0 -> "Watch Ad 1 (1/3)"
+                                        1 -> "Watch Ad 2 (2/3)"
+                                        else -> "🎉 Watch Final Ad & Open Mega Chest! (3/3)"
                                     }
                                 },
                                 fontSize = 12.sp,
@@ -324,13 +324,13 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // SECTION: SÜRELİ GÜÇLENDİRİCİLER
+                // SECTION: TIMED BOOSTERS
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
                 ) {
                     Text(
-                        text = "⏱️ SÜRELİ ÖZEL GÜÇLENDİRİCİLER",
+                        text = "⏱️ TIMED SPECIAL BOOSTERS",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF59E0B),
@@ -338,15 +338,15 @@ fun ShopDialog(
                     )
                 }
 
-                // Timed Booster 1: 2x Kupa (15 Dk)
+                // Timed Booster 1: 2x Trophies (15 Min)
                 val doubleRemainingSec = ((doubleTrophiesExpiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
                 val isDoubleActive = doubleRemainingSec > 0
                 TimedBoosterCard(
-                    title = "⏱️ 2x Kupa Katlayıcı (15 Dk)",
-                    description = "Bölüm kazançlarında iki kat kupa vererek liderlikte hızlı yükselmeni sağlar.",
+                    title = "⏱️ 2x Trophy Multiplier (15 Min)",
+                    description = "Earn double trophies on level completions to climb the leaderboard faster.",
                     isActive = isDoubleActive,
                     remainingSeconds = doubleRemainingSec,
-                    buttonText = "Reklam İzle & 15 Dk Aktif Et",
+                    buttonText = "Watch Ad & Activate (15 Min)",
                     accentColor = Color(0xFFF59E0B),
                     isDarkTheme = isDarkTheme,
                     onClick = { onWatchRewardedAd("BOOSTER_DOUBLE_TROPHIES") }
@@ -354,15 +354,15 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Timed Booster 2: Sınırsız Matkap (10 Dk)
+                // Timed Booster 2: Unlimited Drills (10 Min)
                 val infiniteRemainingSec = ((infiniteBreakersExpiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
                 val isInfiniteActive = infiniteRemainingSec > 0
                 TimedBoosterCard(
-                    title = "⏱️ Sınırsız Matkap Lazeri (10 Dk)",
-                    description = "10 dakika boyunca matkap lazelerin tükenmeden engelleri serbestçe del.",
+                    title = "⏱️ Unlimited Drill Laser (10 Min)",
+                    description = "Drill through obstacles freely for 10 minutes without depleting ammo.",
                     isActive = isInfiniteActive,
                     remainingSeconds = infiniteRemainingSec,
-                    buttonText = "Reklam İzle & 10 Dk Aktif Et",
+                    buttonText = "Watch Ad & Activate (10 Min)",
                     accentColor = Color(0xFFEF4444),
                     isDarkTheme = isDarkTheme,
                     onClick = { onWatchRewardedAd("BOOSTER_INFINITE_BREAKERS") }
@@ -370,15 +370,15 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Timed Booster 3: Esnek Kalkan (20 Dk)
+                // Timed Booster 3: Flexible Shield (20 Min)
                 val shrinkerRemainingSec = ((radiusShrinkerExpiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
                 val isShrinkerActive = shrinkerRemainingSec > 0
                 TimedBoosterCard(
-                    title = "⏱️ Esnek Yankı Kalkanı (20 Dk)",
-                    description = "Yankı engellerini 20 dakika boyunca %50 incelterek geçişi kolaylaştırır.",
+                    title = "⏱️ Flexible Echo Shield (20 Min)",
+                    description = "Shrinks echo obstacles by 50% for 20 minutes to ease navigation.",
                     isActive = isShrinkerActive,
                     remainingSeconds = shrinkerRemainingSec,
-                    buttonText = "Reklam İzle & 20 Dk Aktif Et",
+                    buttonText = "Watch Ad & Activate (20 Min)",
                     accentColor = Color(0xFF10B981),
                     isDarkTheme = isDarkTheme,
                     onClick = { onWatchRewardedAd("BOOSTER_SHIELD") }
@@ -386,11 +386,11 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Ad 1: Nadir Elmas (Rare Diamond)
+                // Ad 1: Rare Diamond
                 AdRewardCard(
-                    title = "Nadir Elmas (+1 💎)",
-                    description = "Değerli ve nadir elmas kazan. Sandıklarda ve takaslarda kullanılır.",
-                    buttonText = "Reklam İzle (+1 💎)",
+                    title = "Rare Diamond (+1 💎)",
+                    description = "Earn rare diamonds. Used for chests and exchanges.",
+                    buttonText = "Watch Ad (+1 💎)",
                     icon = Icons.Default.Diamond,
                     accentColor = Color(0xFF0284C7),
                     isDarkTheme = isDarkTheme,
@@ -401,11 +401,11 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Ad 2: 3x İpucu Jetonu
+                // Ad 2: 3x Hint Tokens
                 AdRewardCard(
-                    title = "3x İpucu Jetonu (+3 🪙)",
-                    description = "Kısa bir video izle ve hemen 3 ipucu jetonu kazan.",
-                    buttonText = "Reklam İzle (+3 🪙)",
+                    title = "3x Hint Tokens (+3 🪙)",
+                    description = "Watch a short video and receive 3 hint tokens immediately.",
+                    buttonText = "Watch Ad (+3 🪙)",
                     icon = Icons.Default.Lightbulb,
                     accentColor = Color(0xFFD97706),
                     isDarkTheme = isDarkTheme,
@@ -416,11 +416,11 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Ad 3: 1x Matkap Lazeri
+                // Ad 3: 1x Drill Laser
                 AdRewardCard(
-                    title = "1x Matkap Lazeri (+1 ⚡)",
-                    description = "Kırmızı yankı engellerini delen güçlü lazer cephanesi.",
-                    buttonText = "Reklam İzle (+1 ⚡)",
+                    title = "1x Drill Laser (+1 ⚡)",
+                    description = "Powerful laser ammo to drill through red echo barriers.",
+                    buttonText = "Watch Ad (+1 ⚡)",
                     icon = Icons.Default.Bolt,
                     accentColor = Color(0xFFDC2626),
                     isDarkTheme = isDarkTheme,
@@ -431,11 +431,11 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Ad 4: Yankıları Temizle
+                // Ad 4: Clear Echoes
                 AdRewardCard(
-                    title = "Tüm Yankıları Temizle (🔄)",
-                    description = "Bölümdeki tüm kırmızı yankı hatlarını anında yok et.",
-                    buttonText = "İzle & Temizle",
+                    title = "Clear All Echoes (🔄)",
+                    description = "Instantly destroy all red echo lines in the current level.",
+                    buttonText = "Watch & Clear",
                     icon = Icons.Default.Refresh,
                     accentColor = Color(0xFF059669),
                     isDarkTheme = isDarkTheme,
@@ -446,7 +446,7 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // SECTION 2: ELMAS & JETON TAKASI
+                // SECTION 2: DIAMOND EXCHANGE
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -459,7 +459,7 @@ fun ShopDialog(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "OYUN İÇİ ELMAS TAKASI",
+                        text = "IN-GAME DIAMOND EXCHANGE",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF8B5CF6),
@@ -469,8 +469,8 @@ fun ShopDialog(
 
                 // Exchange 1: 1 Diamond -> 5 Tokens
                 ExchangeCard(
-                    title = "5x İpucu Jetonu Paketi",
-                    costText = "1 💎 Elmas",
+                    title = "5x Hint Tokens Pack",
+                    costText = "1 💎 Diamond",
                     canAfford = currentDiamonds >= 1,
                     isDarkTheme = isDarkTheme,
                     icon = Icons.Default.Lightbulb,
@@ -482,8 +482,8 @@ fun ShopDialog(
 
                 // Exchange 2: 1 Diamond -> 2 Breakers
                 ExchangeCard(
-                    title = "2x Matkap Lazeri Paketi",
-                    costText = "1 💎 Elmas",
+                    title = "2x Drill Laser Pack",
+                    costText = "1 💎 Diamond",
                     canAfford = currentDiamonds >= 1,
                     isDarkTheme = isDarkTheme,
                     icon = Icons.Default.Bolt,
@@ -562,7 +562,7 @@ private fun AdRewardCard(
                         color = if (isOnCooldown) textSecondary else textPrimary
                     )
                     Text(
-                        text = if (isOnCooldown) "$description • (Kalan: $formattedCooldown)" else description,
+                        text = if (isOnCooldown) "$description • (Cooldown: $formattedCooldown)" else description,
                         fontSize = 10.sp,
                         color = if (isOnCooldown) Color(0xFFEAB308) else textSecondary,
                         lineHeight = 13.sp
@@ -713,7 +713,7 @@ private fun TimedBoosterCard(
                         color = Color(0xFF10B981)
                     ) {
                         Text(
-                            text = String.format("AKTİF %02d:%02d", m, s),
+                            text = String.format("ACTIVE %02d:%02d", m, s),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,

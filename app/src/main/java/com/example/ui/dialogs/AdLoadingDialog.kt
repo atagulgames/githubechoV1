@@ -80,7 +80,7 @@ fun AdLoadingDialog(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
-                    text = "Canlı Reklam Hazırlanıyor",
+                    text = "Preparing Video Ad",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF0F172A),
@@ -90,7 +90,7 @@ fun AdLoadingDialog(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Lütfen bekleyin, video açılıyor...",
+                    text = "Please wait, opening video...",
                     fontSize = 13.sp,
                     color = Color(0xFF64748B),
                     textAlign = TextAlign.Center
@@ -103,7 +103,7 @@ fun AdLoadingDialog(
                     modifier = Modifier.testTag("cancel_ad_loading")
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = "Cancel",
                         color = Color(0xFF94A3B8),
                         fontSize = 12.sp
                     )

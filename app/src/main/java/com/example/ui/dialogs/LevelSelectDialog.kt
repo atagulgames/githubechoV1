@@ -79,22 +79,22 @@ fun LevelSelectDialog(
     }
 
     val filterOptions = listOf(
-        "Tümü (150)",
-        "1-10 Harmonik",
-        "11-20 Yönlü",
-        "21-30 Kilit",
-        "31-40 Sönen",
-        "41-50 Gölge",
-        "51-60 Fraktal",
-        "61-70 Kuantum",
-        "71-80 Zaman",
-        "81-90 Usta",
+        "All (150)",
+        "1-10 Harmonic",
+        "11-20 Directional",
+        "21-30 Locks",
+        "31-40 Fading",
+        "41-50 Shadow",
+        "51-60 Fractal",
+        "61-70 Quantum",
+        "71-80 Time",
+        "81-90 Master",
         "91-100 OMEGA",
-        "101-110 Hiper Akı",
-        "111-120 Tekillik",
-        "121-130 Kuantum Dolanık",
-        "131-140 Kronos Kırılma",
-        "141-150 KOZMİK ZİRVE"
+        "101-110 Hyper Flux",
+        "111-120 Singularity",
+        "121-130 Quantum Entangled",
+        "131-140 Chrono Breach",
+        "141-150 COSMIC PEAK"
     )
 
     val displayedLevels = remember(levels, selectedFilterIndex) {
@@ -182,7 +182,7 @@ fun LevelSelectDialog(
 
                             Column {
                                 Text(
-                                    text = "BÖLÜM SEÇİMİ",
+                                    text = "LEVEL SELECT",
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFFFFD54F),
@@ -190,7 +190,7 @@ fun LevelSelectDialog(
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "$completedCount/100 Tamamlandı",
+                                        text = "$completedCount/100 Completed",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF38BDF8)
@@ -244,7 +244,7 @@ fun LevelSelectDialog(
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Rehber",
+                                            text = "Guide",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White
@@ -274,7 +274,7 @@ fun LevelSelectDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Kapat",
+                                    contentDescription = "Close",
                                     tint = Color.White,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -430,7 +430,7 @@ fun LevelSelectDialog(
                                         )
                                         if (isCurrent) {
                                             Text(
-                                                text = "ŞU AN",
+                                                text = "CURRENT",
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Black,
                                                 color = Color.White
@@ -464,10 +464,10 @@ fun LevelSelectDialog(
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        LegendItem(color = Color(0xFF00D2FF), label = "Şu Anki")
-                        LegendItem(color = Color(0xFFFFC700), label = "Tamamlandı")
-                        LegendItem(color = Color(0xFF3B82F6), label = "Açık")
-                        LegendItem(color = Color(0xFF64748B), label = "Kilitli")
+                        LegendItem(color = Color(0xFF00D2FF), label = "Current")
+                        LegendItem(color = Color(0xFFFFC700), label = "Completed")
+                        LegendItem(color = Color(0xFF3B82F6), label = "Unlocked")
+                        LegendItem(color = Color(0xFF64748B), label = "Locked")
                     }
                 }
             }

@@ -185,7 +185,7 @@ data class EchoUiState(
     val ghostRunnerCurrentPoint: com.example.model.Point? = null,
     val ghostRacePlayerWon: Boolean = false,
     // Behavioral Intelligence (Oyuncu Davranış Analizi)
-    val playerBehaviorInsight: String = "Analiz: Kusursuz Yolculuk",
+    val playerBehaviorInsight: String = "Analysis: Flawless Journey",
     val adaptiveTendencyQuadrant: Int? = null,
     // Echo Beast Corruption System (Yankı Canavarı)
     val echoBeastState: com.example.model.EchoBeastState = com.example.model.EchoBeastState.CALM,
@@ -364,13 +364,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val m = (cd % 3600) / 60
         val s = cd % 60
         val timeFormatted = if (h > 0) {
-            String.format(Locale.getDefault(), "%d saat %d dakika", h, m)
+            String.format(Locale.getDefault(), "%dh %dm", h, m)
         } else if (m > 0) {
-            String.format(Locale.getDefault(), "%d dakika %d saniye", m, s)
+            String.format(Locale.getDefault(), "%dm %ds", m, s)
         } else {
-            String.format(Locale.getDefault(), "%d saniye", s)
+            String.format(Locale.getDefault(), "%ds", s)
         }
-        showToast("Ödülünüz 3 saatte bir yenilenir! Kalan süre: $timeFormatted")
+        showToast("Your reward refreshes every 3 hours! Remaining: $timeFormatted")
     }
 
     private fun loadSavedPreferences() {
@@ -437,9 +437,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             _uiState.update {
                 it.copy(
                     isAdBlockerDetected = true,
-                    adBlockerTitle = "İnternet Bağlantısı Yok",
-                    adBlockerSubtitle = "Reklamlar çalıştırılamıyor",
-                    adBlockerDetails = "ECHO tamamen ücretsiz bir oyundur ve reklam servisleri ile desteklenmektedir. Oyuna devam etmek için lütfen internet bağlantınızı (Wi-Fi veya Mobil Veri) açın."
+                    adBlockerTitle = "No Internet Connection",
+                    adBlockerSubtitle = "Ads cannot run",
+                    adBlockerDetails = "ECHO is completely free and supported by ads. Please turn on Wi-Fi or Mobile Data to continue."
                 )
             }
             return
@@ -641,9 +641,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             _uiState.update {
                 it.copy(
                     isAdBlockerDetected = true,
-                    adBlockerTitle = "İnternet Bağlantısı Yok",
-                    adBlockerSubtitle = "Reklamlar çalıştırılamıyor",
-                    adBlockerDetails = "Günün bulmacasını oynamak için aktif bir internet bağlantısı gerekmektedir. Lütfen internetinizi açın."
+                    adBlockerTitle = "No Internet Connection",
+                    adBlockerSubtitle = "Ads cannot run",
+                    adBlockerDetails = "An active internet connection is required to play the daily challenge. Please enable your internet."
                 )
             }
             return
@@ -660,7 +660,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 screenState = ScreenState.DAILY_CHALLENGE,
                 currentLevelIndex = todaySeed,
-                level = levelData.copy(title = "Günün Bulmacası (2x Jeton)"),
+                level = levelData.copy(title = "Daily Puzzle (2x Tokens)"),
                 nodes = levelData.nodes.map { ln ->
                     Node(id = ln.id, x = ln.x, y = ln.y, connected = false, type = ln.type, keyForGateId = ln.keyForGateId)
                 },
@@ -869,7 +869,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
         com.example.audio.HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
-        showToast("✨ ${activeSeasonTheme.displayName} Teması ve Özel Arka Plan Deseni Aktif Edildi!")
+        showToast("✨ ${activeSeasonTheme.displayName} Theme and Custom Background Pattern Activated!")
     }
 
     fun setSeason2VisualTheme(theme: com.example.model.Season2VisualTheme) {
@@ -883,7 +883,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
         com.example.audio.HarmonicAudioEngine.playNodeVisited()
         triggerHapticLight()
-        showToast("✨ Tema: ${theme.displayName} aktif!")
+        showToast("✨ Theme: ${theme.displayName} active!")
     }
 
     fun toggleSeason2BackgroundEffects() {
@@ -891,7 +891,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isSeason2BackgroundEffectsEnabled = next
         _uiState.update { it.copy(isSeason2BackgroundEffectsEnabled = next) }
         triggerHapticLight()
-        showToast(if (next) "✨ Arka Plan Animasyonları Açık" else "Arka Plan Animasyonları Kapatıldı")
+        showToast(if (next) "✨ Background Animations On" else "Background Animations Off")
     }
 
     fun toggleSeason2ThemeActive() {
@@ -899,7 +899,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isSeason2ThemeActive = next
         _uiState.update { it.copy(isSeason2ThemeActive = next) }
         triggerHapticLight()
-        showToast(if (next) "🌌 Görsel Tema Açıldı" else "Klasik Tema Aktif")
+        showToast(if (next) "🌌 Visual Theme Active" else "Classic Theme Active")
     }
 
     fun setSeason2ThemeSelectorVisible(visible: Boolean) {
@@ -990,7 +990,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val state = _uiState.value
         if (state.gameStatus != GameStatus.PLAYING) return
         if (state.isPreviewActive) {
-            showToast("Ön izleme aşamasındasınız (5sn). Süre başlayınca çizim yapabilirsiniz.")
+            showToast("You are in preview mode (5s). You can draw once the timer starts.")
             return
         }
 
@@ -1004,7 +1004,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         if (hitNode != null) {
             // "Karakter 1'den başlayacak" kuralı: Çizim mutlaka 1 numaralı başlangıç düğümünden başlamalıdır.
             if (hitNode.id != 1) {
-                showToast("Karakter 1'den başlar! Çizime 1 numaralı noktadan başlayın. (+1 Yankı)")
+                showToast("Character starts at 1! Begin drawing from point 1. (+1 Echo)")
                 HarmonicAudioEngine.playHataSound()
                 triggerCollisionFeedback()
                 _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1, totalEchoes = it.totalEchoes + 1) }
@@ -1018,7 +1018,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         state.collectedKeyIds.contains(hitNode.id) ||
                         (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
                 if (!isUnlocked) {
-                    showToast("Bu kapı kilitli! Önce anahtarı topla. (+1 Yankı)")
+                    showToast("This door is locked! Collect the key first. (+1 Echo)")
                     HarmonicAudioEngine.playHataSound()
                     triggerCollisionFeedback()
                     _uiState.update { it.copy(echoCountForLevel = it.echoCountForLevel + 1, totalEchoes = it.totalEchoes + 1) }
@@ -1031,7 +1031,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             triggerNodeTouch()
 
             val newCollectedKeys = if (hitNode.type == NodeType.KEY) {
-                showToast("Anahtar toplandı! Kilitli kapı açıldı.")
+                showToast("Key collected! Locked door opened.")
                 state.collectedKeyIds + hitNode.keyForGateId + hitNode.id
             } else state.collectedKeyIds
 
@@ -1088,9 +1088,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             if (state.visitedNodeIds.contains(hitNode.id)) {
                 val isPrevNode = state.visitedNodeIds.size >= 2 && hitNode.id == state.visitedNodeIds[state.visitedNodeIds.size - 2]
                 val msg = if (isPrevNode) {
-                    "Önceki düğüme geri dönüldü! (+1 Yankı)"
+                    "Returned to previous node! (+1 Echo)"
                 } else {
-                    "Ziyaret edilen düğüme geri dönülemez! (+1 Yankı)"
+                    "Cannot return to visited node! (+1 Echo)"
                 }
                 showToast(msg)
                 commitStrokeAsEcho(msg, attemptedSeg)
@@ -1102,14 +1102,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 edge.fromId == hitNode.id && edge.toId == lastVisitedId
             }
             if (illegalDirected) {
-                val msg = "Bu kenar tek yönlü! (+1 Yankı)"
+                val msg = "This path is one-way! (+1 Echo)"
                 showToast(msg)
                 commitStrokeAsEcho(msg, attemptedSeg)
                 return
             }
 
             if (hitNode.id != expectedNextId) {
-                val msg = "Sıradaki hedef: $expectedNextId numaralı nokta! (+1 Yankı)"
+                val msg = "Next target: Point $expectedNextId! (+1 Echo)"
                 showToast(msg)
                 commitStrokeAsEcho(msg, attemptedSeg)
                 return
@@ -1121,7 +1121,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         state.collectedKeyIds.contains(hitNode.id) ||
                         (hitNode.keyForGateId == -1 && state.collectedKeyIds.isNotEmpty())
                 if (!isUnlocked) {
-                    val msg = "Kapı kilitli! Önce anahtarı topla (+1 Yankı)"
+                    val msg = "Door is locked! Collect the key first (+1 Echo)"
                     showToast(msg)
                     commitStrokeAsEcho(msg, attemptedSeg)
                     return
@@ -1130,7 +1130,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
             // Collect key if this node is a key
             val updatedKeys = if (hitNode.type == NodeType.KEY) {
-                showToast("Anahtar toplandı! Kilitli kapı açıldı.")
+                showToast("Key collected! Locked door opened.")
                 state.collectedKeyIds + hitNode.keyForGateId + hitNode.id
             } else state.collectedKeyIds
 
@@ -1215,7 +1215,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         // Only penalize with an echo barrier if the player actually drew segments and lifted mid-path.
         // If they only touched node 1 and lifted without completing a segment, reset cleanly.
         if (state.currentStrokeSegments.isNotEmpty() && state.visitedNodeIds.size < state.nodes.size) {
-            triggerEarlyLiftFailure("Hamle yarım bırakıldı!")
+            triggerEarlyLiftFailure("Move left incomplete!")
         } else {
             _uiState.update {
                 it.copy(
@@ -1264,7 +1264,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val wonGhostRace = state.isGhostRaceAvailable && state.ghostReplayDurationMs > 0 &&
                 (System.currentTimeMillis() - state.levelStartTimeMs) < state.ghostReplayDurationMs
         if (wonGhostRace) {
-            showToast("🏆 Kendi Kusursuz Hayaletini Geride Bıraktın! Yeni Rekor!")
+            showToast("🏆 You beat your own Perfect Ghost! New Record!")
         }
 
         val startTime = if (state.levelStartTimeMs > 0) state.levelStartTimeMs else (System.currentTimeMillis() - 7500L)
@@ -1344,7 +1344,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             prefs.addDiamonds(3)
             prefs.lastDailyCompletedDate = todayStr
             prefs.dailyChallengeCompletedToday = true
-            showToast("Tebrikler! Günün Bulmacası Tamamlandı (+10 Jeton, +3 Elmas!)")
+            showToast("Congratulations! Daily Challenge Completed (+10 Tokens, +3 Diamonds!)")
         } else {
             // Season 2: Normal level gives +3 tokens, and flawless gives +5 tokens + 1 Diamond!
             val wonTokens = if (echoCount == 0) 5 else 3
@@ -1402,17 +1402,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     private fun triggerSelfIntersectionFailure(message: String) {
         showToast(message)
-        commitStrokeAsEcho("Kendi Yoluyla Kesişti")
+        commitStrokeAsEcho("Self Intersection")
     }
 
     private fun triggerCollisionFailure(message: String) {
         showToast(message)
-        commitStrokeAsEcho("Yankıya Çarpıldı")
+        commitStrokeAsEcho("Echo Collision")
     }
 
     private fun triggerEarlyLiftFailure(message: String) {
         showToast(message)
-        commitStrokeAsEcho("Yarım Hamle")
+        commitStrokeAsEcho("Incomplete Move")
     }
 
     private fun commitStrokeAsEcho(reason: String, attemptedSegment: Segment? = null) {
@@ -1458,7 +1458,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.recordBehaviorError(
                     lastPt.first,
                     lastPt.second,
-                    isRetreat = reason.contains("Geri") || reason.contains("Yarım"),
+                    isRetreat = reason.contains("Incomplete") || reason.contains("Retreat") || reason.contains("Geri") || reason.contains("Yarım"),
                     isFast = (System.currentTimeMillis() - state.levelStartTimeMs) < 4000L
                 )
             }
@@ -1554,7 +1554,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun toggleGhostRace() {
         _uiState.update { it.copy(isGhostRaceActive = !it.isGhostRaceActive) }
-        val statusText = if (!_uiState.value.isGhostRaceActive) "Hayaletle Yarış Kapatıldı" else "Hayaletle Yarış Aktif!"
+        val statusText = if (!_uiState.value.isGhostRaceActive) "Ghost Race Disabled" else "Ghost Race Active!"
         showToast(statusText)
     }
 
@@ -1579,7 +1579,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun useEchoBreaker() {
         val state = _uiState.value
         if (state.echoes.isEmpty()) {
-            showToast("Kırılacak aktif yankı bulunmuyor.")
+            showToast("No active echoes to break.")
             return
         }
         val isInfiniteActive = System.currentTimeMillis() < prefs.infiniteBreakersExpiresAt
@@ -1594,9 +1594,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     echoBreakers = prefs.echoBreakers
                 )
             }
-            showToast(if (isInfiniteActive) "⏱️ Sonsuz Matkap aktif: Yankı imha edildi!" else "Matkap lazeri son yankıyı imha etti!")
+            showToast(if (isInfiniteActive) "⏱️ Infinite Drill active: Echo destroyed!" else "Drill laser destroyed the last echo!")
         } else {
-            showToast("Yetersiz Matkap Jetonu! Mağazadan temin edebilirsin.")
+            showToast("Insufficient Drill Tokens! You can obtain more in the Shop.")
             setShopVisible(true)
         }
     }
@@ -1604,7 +1604,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun activateEchoShrinker(onTriggerAd: () -> Unit = {}) {
         val state = _uiState.value
         if (state.isEchoShrinkerActive) {
-            showToast("🌟 Esnek Mod zaten bu bölüm için aktif!")
+            showToast("🌟 Flexible Mode is already active for this level!")
             return
         }
         _uiState.update {
@@ -1615,7 +1615,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticClick()
-        showToast("🌟 Esnek Mod Aktif! Yankı bariyerleri %50 küçültüldü (Yalnızca bu bölüm için geçerli).")
+        showToast("🌟 Flexible Mode Active! Echo barriers reduced by 50% (This level only).")
     }
 
     /**
@@ -1633,7 +1633,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 gameStatus = GameStatus.PLAYING
             )
         }
-        showToast("⏱️ +15 Saniye Ek Süre Eklendi!")
+        showToast("⏱️ +15 Seconds Extra Time Added!")
         HarmonicAudioEngine.playParty()
         startGameplayTimer(levelId)
     }
@@ -1649,8 +1649,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "⏱️ +15 Saniye Eklendi!",
-                    subtitle = "Bölüm süresine +15 saniye başarıyla eklendi.",
+                    title = "⏱️ +15 Seconds Added!",
+                    subtitle = "Successfully added +15 seconds to level time.",
                     rewardType = type
                 )
             }
@@ -1666,8 +1666,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "Yankılar Temizlendi!",
-                    subtitle = "Bütün yankı bariyerleri silindi ve +1 İpucu Jetonu kazandınız.",
+                    title = "Echoes Cleared!",
+                    subtitle = "All echo barriers erased and earned +1 Hint Token.",
                     rewardType = type,
                     tokensAdded = 1
                 )
@@ -1683,10 +1683,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 if (current < 3) {
-                    showToast("Esnek Alan için reklam ($current/3) izlendi! ${3 - current} reklam daha izleyin.")
+                    showToast("Ad watched for Flexible Area ($current/3)! Watch ${3 - current} more ads.")
                     RewardClaimedInfo(
-                        title = "Esnek Alan İlerlemesi ($current/3)",
-                        subtitle = "Esnek Alan için ${3 - current} reklam daha izlenmeli ve 5 Elmas gereklidir.",
+                        title = "Flexible Area Progress ($current/3)",
+                        subtitle = "${3 - current} more ads and 5 Diamonds required for Flexible Area.",
                         rewardType = type
                     )
                 } else {
@@ -1701,17 +1701,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                                 gameStatus = GameStatus.PLAYING
                             )
                         }
-                        showToast("🌟 Esnek Alan Aktif! 3 reklam tamamlandı ve 5 Elmas harcandı.")
+                        showToast("🌟 Flexible Area Active! 3 ads watched and 5 Diamonds spent.")
                         RewardClaimedInfo(
-                            title = "🌟 Esnek Alan Aktif!",
-                            subtitle = "3 reklam izlendi ve 5 Elmas ile yankı bariyerleri inceltildi.",
+                            title = "🌟 Flexible Area Active!",
+                            subtitle = "3 ads watched and echo barriers shrunk with 5 Diamonds.",
                             rewardType = type
                         )
                     } else {
-                        showToast("3 reklam tamamlandı! Şimdi aktifleştirmek için 5 Elmas zorunludur (Mevcut: ${prefs.diamonds}).")
+                        showToast("3 ads completed! 5 Diamonds required to activate (Current: ${prefs.diamonds}).")
                         RewardClaimedInfo(
-                            title = "3/3 Reklam Tamamlandı!",
-                            subtitle = "Esnek Alanı aktifleştirmek için 5 Elmas zorunludur (Mevcut: ${prefs.diamonds} Elmas).",
+                            title = "3/3 Ads Completed!",
+                            subtitle = "5 Diamonds required to activate Flexible Area (Current: ${prefs.diamonds} Diamonds).",
                             rewardType = type
                         )
                     }
@@ -1737,17 +1737,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                             gameStatus = GameStatus.PLAYING
                         )
                     }
-                    showToast("💡 İpucu Açıldı! 3 reklam başarıyla izlendi.")
+                    showToast("💡 Hint Unlocked! 3 ads successfully watched.")
                     RewardClaimedInfo(
-                        title = "💡 İpucu Rehberi Aktif!",
-                        subtitle = "3 reklam izlendi ve bu bölümün çözüm rotası açıldı.",
+                        title = "💡 Hint Guide Active!",
+                        subtitle = "3 ads watched and solution path revealed for this level.",
                         rewardType = type
                     )
                 } else {
-                    showToast("💡 İpucu için reklam ($nextWatched/3) izlendi! Kalan: ${3 - nextWatched}")
+                    showToast("💡 Ad watched for Hint ($nextWatched/3)! Remaining: ${3 - nextWatched}")
                     RewardClaimedInfo(
-                        title = "İpucu Reklamı ($nextWatched/3)",
-                        subtitle = "İpucu için ${3 - nextWatched} reklam daha izleyin veya 5 elmas kullanın.",
+                        title = "Hint Ad Progress ($nextWatched/3)",
+                        subtitle = "Watch ${3 - nextWatched} more ads or use 5 diamonds to unlock.",
                         rewardType = type
                     )
                 }
@@ -1767,8 +1767,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "Ödül Başarıyla Kazanıldı!",
-                    subtitle = "+1 Matkap Lazeri & +2 İpucu Jetonu hesabınıza eklendi (3 saat sonra tekrar hazır).",
+                    title = "Reward Claimed Successfully!",
+                    subtitle = "+1 Drill Laser & +2 Hint Tokens added (Available again in 3 hours).",
                     rewardType = type,
                     tokensAdded = 2,
                     breakersAdded = 1
@@ -1788,8 +1788,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "Nadir Elmas Kazanıldı!",
-                    subtitle = "+1 Nadir Elmas hesabınıza başarıyla eklendi (3 saat sonra tekrar hazır).",
+                    title = "Rare Diamond Earned!",
+                    subtitle = "+1 Rare Diamond successfully added (Available again in 3 hours).",
                     rewardType = type,
                     diamondsAdded = 1
                 )
@@ -1810,8 +1810,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "Jeton & Altın Paketi!",
-                    subtitle = "+3 İpucu Jetonu ve +30 Altın hesabınıza eklendi (3 saat sonra tekrar hazır).",
+                    title = "Token & Coins Pack!",
+                    subtitle = "+3 Hint Tokens and +30 Coins added (Available again in 3 hours).",
                     rewardType = type,
                     tokensAdded = 3,
                     coinsAdded = 30
@@ -1827,8 +1827,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "Jeton Ödülü Kazanıldı!",
-                    subtitle = "+2 İpucu Jetonu hesabınıza başarıyla eklendi.",
+                    title = "Token Reward Claimed!",
+                    subtitle = "+2 Hint Tokens added to your account.",
                     rewardType = type,
                     tokensAdded = 2
                 )
@@ -1858,8 +1858,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         )
                     }
                     RewardClaimedInfo(
-                        title = "🎉 3-REKLAM MEGA ÖDÜLÜ AÇILDI!",
-                        subtitle = "Tebrikler! +3 💎 Elmas, +500 🪙 Altın, +3 ⚡ Matkap, +5 Jeton ve 15 Dk 2x Kupa kazandınız (3 saat sonra tekrar hazır)!",
+                        title = "🎉 3-AD MEGA REWARD UNLOCKED!",
+                        subtitle = "Congratulations! You earned +3 💎 Diamonds, +500 🪙 Coins, +3 ⚡ Drills, +5 Tokens and 15 Min 2x Trophies (Available again in 3 hours)!",
                         rewardType = type,
                         diamondsAdded = 3,
                         coinsAdded = 500,
@@ -1875,7 +1875,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                             multiAdWatchCount = currentCount
                         )
                     }
-                    showToast("1 Reklam İzlendi ($currentCount/3)! ${3 - currentCount} reklam sonra Büyük Mega Sandık açılacak.")
+                    showToast("1 Ad Watched ($currentCount/3)! ${3 - currentCount} more ads to unlock Mega Chest.")
                     return
                 }
             }
@@ -1890,8 +1890,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "⏱️ 2x Kupa Katlayıcı Aktif!",
-                    subtitle = "Önümüzdeki 15 dakika boyunca her kazanılan bölümde 2 kat kupa alacaksınız!",
+                    title = "⏱️ 2x Trophy Multiplier Active!",
+                    subtitle = "Earn double trophies for every level won for the next 15 minutes!",
                     rewardType = type
                 )
             }
@@ -1906,8 +1906,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "⏱️ Sınırsız Matkap Lazeri Aktif!",
-                    subtitle = "Önümüzdeki 10 dakika boyunca matkap lazeleriniz tükenmeden serbestçe kullanılabilir!",
+                    title = "⏱️ Unlimited Drill Laser Active!",
+                    subtitle = "Freely use drill lasers without consuming stock for the next 10 minutes!",
                     rewardType = type
                 )
             }
@@ -1923,8 +1923,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "⏱️ Esnek Yankı Kalkanı Aktif!",
-                    subtitle = "Önümüzdeki 20 dakika boyunca yankı bariyerleri %50 inceltildi.",
+                    title = "⏱️ Flexible Echo Shield Active!",
+                    subtitle = "Echo barriers thinned by 50% for the next 20 minutes.",
                     rewardType = type
                 )
             }
@@ -1940,8 +1940,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             "DOUBLE_REWARD" -> {
                 claimVictoryDoubleReward()
                 RewardClaimedInfo(
-                    title = "2X Zafer Ödülü!",
-                    subtitle = "+2 İpucu Jetonu ve +1 Matkap Lazeri hesabınıza tanımlandı.",
+                    title = "2X Victory Reward!",
+                    subtitle = "+2 Hint Tokens and +1 Drill added to your account.",
                     rewardType = type,
                     tokensAdded = 2,
                     breakersAdded = 1
@@ -1957,8 +1957,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 RewardClaimedInfo(
-                    title = "Ödül Alındı!",
-                    subtitle = "+1 İpucu Jetonu hesabınıza tanımlandı.",
+                    title = "Reward Claimed!",
+                    subtitle = "+1 Hint Token added to your account.",
                     rewardType = type,
                     tokensAdded = 1
                 )
@@ -2004,7 +2004,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 delay(6000)
                 if (_uiState.value.isAdLoading) {
                     _uiState.update { it.copy(isAdLoading = false) }
-                    showToast("Sorun oluştu! Reklam yüklenemedi veya istek zaman aşımına uğradı.")
+                    showToast("Error! Ad could not be loaded or request timed out.")
                 }
             }
         }
@@ -2018,7 +2018,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             )
         }
         // Strict policy: "sadece rewarda eğer gerçek reklam gösterilmediyse ödülü vermesin"
-        showToast("Reklam yüklenemediği veya tamamlanmadığı için ödül verilemedi.")
+        showToast("Reward not granted because ad was not completed.")
     }
 
     fun shouldShowInterstitialOnNextLevel(): Boolean {
@@ -2093,9 +2093,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         _uiState.update {
                             it.copy(
                                 isAdBlockerDetected = true,
-                                adBlockerTitle = "İnternet Bağlantısı Kesildi",
-                                adBlockerSubtitle = "Reklam servislerine erişilemiyor",
-                                adBlockerDetails = "ECHO tamamen ücretsiz bir oyundur ve reklam servisleri ile desteklenmektedir. Oyuna devam etmek için lütfen internet bağlantınızı (Wi-Fi veya Mobil Veri) açın."
+                                adBlockerTitle = "Internet Connection Lost",
+                                adBlockerSubtitle = "Ad services unreachable",
+                                adBlockerDetails = "ECHO is completely free and supported by ad services. To continue playing, please enable your internet connection (Wi-Fi or Mobile Data)."
                             )
                         }
                     }
@@ -2111,8 +2111,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(testAdsEnabled = enabled) }
         com.example.ads.StartIoManager.setTestModeEnabled(enabled, getApplication())
         showToast(
-            if (enabled) "Test Reklam Modu Aktif"
-            else "Canlı Reklam Modu Aktif (Google Play)"
+            if (enabled) "Test Ad Mode Active"
+            else "Live Ad Mode Active (Google Play)"
         )
     }
 
@@ -2130,13 +2130,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun clearEchoesAction() {
         clearAllEchoes()
-        showToast("Yankılar temizlendi!")
+        showToast("Echoes cleared!")
     }
 
     fun useHint(onTriggerAd: () -> Unit = {}) {
         val state = _uiState.value
         if (state.isHintActive) {
-            showToast("💡 İpucu zaten bu bölüm için aktif! Numaralandırılmış rotayı takip edin.")
+            showToast("💡 Hint is already active for this level! Follow the numbered path.")
             return
         }
         _uiState.update {
@@ -2179,9 +2179,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
             }
-            showToast("💡 İpucu Açıldı! 5 Elmas harcandı ve rehber rota açıldı.")
+            showToast("💡 Hint Unlocked! 5 Diamonds spent and guide path revealed.")
         } else {
-            showToast("Yetersiz Elmas! (Mevcut: ${_uiState.value.diamonds} Elmas. 5 Elmas gereklidir)")
+            showToast("Insufficient Diamonds! (Current: ${_uiState.value.diamonds} Diamonds. 5 required)")
         }
     }
 
@@ -2197,9 +2197,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             HarmonicAudioEngine.playVictoryCascade()
             triggerHapticClick()
-            showToast("💡 İpucu Açıldı! 1 İpucu Jetonu kullanıldı.")
+            showToast("💡 Hint Unlocked! 1 Hint Token used.")
         } else {
-            showToast("Yetersiz Jeton! 3 reklam veya 5 elmas ile de açabilirsiniz.")
+            showToast("Insufficient Tokens! You can also unlock with 3 ads or 5 diamonds.")
         }
     }
 
@@ -2262,7 +2262,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             startPlayingLevel(nextIdx)
         } else {
             HarmonicAudioEngine.playWinAllLevels()
-            showToast("Tebrikler! 100 bölümün tamamını fethettiniz! Büyük Zirve Tamamlandı!")
+            showToast("Congratulations! You conquered all 100 levels! Grand Summit Completed!")
             returnToMainMenu()
         }
     }
@@ -2274,7 +2274,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             loadSavedPreferences()
             startPlayingLevel(0)
             returnToMainMenu()
-            showToast("Tüm ilerleme sıfırlandı! 1. Bölümden başlıyorsunuz.")
+            showToast("All progress reset! Starting from Level 1.")
         }
     }
 
@@ -2312,9 +2312,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             saveCurrentUserProgress()
             HarmonicAudioEngine.playVictoryCascade()
-            showToast("$tokens adet İpucu Jetonu takas edildi!")
+            showToast("$tokens Hint Tokens exchanged!")
         } else {
-            showToast("Yetersiz Elmas! Reklam izleyerek elmas kazanabilirsiniz.")
+            showToast("Insufficient Diamonds! Watch ads to earn diamonds.")
         }
     }
 
@@ -2329,9 +2329,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             saveCurrentUserProgress()
             HarmonicAudioEngine.playVictoryCascade()
-            showToast("$breakers adet Matkap Lazeri takas edildi!")
+            showToast("$breakers Drills exchanged!")
         } else {
-            showToast("Yetersiz Elmas! Reklam izleyerek elmas kazanabilirsiniz.")
+            showToast("Insufficient Diamonds! Watch ads to earn diamonds.")
         }
     }
 
@@ -2346,9 +2346,9 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             saveCurrentUserProgress()
             HarmonicAudioEngine.playVictoryCascade()
-            showToast("$breakers adet Matkap Lazeri alındı!")
+            showToast("$breakers Drills acquired!")
         } else {
-            showToast("Yetersiz Altın! Reklam izleyerek altın kazanabilirsiniz.")
+            showToast("Insufficient Coins! Watch ads to earn coins.")
         }
     }
 
@@ -2356,14 +2356,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.addTokens(amount)
         _uiState.update { it.copy(tokens = prefs.tokens) }
         saveCurrentUserProgress()
-        showToast("$amount adet İpucu Jetonu eklendi!")
+        showToast("$amount Hint Tokens added!")
     }
 
     fun purchaseBreakers(amount: Int) {
         prefs.addBreakers(amount)
         _uiState.update { it.copy(echoBreakers = prefs.echoBreakers) }
         saveCurrentUserProgress()
-        showToast("$amount adet Matkap Lazeri eklendi!")
+        showToast("$amount Drills added!")
     }
 
     fun saveCurrentUserProgress() {
@@ -2409,8 +2409,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         // 1. Daily Quests (100% connected to real game activity) - Season 2 Supercharged
         val q1 = DailyQuest(
             id = 1,
-            title = "3 Bölüm Çöz",
-            description = "Bugün 3 farklı bölümü başarıyla tamamla",
+            title = "Solve 3 Levels",
+            description = "Successfully complete 3 different levels today",
             current = prefs.levelsCompletedToday,
             target = 3,
             rewardTokens = 5,
@@ -2420,8 +2420,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         )
         val q2 = DailyQuest(
             id = 2,
-            title = "Yıldız Avcısı",
-            description = "Bugün toplam en az 6 yıldız topla",
+            title = "Star Hunter",
+            description = "Collect at least 6 stars today",
             current = prefs.starsEarnedToday,
             target = 6,
             rewardTokens = 8,
@@ -2431,8 +2431,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         )
         val q3 = DailyQuest(
             id = 3,
-            title = "Günün Özel Bulmacası",
-            description = "Bugünün özel eko bulmacasını çöz",
+            title = "Daily Puzzle",
+            description = "Solve today's special echo puzzle",
             current = if (prefs.dailyChallengeCompletedToday) 1 else 0,
             target = 1,
             rewardTokens = 10,
@@ -2442,8 +2442,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         )
         val q4 = DailyQuest(
             id = 4,
-            title = "Kusursuz Çizim (0 Yankı)",
-            description = "En az 2 bölümü tek bir hata/yankı yapmadan bitir",
+            title = "Flawless Path (0 Echoes)",
+            description = "Finish at least 2 levels without a single error or echo",
             current = prefs.flawlessLevelsToday,
             target = 2,
             rewardTokens = 12,
@@ -2491,13 +2491,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             DailyLoginDay(
                 dayNumber = day,
                 title = when (day) {
-                    1 -> "+5 Jeton +2💎"
-                    2 -> "+10 Jeton +2 Matkap"
-                    3 -> "+15 Jeton +8💎"
-                    4 -> "+20 Jeton +4 Matkap"
-                    5 -> "+25 Jeton +15💎"
-                    6 -> "+35 Jeton +6 Matkap"
-                    else -> "Mega Efsanevi Ödül"
+                    1 -> "+5 Tokens +2💎"
+                    2 -> "+10 Tokens +2 Drills"
+                    3 -> "+15 Tokens +8💎"
+                    4 -> "+20 Tokens +4 Drills"
+                    5 -> "+25 Tokens +15💎"
+                    6 -> "+35 Tokens +6 Drills"
+                    else -> "Mega Legendary Reward"
                 },
                 tokens = tok,
                 breakers = brk,
@@ -2545,7 +2545,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
-        showToast("Görev Ödülü Alındı! (+${quest.rewardTokens} Jeton, +${quest.rewardBreakers} Matkap, +${quest.rewardDiamonds} Elmas)")
+        showToast("Quest Reward Claimed! (+${quest.rewardTokens} Tokens, +${quest.rewardBreakers} Drills, +${quest.rewardDiamonds} Diamonds)")
         refreshDailySystems()
         _uiState.update {
             it.copy(
@@ -2559,7 +2559,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun claimDailyLoginReward() {
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         if (prefs.isLoginRewardClaimedToday(todayStr)) {
-            showToast("Bugünkü giriş ödülü zaten alındı!")
+            showToast("Today's login reward has already been claimed!")
             return
         }
 
@@ -2587,7 +2587,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
 
-        showToast("Gün $streak Ödülü! (+$tok Jeton, +$brk Matkap, +$dia Elmas)")
+        showToast("Day $streak Reward! (+$tok Tokens, +$brk Drills, +$dia Diamonds)")
         refreshDailySystems()
         _uiState.update {
             it.copy(
@@ -2602,7 +2602,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         if (!isAd) {
             if (!prefs.isFreeChestAvailable(todayStr)) {
-                showToast("Bugünkü ücretsiz sandık zaten açıldı!")
+                showToast("Today's free chest has already been opened!")
                 return
             }
             prefs.lastFreeChestDate = todayStr
@@ -2611,13 +2611,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             if (!prefs.isWeeklyAdChestAvailable()) {
                 val rem = prefs.getWeeklyAdChestRemainingMillis()
                 val remText = prefs.formatWeeklyAdRemaining(rem)
-                showToast("Haftalık reklamlı sandık sadece haftada 1 kez açılabilir! (Kalan: $remText)")
+                showToast("Weekly ad chest can only be opened once a week! (Remaining: $remText)")
                 return
             }
             prefs.recordWeeklyAdChestOpened()
         }
 
-        grantChestReward(if (isAd) "Haftalık Reklam Sandığı" else "Günlük Ücretsiz Sandık")
+        grantChestReward(if (isAd) "Weekly Ad Chest" else "Daily Free Chest")
     }
 
     /**
@@ -2630,7 +2630,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         if (!hasTokens && !hasCoins) {
             val balance = maxOf(prefs.tokens, prefs.coins)
-            showToast("Yetersiz jeton! Sandık için 250 jeton gerekiyor. (Mevcut: $balance)")
+            showToast("Insufficient tokens! 250 tokens required for chest. (Current: $balance)")
             return
         }
 
@@ -2640,7 +2640,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             prefs.coins -= cost
         }
 
-        grantChestReward("250 Jetonluk Kozmik Sandık")
+        grantChestReward("250 Token Cosmic Chest")
         syncSaveToCloud()
     }
 
@@ -2666,7 +2666,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 ChestReward(
                     rarity = ThemeRarity.COMMON,
                     title = sourceTitle,
-                    subtitle = "$t Jeton ve $d Elmas kazandınız!",
+                    subtitle = "You earned $t Tokens and $d Diamonds!",
                     tokens = t,
                     breakers = 0,
                     diamonds = d
@@ -2680,8 +2680,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.addDiamonds(d)
                 ChestReward(
                     rarity = ThemeRarity.RARE,
-                    title = "Nadir $sourceTitle",
-                    subtitle = "$t Jeton, 2 Matkap ve $d Elmas kazandınız!",
+                    title = "Rare $sourceTitle",
+                    subtitle = "You earned $t Tokens, 2 Drills and $d Diamonds!",
                     tokens = t,
                     breakers = 2,
                     diamonds = d
@@ -2696,12 +2696,12 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.unlockTheme("AURORA_EMERALD")
                 ChestReward(
                     rarity = ThemeRarity.EPIC,
-                    title = "Epik $sourceTitle",
-                    subtitle = "$t Jeton, 4 Matkap, $d Elmas ve 'Kutup Zümrüdü' Teması açıldı!",
+                    title = "Epic $sourceTitle",
+                    subtitle = "You earned $t Tokens, 4 Drills, $d Diamonds, and unlocked 'Polar Emerald' Theme!",
                     tokens = t,
                     breakers = 4,
                     diamonds = d,
-                    unlockedThemeName = "Kutup Zümrüdü"
+                    unlockedThemeName = "Polar Emerald"
                 )
             }
             else -> {
@@ -2713,12 +2713,12 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.unlockTheme("GOLDEN_PULSE")
                 ChestReward(
                     rarity = ThemeRarity.LEGENDARY,
-                    title = "Efsanevi $sourceTitle",
-                    subtitle = "$t Jeton, 8 Matkap, $d Elmas ve Efsanevi 'Altın Lazer' Teması açıldı!",
+                    title = "Legendary $sourceTitle",
+                    subtitle = "You earned $t Tokens, 8 Drills, $d Diamonds, and unlocked Legendary 'Golden Laser' Theme!",
                     tokens = t,
                     breakers = 8,
                     diamonds = d,
-                    unlockedThemeName = "Altın Lazer"
+                    unlockedThemeName = "Golden Laser"
                 )
             }
         }
@@ -2757,7 +2757,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isDoubleRewardClaimedThisLevel = true
             )
         }
-        showToast("2X Bonus Ödülü! (+6 Jeton, +2 Matkap, +2 Elmas)")
+        showToast("2X Bonus Reward! (+6 Tokens, +2 Drills, +2 Diamonds)")
     }
 
     private fun findNodeAtPoint(point: Point, nodes: List<Node>): Node? {
@@ -2890,7 +2890,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         rank = list.size + 1,
                         username = username,
                         avatarEmoji = "⚡",
-                        title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
+                        title = if (prefs.trophies >= 1000) "🏆 Echo Master" else "Sound Explorer",
                         trophies = prefs.trophies,
                         totalEchoes = prefs.totalEchoes,
                         totalPlayTimeSec = prefs.totalPlayTimeSec,
@@ -2915,7 +2915,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                             rank = remoteList.size + 1,
                             username = username,
                             avatarEmoji = "⚡",
-                            title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
+                            title = if (prefs.trophies >= 1000) "🏆 Echo Master" else "Sound Explorer",
                             trophies = prefs.trophies,
                             totalEchoes = prefs.totalEchoes,
                             totalPlayTimeSec = prefs.totalPlayTimeSec,
@@ -2972,7 +2972,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 rank = 1,
                 username = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername },
                 avatarEmoji = "⚡",
-                title = if (prefs.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi",
+                title = if (prefs.trophies >= 1000) "🏆 Echo Master" else "Sound Explorer",
                 trophies = prefs.trophies,
                 totalEchoes = prefs.totalEchoes,
                 totalPlayTimeSec = prefs.totalPlayTimeSec,
@@ -3028,7 +3028,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     selectedPlayerProfile = if (it.selectedPlayerProfile?.isCurrentUser == true) myPlayer else it.selectedPlayerProfile
                 )
             }
-            showToast("Profil başarıyla güncellendi!")
+            showToast("Profile updated successfully!")
         }
     }
 
@@ -3053,7 +3053,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             } else if (!silent) {
-                showToast("Uygulamanız güncel.")
+                showToast("Your app is up to date.")
             }
         }
     }

@@ -41,10 +41,10 @@ class EchoNotificationReceiver : BroadcastReceiver() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "ECHO Günlük Bildirimler",
+                "ECHO Daily Notifications",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Sabah, öğle, ikindi ve akşam için oyun teşvik bildirimleri"
+                description = "Daily game motivation reminders and 3-hour reward notifications"
                 enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)

@@ -261,7 +261,7 @@ private fun LeaderboardHeaderBar(
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Kapat",
+                contentDescription = "Close",
                 tint = Color.White,
                 modifier = Modifier.size(22.dp)
             )
@@ -851,7 +851,7 @@ private fun LeaderboardChunkyRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Waves,
-                        contentDescription = "Yankı",
+                        contentDescription = "Echo",
                         tint = Color(0xFF38BDF8),
                         modifier = Modifier.size(14.dp)
                     )
