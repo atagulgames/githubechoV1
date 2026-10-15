@@ -318,7 +318,7 @@ fun IntroLandscapeScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "TEK ÇİZGİ BULMACA",
+                        text = "ONE LINE PUZZLE",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 4.sp,

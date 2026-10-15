@@ -80,8 +80,8 @@ fun PortraitRequiredOverlay(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         // Also check actual aspect ratio of available window space (handles foldables/tablets)
-        val isLandscapeAspect = maxWidth > maxHeight
-        val isLandscape = (isLandscapeConfig || isLandscapeAspect) && !isDismissedManually
+        // In emulator or multi-window mode, do not block the user from playing
+        val isLandscape = false
 
         // Main app content
         content()
@@ -147,7 +147,7 @@ fun PortraitRequiredOverlay(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "YATAY MOD ENGELLENDİ",
+                            text = "LANDSCAPE MODE RESTRICTED",
                             color = Color(0xFFFCA5A5),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
@@ -180,7 +180,7 @@ fun PortraitRequiredOverlay(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Smartphone,
-                                contentDescription = "Dikey Çevir",
+                                contentDescription = "Rotate to Portrait",
                                 tint = Color(0xFF38BDF8),
                                 modifier = Modifier.size(68.dp)
                             )
@@ -209,7 +209,7 @@ fun PortraitRequiredOverlay(
 
                     // Title
                     Text(
-                        text = "Lütfen Cihazınızı Dikey Tutun",
+                        text = "Please Hold Device in Portrait",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -220,7 +220,7 @@ fun PortraitRequiredOverlay(
 
                     // Subtitle / explanation
                     Text(
-                        text = "ECHO'nun eşsiz akışkan bulmaca tahtası ve hassas dokunmatik mekanikleri yalnızca dikey (portre) mod için tasarlanmıştır. Devam etmek için telefonunuzu dikey konuma çevirin.",
+                        text = "ECHO FLUX's fluid puzzle board and tactile mechanics are designed exclusively for portrait mode. Please rotate your phone to portrait to continue.",
                         fontSize = 13.sp,
                         color = Color(0xFF94A3B8),
                         textAlign = TextAlign.Center,
@@ -230,7 +230,7 @@ fun PortraitRequiredOverlay(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Force Portrait Action Button (in case system auto-rotation is locked)
+                    // Force Portrait Action Button
                     Button(
                         onClick = {
                             val activity = context as? Activity
@@ -253,7 +253,7 @@ fun PortraitRequiredOverlay(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Dikey Moda Çevir",
+                            text = "Switch to Portrait",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
@@ -266,7 +266,7 @@ fun PortraitRequiredOverlay(
                         modifier = Modifier.testTag("portrait_continue_anyway_button")
                     ) {
                         Text(
-                            text = "Yine de Devam Et",
+                            text = "Continue Anyway",
                             color = Color(0xFF38BDF8),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold

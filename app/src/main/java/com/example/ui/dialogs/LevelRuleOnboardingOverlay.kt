@@ -163,9 +163,9 @@ fun LevelRuleOnboardingOverlay(
                             ) {
                                 Text(
                                     text = if (activeRule.isMajorMilestone) {
-                                        if (isTurkish) "🏆 BÖLÜM ${activeRule.levelId} MİLAT NOKTASI" else "🏆 LEVEL ${activeRule.levelId} MILESTONE"
+                                        "🏆 LEVEL ${activeRule.levelId} MILESTONE"
                                     } else {
-                                        if (isTurkish) "✨ BÖLÜM ${activeRule.levelId} KURALI" else "✨ LEVEL ${activeRule.levelId} RULE"
+                                        "✨ LEVEL ${activeRule.levelId} RULE"
                                     },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
@@ -183,7 +183,7 @@ fun LevelRuleOnboardingOverlay(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Kapat",
+                                    contentDescription = "Close",
                                     tint = textSecondary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -237,7 +237,7 @@ fun LevelRuleOnboardingOverlay(
 
                         // Milestone Selector Quick Bar (Allows previewing all 12 Grand Milestones)
                         Text(
-                            text = if (isTurkish) "⚡ Seviye Milatları (1 - 100):" else "⚡ Level Milestones (1 - 100):",
+                            text = "⚡ Level Milestones (1 - 100):",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = textSecondary,
@@ -304,7 +304,7 @@ fun LevelRuleOnboardingOverlay(
                                 )
                                 Column {
                                     Text(
-                                        text = if (isTurkish) "Nasıl Çalışır?" else "How It Works",
+                                        text = "How It Works",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = accentColor
@@ -343,7 +343,7 @@ fun LevelRuleOnboardingOverlay(
                                 )
                                 Column {
                                     Text(
-                                        text = if (isTurkish) "Yankı & Hata Tehlikesi (+1 Yankı)" else "Echo & Collision Hazard (+1 Echo)",
+                                        text = "Echo & Collision Hazard (+1 Echo)",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFEF4444)
@@ -382,7 +382,7 @@ fun LevelRuleOnboardingOverlay(
                                 )
                                 Column {
                                     Text(
-                                        text = if (isTurkish) "Usta Taktiği (3 Yıldız Rehberi)" else "Master Strategy (3-Star Tip)",
+                                        text = "Master Strategy (3-Star Tip)",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFF59E0B)
@@ -422,7 +422,7 @@ fun LevelRuleOnboardingOverlay(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (isTurkish) "Bu kuralı otomatik tekrar göster" else "Auto-show rules for new milestones",
+                                    text = "Auto-show rules for new milestones",
                                     fontSize = 12.sp,
                                     color = textSecondary
                                 )
@@ -484,7 +484,7 @@ fun LevelRuleOnboardingOverlay(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (isTurkish) "Bölüme Başla!" else "Start Level!",
+                                    text = "Start Level!",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -518,13 +518,13 @@ fun LevelRuleOnboardingOverlay(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Column {
                                     Text(
-                                        text = if (isTurkish) "100 Seviye Kural Ansiklopedisi" else "100 Level Rules Encyclopedia",
+                                        text = "100 Level Rules Encyclopedia",
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Black,
                                         color = textPrimary
                                     )
                                     Text(
-                                        text = if (isTurkish) "12 Büyük Kademe & Tüm Kurallar" else "12 Grand Tiers & All Rules",
+                                        text = "12 Grand Tiers & All Rules",
                                         fontSize = 11.sp,
                                         color = textSecondary
                                     )
@@ -538,14 +538,14 @@ fun LevelRuleOnboardingOverlay(
                                 },
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat", tint = textSecondary)
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = textSecondary)
                             }
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
                         // Scrollable List of All 100 Rules grouped by Milestones
-                        val allRules = remember(isTurkish) { LevelRuleCatalog.getAll100Rules(isTurkish) }
+                        val allRules = remember { LevelRuleCatalog.getAll100Rules(false) }
 
                         LazyColumn(
                             modifier = Modifier
@@ -588,7 +588,7 @@ fun LevelRuleOnboardingOverlay(
                                             Column {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Text(
-                                                        text = if (isTurkish) "Bölüm ${rule.levelId}: ${rule.ruleTitle}" else "Level ${rule.levelId}: ${rule.ruleTitle}",
+                                                        text = "Level ${rule.levelId}: ${rule.ruleTitle}",
                                                         fontSize = 13.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = textPrimary,
@@ -598,7 +598,7 @@ fun LevelRuleOnboardingOverlay(
                                                     if (rule.isMajorMilestone) {
                                                         Spacer(modifier = Modifier.width(6.dp))
                                                         Text(
-                                                            text = "⭐ MİLAT",
+                                                            text = "⭐ MILESTONE",
                                                             fontSize = 9.sp,
                                                             fontWeight = FontWeight.Black,
                                                             color = rColor
@@ -617,7 +617,7 @@ fun LevelRuleOnboardingOverlay(
                                         }
 
                                         Text(
-                                            text = "İncele ▶",
+                                            text = "View ▶",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = rColor
@@ -641,7 +641,7 @@ fun LevelRuleOnboardingOverlay(
                             colors = ButtonDefaults.buttonColors(containerColor = accentColor)
                         ) {
                             Text(
-                                text = if (isTurkish) "Seçili Kurala Dön" else "Back to Selected Rule",
+                                text = "Back to Selected Rule",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )

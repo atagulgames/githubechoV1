@@ -4,7 +4,9 @@
     <string name="action_levels">Levels</string>
     <string name="action_themes">Themes</string>
     <string name="action_shop">Shop</string>
-    <string name="startapp_app_id" translatable="false">209349309</string>
+    <string name="yandex_banner_ad_unit_id" translatable="false">RM-20228995-1</string>
+    <string name="yandex_rewarded_ad_unit_id" translatable="false">RM-20228995-2</string>
+    <string name="yandex_interstitial_ad_unit_id" translatable="false">RM-20228995-3</string>
     <string name="adblock_warning_title">Ad Blocker Detected</string>
     <string name="adblock_warning_subtitle">Unable to run application</string>
     <string name="adblock_recheck">Check Again</string>

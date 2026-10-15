@@ -47,11 +47,11 @@ import com.example.data.UpdateInfo
  * App Update Dialog shown when latest_version > current_version.
  *
  * Panel:
- * "Yeni Güncelleme"
- * "Yeni bir ECHOFLUX güncellemesi mevcut."
- * Butonlar:
- * "Güncelle" -> aç https://echoflux.apk.com
- * "Daha sonra" -> paneli kapat ve devam et
+ * "New Update Available"
+ * "A new version of ECHO FLUX is available."
+ * Buttons:
+ * "Update Now"
+ * "Maybe later"
  */
 @Composable
 fun UpdateDialog(
@@ -131,9 +131,9 @@ fun UpdateDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title: "Yeni Güncelleme"
+                // Title: "New Update Available"
                 Text(
-                    text = updateInfo.title.ifBlank { "Yeni Güncelleme" },
+                    text = updateInfo.title.ifBlank { "New Update Available" },
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -142,9 +142,9 @@ fun UpdateDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Description: "Yeni bir ECHOFLUX güncellemesi mevcut."
+                // Description: "A new version of ECHO FLUX is available."
                 Text(
-                    text = updateInfo.description.ifBlank { "Yeni bir ECHOFLUX güncellemesi mevcut." },
+                    text = updateInfo.description.ifBlank { "A new version of ECHO FLUX is available." },
                     fontSize = 14.sp,
                     color = Color(0xFFCBD5E1),
                     textAlign = TextAlign.Center,
@@ -153,7 +153,7 @@ fun UpdateDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Primary Button: "Güncelle"
+                // Primary Button: "Update Now"
                 Button(
                     onClick = hapticClick(isHeavy = true) {
                         try {
@@ -177,7 +177,7 @@ fun UpdateDialog(
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
                 ) {
                     Text(
-                        text = "Güncelle",
+                        text = "Update Now",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -186,7 +186,7 @@ fun UpdateDialog(
                 if (!updateInfo.isForceUpdate) {
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Secondary Button: "Daha sonra"
+                    // Secondary Button: "Maybe later"
                     OutlinedButton(
                         onClick = hapticClick {
                             onDismiss()
@@ -205,7 +205,7 @@ fun UpdateDialog(
                         )
                     ) {
                         Text(
-                            text = "Daha sonra",
+                            text = "Maybe later",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
                             color = Color(0xFF94A3B8)

@@ -21,17 +21,10 @@
 #-renamesourcefileattribute SourceFile
 
 # ==========================================
-# Start.io (StartApp) In-App SDK ProGuard Rules
+# Yandex Mobile Ads SDK ProGuard Rules
 # ==========================================
--keep class com.startapp.** {
+-keep class com.yandex.mobile.ads.** {
       *;
 }
-
--keep class com.truenet.** {
-      *;
-}
-
--keepattributes Exceptions, InnerClasses, Signature, Deprecated, SourceFile, LineNumberTable, *Annotation*, EnclosingMethod
--dontwarn android.webkit.JavascriptInterface
--dontwarn com.startapp.**
+-dontwarn com.yandex.mobile.ads.**
 -dontwarn org.jetbrains.annotations.**

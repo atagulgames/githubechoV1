@@ -136,7 +136,7 @@ fun SkinsDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // User Requirement: "tema dark/white sadece iki tane seçenek olacak"
+                // User requirement: Dark / White UI Theme options only
                 Text(
                     text = "UI Theme (Dark / White)",
                     fontSize = 14.sp,

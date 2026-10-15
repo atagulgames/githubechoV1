@@ -6,10 +6,10 @@ import com.example.model.LevelNode
 object LevelsRepository {
 
     val levels: List<LevelData> = listOf(
-        // Level 1: Kare (Square Introduction)
+        // Level 1: Square Introduction
         LevelData(
             levelId = 1,
-            title = "Kare Başlangıcı",
+            title = "Square Genesis",
             gridSize = 3,
             nodes = listOf(
                 LevelNode(id = 0, x = 80f, y = 140f),
@@ -19,13 +19,13 @@ object LevelsRepository {
             ),
             parEchoes = 0,
             hintOrder = listOf(0, 1, 2, 3),
-            description = "Tüm düğümleri tek bir kesintisiz çizgiyle birleştirin."
+            description = "Connect all nodes in a single continuous path."
         ),
 
-        // Level 2: Ev Çatısı (Pentagon / House)
+        // Level 2: Pentagon / House
         LevelData(
             levelId = 2,
-            title = "Ev Çatısı",
+            title = "House Gable",
             gridSize = 3,
             nodes = listOf(
                 LevelNode(id = 0, x = 180f, y = 100f), // roof peak
@@ -36,13 +36,13 @@ object LevelsRepository {
             ),
             parEchoes = 0,
             hintOrder = listOf(0, 1, 2, 3, 4),
-            description = "Düğümleri sırayla bağlayarak yankı bırakmadan çatıyı tamamlayın."
+            description = "Complete the roof sequentially without creating echoes."
         ),
 
-        // Level 3: Kum Saati (Hourglass / Bowtie)
+        // Level 3: Hourglass / Bowtie
         LevelData(
             levelId = 3,
-            title = "Kum Saati",
+            title = "Hourglass",
             gridSize = 3,
             nodes = listOf(
                 LevelNode(id = 0, x = 80f, y = 120f),
@@ -53,13 +53,13 @@ object LevelsRepository {
             ),
             parEchoes = 1,
             hintOrder = listOf(0, 1, 2, 3, 4),
-            description = "Merkez düğümden dikkatle geçin. Yankılar yolu kapatabilir!"
+            description = "Pass carefully through the center node. Echoes will block your route!"
         ),
 
-        // Level 4: Beşgen Yıldız (Star Nodes)
+        // Level 4: Star Nodes
         LevelData(
             levelId = 4,
-            title = "Yıldız Döngüsü",
+            title = "Star Circuit",
             gridSize = 4,
             nodes = listOf(
                 LevelNode(id = 0, x = 180f, y = 90f),
@@ -70,13 +70,13 @@ object LevelsRepository {
             ),
             parEchoes = 1,
             hintOrder = listOf(0, 2, 4, 1, 3),
-            description = "Çapraz yıldız rotasını çizerek düğümleri birleştirin."
+            description = "Trace the diagonal star path to connect all points."
         ),
 
-        // Level 5: Altıgen Ağ (Hexagon)
+        // Level 5: Hexagon
         LevelData(
             levelId = 5,
-            title = "Altıgen Ağ",
+            title = "Hexagon Web",
             gridSize = 4,
             nodes = listOf(
                 LevelNode(id = 0, x = 180f, y = 90f),
@@ -88,13 +88,13 @@ object LevelsRepository {
             ),
             parEchoes = 1,
             hintOrder = listOf(0, 1, 2, 3, 4, 5),
-            description = "Altıgen sınırları boyunca tek nefeste çizin."
+            description = "Trace along the hexagon perimeter in one breath."
         ),
 
-        // Level 6: Zikzak Köprü (Zigzag Bridge)
+        // Level 6: Zigzag Bridge
         LevelData(
             levelId = 6,
-            title = "Zikzak Köprü",
+            title = "Zigzag Bridge",
             gridSize = 4,
             nodes = listOf(
                 LevelNode(id = 0, x = 70f, y = 120f),
@@ -106,13 +106,13 @@ object LevelsRepository {
             ),
             parEchoes = 1,
             hintOrder = listOf(0, 1, 3, 2, 4, 5),
-            description = "Yankı çizgileriyle kendi yolunuzu kilitlememeye özen gösterin."
+            description = "Avoid locking your own route with echo lines."
         ),
 
-        // Level 7: 3x3 Izgara (The 3x3 Matrix)
+        // Level 7: 3x3 Matrix
         LevelData(
             levelId = 7,
-            title = "3x3 Izgara",
+            title = "3x3 Matrix",
             gridSize = 3,
             nodes = listOf(
                 LevelNode(id = 0, x = 70f, y = 120f),
@@ -127,13 +127,13 @@ object LevelsRepository {
             ),
             parEchoes = 2,
             hintOrder = listOf(0, 1, 2, 3, 4, 5, 6, 7, 8),
-            description = "Tüm 9 noktayı ziyaret eden kesintisiz bir S rotası çizin."
+            description = "Trace an unbroken S-curve visiting all 9 points."
         ),
 
-        // Level 8: Çift Halka (Concentric Squares)
+        // Level 8: Concentric Squares
         LevelData(
             levelId = 8,
-            title = "Çift Halka",
+            title = "Concentric Rings",
             gridSize = 4,
             nodes = listOf(
                 LevelNode(id = 0, x = 60f, y = 100f),
@@ -147,13 +147,13 @@ object LevelsRepository {
             ),
             parEchoes = 2,
             hintOrder = listOf(0, 1, 2, 6, 5, 4, 7, 3),
-            description = "Dış çemberden iç çembere geçişte yankı bariyerlerine çarpmayın."
+            description = "Navigate from outer ring to inner core without hitting barriers."
         ),
 
-        // Level 9: Kristal Elmas (Diamond Mesh)
+        // Level 9: Diamond Mesh
         LevelData(
             levelId = 9,
-            title = "Kristal Elmas",
+            title = "Crystal Diamond",
             gridSize = 5,
             nodes = listOf(
                 LevelNode(id = 0, x = 180f, y = 80f),  // top
@@ -166,13 +166,13 @@ object LevelsRepository {
             ),
             parEchoes = 2,
             hintOrder = listOf(0, 1, 2, 3, 6, 4, 5),
-            description = "Kristal ekseninde zarif bir akış planlayın."
+            description = "Plan a graceful flow along the crystal axis."
         ),
 
-        // Level 10: Spiral Labirent (Inward Spiral)
+        // Level 10: Inward Spiral
         LevelData(
             levelId = 10,
-            title = "Spiral Labirent",
+            title = "Inward Spiral",
             gridSize = 4,
             nodes = listOf(
                 LevelNode(id = 0, x = 60f, y = 90f),
@@ -186,13 +186,13 @@ object LevelsRepository {
             ),
             parEchoes = 2,
             hintOrder = listOf(0, 1, 2, 3, 4, 5, 6, 7),
-            description = "İçeriye doğru kıvrılan spiralde en ufak bir hata tüm yolu kapatır."
+            description = "In this curling spiral, even the slightest mistake blocks the path."
         ),
 
-        // Level 11: Kozmik Yıldız (10-Node Complex Web)
+        // Level 11: 10-Node Complex Web
         LevelData(
             levelId = 11,
-            title = "Kozmik Yıldız",
+            title = "Cosmic Star",
             gridSize = 5,
             nodes = listOf(
                 LevelNode(id = 0, x = 180f, y = 80f),
@@ -208,13 +208,13 @@ object LevelsRepository {
             ),
             parEchoes = 3,
             hintOrder = listOf(0, 1, 2, 3, 4, 9, 8, 7, 6, 5),
-            description = "Çember ve iç çekirdek arasındaki hassas denge."
+            description = "Delicate balance between the outer orbit and inner core."
         ),
 
-        // Level 12: Yankı Matrisi (Final Grandmaster Challenge)
+        // Level 12: Final Grandmaster Challenge
         LevelData(
             levelId = 12,
-            title = "Yankı Matrisi",
+            title = "Echo Matrix",
             gridSize = 4,
             nodes = listOf(
                 LevelNode(id = 0, x = 70f, y = 90f),
@@ -230,7 +230,7 @@ object LevelsRepository {
             ),
             parEchoes = 3,
             hintOrder = listOf(0, 1, 2, 5, 4, 3, 6, 7, 8, 9),
-            description = "Usta seviye: Yankı engelleri arasında tek bir mükemmel çizgi var."
+            description = "Master challenge: Only one flawless line threads through the obstacles."
         )
     )
 

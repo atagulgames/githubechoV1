@@ -132,7 +132,7 @@ fun SupportDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = if (isTr) "Destek & İletişim" else "Support & Contact",
+                                text = "Support & Contact",
                                 color = textPrimary,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
@@ -154,7 +154,7 @@ fun SupportDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = if (isTr) "Kapat" else "Close",
+                            contentDescription = "Close",
                             tint = textSecondary
                         )
                     }
@@ -163,10 +163,7 @@ fun SupportDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = if (isTr)
-                        "Geri bildiriminiz, önerileriniz veya karşılaştığınız sorunlar için bize ulaşın. Ekibimiz en kısa sürede dönüş yapacaktır."
-                    else
-                        "Contact us for your feedback, suggestions or any issues. Our support team will get back to you promptly.",
+                    text = "Contact us for your feedback, suggestions or any issues. Our support team will get back to you promptly.",
                     color = textSecondary,
                     fontSize = 12.sp,
                     lineHeight = 16.sp
@@ -174,14 +171,14 @@ fun SupportDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Adı Soyadı Input
+                // Full Name Input
                 OutlinedTextField(
                     value = fullName,
                     onValueChange = {
                         fullName = it
                         errorMessage = null
                     },
-                    label = { Text(if (isTr) "Ad Soyad *" else "Full Name *") },
+                    label = { Text("Full Name *") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Person,
@@ -213,14 +210,14 @@ fun SupportDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Telefon Numarası Input
+                // Phone Number Input
                 OutlinedTextField(
                     value = phoneNumber,
                     onValueChange = {
                         phoneNumber = it
                         errorMessage = null
                     },
-                    label = { Text(if (isTr) "Telefon Numarası *" else "Phone Number *") },
+                    label = { Text("Phone Number *") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Phone,
@@ -252,14 +249,14 @@ fun SupportDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // E-posta Input
+                // Email Input
                 OutlinedTextField(
                     value = emailAddress,
                     onValueChange = {
                         emailAddress = it
                         errorMessage = null
                     },
-                    label = { Text(if (isTr) "E-posta Adresiniz *" else "Your Email *") },
+                    label = { Text("Your Email *") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Email,
@@ -291,14 +288,14 @@ fun SupportDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Mesaj Input
+                // Message Input
                 OutlinedTextField(
                     value = messageText,
                     onValueChange = {
                         messageText = it
                         errorMessage = null
                     },
-                    label = { Text(if (isTr) "Mesajınız / Sorun Detayı *" else "Your Message / Issue *") },
+                    label = { Text("Your Message / Issue *") },
                     minLines = 3,
                     maxLines = 5,
                     keyboardOptions = KeyboardOptions(
@@ -338,19 +335,19 @@ fun SupportDialog(
                 Button(
                     onClick = {
                         if (fullName.trim().isEmpty()) {
-                            errorMessage = if (isTr) "Lütfen ad ve soyadınızı girin." else "Please enter your full name."
+                            errorMessage = "Please enter your full name."
                             return@Button
                         }
                         if (phoneNumber.trim().isEmpty()) {
-                            errorMessage = if (isTr) "Lütfen telefon numaranızı girin." else "Please enter your phone number."
+                            errorMessage = "Please enter your phone number."
                             return@Button
                         }
                         if (emailAddress.trim().isEmpty() || !emailAddress.contains("@")) {
-                            errorMessage = if (isTr) "Lütfen geçerli bir e-posta adresi girin." else "Please enter a valid email."
+                            errorMessage = "Please enter a valid email."
                             return@Button
                         }
                         if (messageText.trim().isEmpty()) {
-                            errorMessage = if (isTr) "Lütfen mesajınızı yazın." else "Please enter your message."
+                            errorMessage = "Please enter your message."
                             return@Button
                         }
 
@@ -361,8 +358,7 @@ fun SupportDialog(
                             email = emailAddress.trim(),
                             message = messageText.trim(),
                             username = username,
-                            level = currentLevel,
-                            isTr = isTr
+                            level = currentLevel
                         )
                         onDismiss()
                     },
@@ -383,7 +379,7 @@ fun SupportDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isTr) "E-posta Gönder" else "Send Email",
+                        text = "Send Email",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -400,24 +396,23 @@ private fun sendSupportEmail(
     email: String,
     message: String,
     username: String,
-    level: Int,
-    isTr: Boolean
+    level: Int
 ) {
     val recipient = "atagulgamesdestek@gmail.com"
-    val subject = "[ECHO Destek] $fullName - Seviye $level"
+    val subject = "[ECHO Support] $fullName - Level $level"
     val emailBody = buildString {
-        appendLine("--- ECHO DESTEK TALEBİ ---")
-        appendLine("Ad Soyad: $fullName")
-        appendLine("Telefon: $phoneNumber")
-        appendLine("E-posta: $email")
+        appendLine("--- ECHO SUPPORT REQUEST ---")
+        appendLine("Full Name: $fullName")
+        appendLine("Phone: $phoneNumber")
+        appendLine("Email: $email")
         if (username.isNotEmpty()) {
-            appendLine("Oyuncu Adı: $username")
+            appendLine("Player Name: $username")
         }
-        appendLine("Mevcut Seviye: $level")
-        appendLine("Tarih: ${java.util.Date()}")
+        appendLine("Current Level: $level")
+        appendLine("Date: ${java.util.Date()}")
         appendLine("--------------------------")
         appendLine()
-        appendLine("Mesaj:")
+        appendLine("Message:")
         appendLine(message)
     }
 
@@ -429,11 +424,11 @@ private fun sendSupportEmail(
     }
 
     try {
-        context.startActivity(Intent.createChooser(intent, if (isTr) "E-posta Uygulaması Seçin" else "Choose Email Client"))
+        context.startActivity(Intent.createChooser(intent, "Choose Email Client"))
     } catch (e: Exception) {
         Toast.makeText(
             context,
-            if (isTr) "E-posta uygulaması bulunamadı: $recipient" else "No email app found: $recipient",
+            "No email app found: $recipient",
             Toast.LENGTH_LONG
         ).show()
     }

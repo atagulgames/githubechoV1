@@ -30,7 +30,7 @@ object HarmonicAudioEngine {
 
     /**
      * Tracks whether the intro sequence or intro video is actively playing.
-     * When true, background music (fon müziği) is strictly inhibited.
+     * When true, background music is strictly inhibited.
      */
     var isIntroActive: Boolean = true
         private set
@@ -111,7 +111,7 @@ object HarmonicAudioEngine {
     /**
      * Starts continuous ambient background music in an infinite loop.
      * Keeps steady natural playback speed and never restarts from beginning when navigating.
-     * Sourced from assets/audio/gamemusıc.mp3 or res/raw/gamemusic.mp3.
+     * Sourced from assets/audio/gamemusic.mp3 or res/raw/gamemusic.mp3.
      */
     @Synchronized
     fun startBgm() {
@@ -137,7 +137,6 @@ object HarmonicAudioEngine {
                 // Asset loading fallback
                 try {
                     val assetNames = listOf(
-                        "audio/gamemusıc.mp3",
                         "audio/gamemusic.mp3",
                         "audio/gamemusic.ogg"
                     )
@@ -389,7 +388,7 @@ object HarmonicAudioEngine {
     }
 
     /**
-     * Plays the single countdown tick ("dıt") instantaneously.
+     * Plays the single countdown tick instantaneously.
      * Sourced directly from countdown_tick.mp3 (extracted from 5second.mp3) with SoundPool.
      */
     fun playCountdownTick(second: Int = 1) {
@@ -402,7 +401,7 @@ object HarmonicAudioEngine {
     }
 
     /**
-     * Plays 5second countdown ticks ("dıt dıt") in a precise 1-second cadence (5, 4, 3, 2, 1).
+     * Plays 5second countdown ticks in a precise 1-second cadence (5, 4, 3, 2, 1).
      * Automatically stops any playing SFX to prevent audio overlap.
      */
     fun play5Second(onCompletion: (() -> Unit)? = null) {
@@ -437,7 +436,7 @@ object HarmonicAudioEngine {
     /**
      * Plays party.mp3 when the 5s preview ends and 60-second time begins.
      */
-    fun playSüreBasladiParty() {
+    fun playTimeStartedParty() {
         playParty()
     }
 

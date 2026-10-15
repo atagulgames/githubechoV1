@@ -134,7 +134,7 @@ fun LegalConsentCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Security,
-                        contentDescription = "Güvenlik",
+                        contentDescription = "Security",
                         tint = Color(0xFF60A5FA),
                         modifier = Modifier.size(26.dp)
                     )
@@ -142,13 +142,13 @@ fun LegalConsentCard(
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        text = "Kullanıcı Sözleşmesi & Yasal Onay",
+                        text = "User Agreement & Legal Consent",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Text(
-                        text = "Oyuna başlamadan önce lütfen koşulları onaylayınız",
+                        text = "Please review and accept terms before playing",
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
@@ -167,7 +167,7 @@ fun LegalConsentCard(
                     .padding(16.dp)
                     .verticalScroll(scrollState)
             ) {
-                // 1. Kullanıcı Sözleşmesi (EULA & Terms of Service)
+                // 1. EULA & Terms of Service
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Description,
@@ -177,7 +177,7 @@ fun LegalConsentCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "1. Kullanıcı Sözleşmesi & Hizmet Şartları",
+                        text = "1. End User License Agreement & Terms of Service",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = Color(0xFF38BDF8)
@@ -185,11 +185,11 @@ fun LegalConsentCard(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Bu oyunu indirerek, kurarak veya oynayarak aşağıdaki kuralları kabul etmiş sayılırsınız:\n" +
-                            "• Oyun içi içerikler, seviye tasarımları, grafikler ve ses motoru fikri mülkiyet hukuku ile korunmaktadır.\n" +
-                            "• Hile, üçüncü parti müdahale yazılımları veya adil rekabeti bozan yöntemler kesinlikle yasaktır ve hesap sıfırlanmasına sebep olabilir.\n" +
-                            "• Oyun içi ödüller, jetonlar ve elmaslar dijital oyun içi varlıklardır, gerçek para karşılığı veya takas değeri taşımaz.\n" +
-                            "• Uygulamada gösterilen reklamlar bizim kontrolümüz altında değildir; reklam içeriği ve yönlendirmeleri tamamen reklamı veren tarafa aittir, çıkan reklamlardan biz sorumlu değiliz.",
+                    text = "By downloading, installing, or playing this game, you agree to the following terms:\n" +
+                            "• In-game assets, level designs, graphics, and audio engine are protected by intellectual property laws.\n" +
+                            "• Cheating, third-party tampering, or unfair gameplay modifications are strictly prohibited.\n" +
+                            "• In-game rewards, tokens, and diamonds are virtual digital assets with no real-world cash or exchange value.\n" +
+                            "• Advertisements served in the application are provided by third-party networks and are subject to their policies.",
                     fontSize = 12.sp,
                     color = Color(0xFFCBD5E1),
                     lineHeight = 17.sp
@@ -197,7 +197,7 @@ fun LegalConsentCard(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // 2. KVKK Aydınlatma Metni
+                // 2. Privacy Policy & Data Protection
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Gavel,
@@ -207,7 +207,7 @@ fun LegalConsentCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "2. KVKK & Gizlilik Aydınlatma Metni",
+                        text = "2. Privacy Policy & Data Protection",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = Color(0xFF34D399)
@@ -215,7 +215,7 @@ fun LegalConsentCard(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "6698 sayılı Kişisel Verilerin Korunması Kanunu (\"KVKK\") kapsamında; kullanıcı adınız, çözülen bulmaca verileriniz, skorlarınız ve oyun içi ilerleme kayıtlarınız yalnızca yerel profilinizin korunması, cihazınızda Room veritabanında saklanması ve güvenli yedek alanına aktarılması amacıyla işlenir. Verileriniz hiçbir surette üçüncü şahıslara ticari amaçla satılmaz.",
+                    text = "Your username, solved puzzle records, scores, and in-game progression are stored locally and in secure cloud backups solely to preserve your game profile. Your data is never sold to third parties for commercial advertising.",
                     fontSize = 12.sp,
                     color = Color(0xFFCBD5E1),
                     lineHeight = 17.sp
@@ -223,7 +223,7 @@ fun LegalConsentCard(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // 3. Epilepsi ve Işığa Duyarlılık Uyarısı
+                // 3. Photosensitivity & Epilepsy Warning
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Warning,
@@ -233,7 +233,7 @@ fun LegalConsentCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "3. Epilepsi & Işığa Duyarlılık Uyarısı",
+                        text = "3. Photosensitivity & Epilepsy Warning",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = Color(0xFFFBBF24)
@@ -241,7 +241,7 @@ fun LegalConsentCard(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "DİKKAT: Bu oyun hızlı yanıp sönen neon ışıklar, ritmik titreşimler, dinamik ses dalgaları ve görsel animasyonlar içermektedir. Işığa duyarlı epilepsi öyküsü bulunan bireylerde nadiren nöbet tetiklenebilir. Oyunu iyi aydınlatılmış bir ortamda oynayınız. Rahatsızlık, göz seyirmesi veya baş dönmesi hissettiğinizde oyunu kapatınız.",
+                    text = "CAUTION: This game contains dynamic lighting, visual animations, pulsating patterns, and rhythmic sound effects. A small percentage of individuals may experience seizures when exposed to flashing lights. Please play in a well-lit environment and take breaks immediately if experiencing discomfort or dizziness.",
                     fontSize = 12.sp,
                     color = Color(0xFFCBD5E1),
                     lineHeight = 17.sp
@@ -249,7 +249,7 @@ fun LegalConsentCard(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // 4. Sorumluluk Reddi Beyanı (Disclaimer)
+                // 4. Disclaimer of Warranties
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Visibility,
@@ -259,7 +259,7 @@ fun LegalConsentCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "4. Sorumluluk Reddi Beyanı",
+                        text = "4. Disclaimer of Warranties",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = Color(0xFFA78BFA)
@@ -267,7 +267,7 @@ fun LegalConsentCard(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Bu mobil oyun eğlence ve zeka bulmacası maksadıyla sunulmaktadır. Kullanıcının oyunu oynarken karşılaşabileceği kişisel sağlık reaksiyonlarından veya cihaz kullanım hatalarından geliştirici sorumlu tutulamaz. Oyuna devam ederek bu koşulları bizzat kabul etmiş sayılırsınız.",
+                    text = "This game is provided for casual entertainment and puzzle solving. The developer shall not be held liable for personal health reactions or hardware misuse. By proceeding, you acknowledge and agree to these terms.",
                     fontSize = 12.sp,
                     color = Color(0xFFCBD5E1),
                     lineHeight = 17.sp
@@ -275,7 +275,7 @@ fun LegalConsentCard(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // 5. Reklam Sorumluluk Reddi (Ad Disclaimer)
+                // 5. Ad Disclaimer
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Warning,
@@ -285,7 +285,7 @@ fun LegalConsentCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "5. Reklamlar ve Üçüncü Taraf Sorumluluk Reddi",
+                        text = "5. Advertisements & Third-Party Disclaimer",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = Color(0xFFFF9100)
@@ -293,7 +293,7 @@ fun LegalConsentCard(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Uygulama içerisinde gösterilen reklamlar ve reklam içerikleri bizim kontrolümüz altında değildir; tamamen reklamı veren tarafların ve reklam ağlarının kontrolündedir. Bu nedenle çıkan reklamlardan, reklam içeriklerinden ve yönlendirilen bağlantılardan geliştirici olarak biz sorumlu değiliz.",
+                    text = "Advertisements displayed in this game are delivered by external ad networks. The developer does not control specific ad content or destinations. Advertisers are solely responsible for their promotional materials.",
                     fontSize = 12.sp,
                     color = Color(0xFFCBD5E1),
                     lineHeight = 17.sp
@@ -301,7 +301,7 @@ fun LegalConsentCard(
 
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
-                    text = "✓ Bu sözleşme ve onay bir defaya mahsus alınır ve daha sonra tekrar sorulmaz.",
+                    text = "✓ This consent is required only once and will not be prompted again.",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF34D399)
@@ -310,7 +310,7 @@ fun LegalConsentCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Action Buttons (Reddet ve Çıkış Yap / Kabul Et)
+            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -326,7 +326,7 @@ fun LegalConsentCard(
                         .testTag("decline_consent_button")
                 ) {
                     Text(
-                        text = "Reddet & Çık",
+                        text = "Decline & Exit",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -345,7 +345,7 @@ fun LegalConsentCard(
                         .testTag("accept_consent_button")
                 ) {
                     Text(
-                        text = "Okudum, Onaylıyorum",
+                        text = "I Read and Agree",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )

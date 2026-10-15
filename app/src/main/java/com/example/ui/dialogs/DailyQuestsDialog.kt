@@ -197,7 +197,7 @@ fun DailyQuestsDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "KAPAT",
+                            text = "CLOSE",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White,

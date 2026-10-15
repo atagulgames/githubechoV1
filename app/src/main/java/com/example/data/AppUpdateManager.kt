@@ -97,8 +97,8 @@ class AppUpdateManager private constructor() {
             val latestVersion = json.optInt("latest_version", json.optInt("version", currentVersionCode))
             val versionName = json.optString("version_name", json.optString("versionName", "1.3"))
             val updateUrl = json.optString("update_url", json.optString("updateUrl", DEFAULT_UPDATE_URL))
-            val title = json.optString("title", "Yeni Güncelleme")
-            val description = json.optString("description", "Yeni bir ECHOFLUX güncellemesi mevcut.")
+            val title = json.optString("title", "New Update Available")
+            val description = json.optString("description", "A new version of ECHO FLUX is available.")
             val forceUpdate = json.optBoolean("force_update", json.optBoolean("forceUpdate", false))
 
             val isAvailable = latestVersion > currentVersionCode
@@ -108,8 +108,8 @@ class AppUpdateManager private constructor() {
                 latestVersionCode = latestVersion,
                 versionName = versionName,
                 updateUrl = if (updateUrl.isNotBlank()) updateUrl else DEFAULT_UPDATE_URL,
-                title = if (title.isNotBlank()) title else "Yeni Güncelleme",
-                description = if (description.isNotBlank()) description else "Yeni bir ECHOFLUX güncellemesi mevcut.",
+                title = if (title.isNotBlank()) title else "New Update Available",
+                description = if (description.isNotBlank()) description else "A new version of ECHO FLUX is available.",
                 isForceUpdate = forceUpdate
             )
         } catch (e: Exception) {

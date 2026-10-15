@@ -7,15 +7,14 @@ enum class Language(
     val flagEmoji: String
 ) {
     EN("en", "English", "English", "🇬🇧"),
-    TR("tr", "Türkçe", "Turkish", "🇹🇷");
+    TR("tr", "English", "English", "🇬🇧");
 
-    val displayName: String get() = nativeName
-    val flag: String get() = flagEmoji
+    val displayName: String get() = "English"
+    val flag: String get() = "🇬🇧"
 
     companion object {
         fun fromCode(code: String): Language {
-            return entries.firstOrNull { it.code.equals(code, ignoreCase = true) } ?: EN
+            return EN
         }
     }
 }
-

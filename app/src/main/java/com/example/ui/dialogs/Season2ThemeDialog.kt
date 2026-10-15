@@ -142,7 +142,7 @@ fun Season2ThemeDialog(
                         .padding(top = 4.dp, bottom = 14.dp)
                 )
 
-                // Master Toggle: Özel Tema Aktif
+                // Master Toggle: Custom Theme Active
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -375,7 +375,7 @@ fun Season2ThemeDialog(
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text(
-                        text = "TAMAM",
+                        text = "DONE",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

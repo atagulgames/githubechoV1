@@ -186,7 +186,7 @@ fun EchoMainMenu(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // LEFT COLUMN: "Hediye" (Gift Box) + "Jeton Görevi" (Coin Quest)
+                    // LEFT COLUMN: Gift Box + Coin Quest
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(if (isShortScreen) 12.dp else 22.dp),
@@ -216,7 +216,7 @@ fun EchoMainMenu(
                         onSelectLevel = onOpenLevelSelect
                     )
 
-                    // RIGHT COLUMN: "Günlük Ödül" (Daily Reward with Video Play Icon)
+                    // RIGHT COLUMN: Daily Reward with Video Play Icon
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Top,
@@ -253,13 +253,27 @@ fun EchoMainMenu(
 
                 Spacer(modifier = Modifier.height(if (isVeryShort) 4.dp else 8.dp))
 
-                // BOTTOM DOCK: "Görevler" (Left) | "Jener" (Elevated Center) | "Sıralama" (Right)
+                // BOTTOM DOCK: "Quests" (Left) | "Levels" (Elevated Center) | "Leaderboard" (Right)
                 BottomGameDock(
                     unclaimedQuestsCount = state.unclaimedQuestsCount,
+                    isGuest = !state.isAuthenticated,
                     onOpenQuests = onOpenDailyQuests,
                     onOpenLevels = onOpenLevelSelect,
                     onOpenLeaderboard = onOpenLeaderboard
                 )
+
+                // Docked Live Yandex Banner Ad at bottom of Main Menu (RM-20228995-1)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    com.example.ads.YandexBannerAdView(
+                        onAdLoaded = onBannerAdLoaded,
+                        onAdFailedToLoad = onBannerAdFailed
+                    )
+                }
             }
         }
     }
@@ -758,7 +772,7 @@ private fun VerticalLevelProgression(
                 onClick = onSelectLevel
             )
         } else {
-            // Progression: Level 2+ (e.g. "1 yaptık 2 3 4 gözüksün en baştakinin altındaki bölüm gri olsun yıldızı gözüksün")
+            // Progression: Level 2+ (Display upcoming levels, current active, and previous completed with stars)
             val lvlAhead2 = (currentLevel + 2).coerceAtMost(LevelCatalog.TOTAL_LEVELS)
             val lvlAhead1 = (currentLevel + 1).coerceAtMost(LevelCatalog.TOTAL_LEVELS)
             val lvlCurrent = currentLevel
@@ -797,7 +811,7 @@ private fun VerticalLevelProgression(
 
             YellowConnectorPipe(height = pipeHeight)
 
-            // BOTTOM: Completed Level (e.g. 1 - "gri olsun yıldızı gözüksün")
+            // BOTTOM: Completed Level (e.g. 1 with stars)
             LevelProgressNode(
                 levelNumber = lvlCompleted,
                 size = nodeSizeCompleted,
@@ -900,7 +914,7 @@ private fun LevelProgressNode(
                 textAlign = TextAlign.Center
             )
 
-            // "yıldızı gözüksün" - Stars underneath
+            // Stars underneath
             val starTint = when {
                 isActive -> Color(0xFF00E5FF)
                 isCompleted -> Color(0xFFFFD54F) // Vibrant Golden Yellow for completed level!
@@ -938,7 +952,7 @@ private fun LevelProgressNode(
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Tamamlandı",
+                    contentDescription = "Completed",
                     tint = Color.White,
                     modifier = Modifier.size(if (size < 46.dp) 9.dp else 11.dp)
                 )
@@ -1053,6 +1067,7 @@ private fun EnergyCostPill(
 @Composable
 private fun BottomGameDock(
     unclaimedQuestsCount: Int,
+    isGuest: Boolean = false,
     onOpenQuests: () -> Unit,
     onOpenLevels: () -> Unit,
     onOpenLeaderboard: () -> Unit
@@ -1080,7 +1095,7 @@ private fun BottomGameDock(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // LEFT TAB: Quests (Dartboard with Red exclamation badge)
+            // LEFT TAB: Quests (Dartboard with Red exclamation badge or Lock)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -1095,26 +1110,42 @@ private fun BottomGameDock(
                     // Dartboard Bullseye Graphic
                     DartboardArt()
 
-                    // Exclamation Notification Badge on top right
-                    Box(
-                        modifier = Modifier
-                            .offset(x = 8.dp, y = (-6).dp)
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFE51D24)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "!",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                    // Lock badge or Exclamation Notification Badge on top right
+                    if (isGuest) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = 8.dp, y = (-6).dp)
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF64748B)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "🔒",
+                                fontSize = 8.sp
+                            )
+                        }
+                    } else if (unclaimedQuestsCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = 8.dp, y = (-6).dp)
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFE51D24)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "!",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
                 }
                 Text(
-                    text = "Quests",
-                    color = Color.White,
+                    text = if (isGuest) "Quests 🔒" else "Quests",
+                    color = if (isGuest) Color(0xFF94A3B8) else Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1123,7 +1154,7 @@ private fun BottomGameDock(
             // Dummy Spacer for elevated center tab
             Spacer(modifier = Modifier.width(70.dp))
 
-            // RIGHT TAB: Leaderboard (Golden Trophy)
+            // RIGHT TAB: Leaderboard (Golden Trophy or Lock)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -1132,26 +1163,54 @@ private fun BottomGameDock(
                     .testTag("nav_tab_siralama")
             ) {
                 // Golden Trophy Graphic
-                Canvas(modifier = Modifier.size(26.dp)) {
-                    val w = size.width
-                    val h = size.height
-                    drawRoundRect(
-                        brush = Brush.verticalGradient(listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))),
-                        topLeft = Offset(w * 0.22f, h * 0.15f),
-                        size = Size(w * 0.56f, h * 0.50f),
-                        cornerRadius = CornerRadius(4.dp.toPx())
-                    )
-                    drawRect(Color(0xFFFF8F00), topLeft = Offset(w * 0.42f, h * 0.65f), size = Size(w * 0.16f, h * 0.15f))
-                    drawRoundRect(
-                        Color(0xFFFFC107),
-                        topLeft = Offset(w * 0.28f, h * 0.80f),
-                        size = Size(w * 0.44f, h * 0.14f),
-                        cornerRadius = CornerRadius(2.dp.toPx())
-                    )
+                Box(
+                    modifier = Modifier.size(28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(26.dp)) {
+                        val w = size.width
+                        val h = size.height
+                        drawRoundRect(
+                            brush = Brush.verticalGradient(
+                                if (isGuest) listOf(Color(0xFF94A3B8), Color(0xFF64748B))
+                                else listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                            ),
+                            topLeft = Offset(w * 0.22f, h * 0.15f),
+                            size = Size(w * 0.56f, h * 0.50f),
+                            cornerRadius = CornerRadius(4.dp.toPx())
+                        )
+                        drawRect(
+                            if (isGuest) Color(0xFF64748B) else Color(0xFFFF8F00),
+                            topLeft = Offset(w * 0.42f, h * 0.65f),
+                            size = Size(w * 0.16f, h * 0.15f)
+                        )
+                        drawRoundRect(
+                            if (isGuest) Color(0xFF94A3B8) else Color(0xFFFFC107),
+                            topLeft = Offset(w * 0.28f, h * 0.80f),
+                            size = Size(w * 0.44f, h * 0.14f),
+                            cornerRadius = CornerRadius(2.dp.toPx())
+                        )
+                    }
+
+                    if (isGuest) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = 8.dp, y = (-6).dp)
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF64748B)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "🔒",
+                                fontSize = 8.sp
+                            )
+                        }
+                    }
                 }
                 Text(
-                    text = "Leaderboard",
-                    color = Color.White,
+                    text = if (isGuest) "Rank 🔒" else "Leaderboard",
+                    color = if (isGuest) Color(0xFF94A3B8) else Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1194,7 +1253,7 @@ private fun BottomGameDock(
     }
 }
 
-// Dartboard Art for "Görevler"
+// Dartboard Art for "Quests"
 @Composable
 private fun DartboardArt() {
     Canvas(modifier = Modifier.size(24.dp)) {

@@ -144,7 +144,7 @@ object HapticEngine {
     }
 
     /**
-     * Tactile vibration triggered when ANY button is pressed ("düğmeler titreşsin").
+     * Tactile vibration triggered when ANY button is pressed.
      * Uses 48ms duration - perfectly tuned so both ERM and LRA vibration motors
      * produce a distinct, crisp tactile feedback without feeling sluggish.
      */
@@ -153,7 +153,7 @@ object HapticEngine {
     }
 
     /**
-     * Heavier vibration for primary CTA buttons (e.g. OYNA, Zafer, Sonraki Bölüm, Sandık Aç).
+     * Heavier vibration for primary CTA buttons (e.g. PLAY, Victory, Next Level, Open Chest).
      */
     fun triggerButtonHeavyClick() {
         vibrateOneShot(durationMs = 75L, amplitude = 255)
@@ -170,7 +170,7 @@ object HapticEngine {
     }
 
     /**
-     * Micro vibration when touching or connecting nodes in the web ("düğümler").
+     * Micro vibration when touching or connecting nodes in the web.
      * Tuned to 40ms so players feel an immediate tactile bump every time
      * they touch or link a node!
      */
@@ -207,7 +207,7 @@ object HapticEngine {
 }
 
 /**
- * Higher-order helper for onClick lambdas that ensures device vibrates on button press ("düğmeler titreşsin").
+ * Higher-order helper for onClick lambdas that ensures device vibrates on button press.
  */
 inline fun hapticClick(isHeavy: Boolean = false, crossinline action: () -> Unit): () -> Unit = {
     if (isHeavy) {

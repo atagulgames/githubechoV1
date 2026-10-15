@@ -23,23 +23,23 @@ class AuthRepository(context: Context) {
         val email = emailInput.trim()
 
         if (username.length < 3) {
-            return@withContext Result.failure(IllegalArgumentException("Kullanıcı adı en az 3 karakter olmalıdır."))
+            return@withContext Result.failure(IllegalArgumentException("Username must be at least 3 characters."))
         }
         if (passwordInput.length < 4) {
-            return@withContext Result.failure(IllegalArgumentException("Şifre en az 4 karakter olmalıdır."))
+            return@withContext Result.failure(IllegalArgumentException("Password must be at least 4 characters."))
         }
 
         // Check if username is already taken in Room or in persistent vault
         val existingUserByName = userDao.getUserByUsername(username)
             ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.username.equals(username, ignoreCase = true) }
         if (existingUserByName != null) {
-            return@withContext Result.failure(IllegalStateException("Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."))
+            return@withContext Result.failure(IllegalStateException("This username is already taken. Please choose another username."))
         }
 
         val existingUserByEmailAsName = userDao.getUserByEmail(username)
             ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.email.isNotBlank() && it.email.equals(username, ignoreCase = true) }
         if (existingUserByEmailAsName != null) {
-            return@withContext Result.failure(IllegalStateException("Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."))
+            return@withContext Result.failure(IllegalStateException("This username is already taken. Please choose another username."))
         }
 
         // If email provided, check if email is already taken
@@ -48,7 +48,7 @@ class AuthRepository(context: Context) {
                 ?: userDao.getUserByUsername(email)
                 ?: PersistentVaultManager.loadAccountsFromVault(appContext).firstOrNull { it.email.equals(email, ignoreCase = true) || it.username.equals(email, ignoreCase = true) }
             if (existingEmail != null) {
-                return@withContext Result.failure(IllegalStateException("Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı seçin."))
+                return@withContext Result.failure(IllegalStateException("This username is already taken. Please choose another username."))
             }
         }
 
@@ -116,10 +116,10 @@ class AuthRepository(context: Context) {
     ): Result<UserAccountEntity> = withContext(Dispatchers.IO) {
         val query = usernameOrEmailInput.trim()
         if (query.isBlank()) {
-            return@withContext Result.failure(IllegalArgumentException("Lütfen kullanıcı adınızı veya e-postanızı girin."))
+            return@withContext Result.failure(IllegalArgumentException("Please enter your username or email."))
         }
         if (passwordInput.isBlank()) {
-            return@withContext Result.failure(IllegalArgumentException("Lütfen şifrenizi girin."))
+            return@withContext Result.failure(IllegalArgumentException("Please enter your password."))
         }
 
         var user = userDao.getUserByUsername(query) ?: userDao.getUserByEmail(query)
@@ -136,12 +136,12 @@ class AuthRepository(context: Context) {
         }
 
         if (user == null) {
-            return@withContext Result.failure(IllegalStateException("Böyle bir hesap bulunamadı! Lütfen kayıt olun."))
+            return@withContext Result.failure(IllegalStateException("Account not found! Please register first."))
         }
 
         val computedHash = hashPassword(passwordInput)
         if (user.passwordHash != computedHash) {
-            return@withContext Result.failure(IllegalStateException("Hatalı şifre! Şifre aynı olmak zorundadır."))
+            return@withContext Result.failure(IllegalStateException("Incorrect password! Please check your credentials."))
         }
 
         // Update active session
@@ -228,7 +228,7 @@ class AuthRepository(context: Context) {
                 avatarEmoji = "⚡",
                 avatarUri = preferences.userAvatarUri,
                 title = preferences.userCustomTitle.ifBlank {
-                    if (preferences.trophies >= 1000) "🏆 Yankı Ustası" else "Ses Kaşifi"
+                    if (preferences.trophies >= 1000) "🏆 Echo Master" else "Sound Explorer"
                 },
                 trophies = preferences.trophies,
                 totalEchoes = preferences.totalEchoes,
@@ -254,7 +254,7 @@ class AuthRepository(context: Context) {
                     username = u.username,
                     avatarEmoji = "👤",
                     avatarUri = u.avatarUri,
-                    title = u.customTitle.ifBlank { if (u.trophies > 1500) "Usta Çizgici" else "Kozmik Oyuncu" },
+                    title = u.customTitle.ifBlank { if (u.trophies > 1500) "Master Weaver" else "Cosmic Player" },
                     trophies = u.trophies,
                     totalEchoes = u.totalEchoes,
                     totalPlayTimeSec = u.totalPlayTimeSec,
@@ -290,7 +290,7 @@ class AuthRepository(context: Context) {
                 list.add(
                     com.example.model.LevelRecord(
                         levelId = lvlId,
-                        levelTitle = "Bölüm $lvlId",
+                        levelTitle = "Level $lvlId",
                         echoesUsed = echoes,
                         timeTakenSec = time,
                         stars = stars,

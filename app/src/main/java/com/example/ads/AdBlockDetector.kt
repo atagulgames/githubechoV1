@@ -25,28 +25,28 @@ sealed class AdHealthResult {
     abstract val details: String
 
     object Healthy : AdHealthResult() {
-        override val title: String = "Reklamlar Aktif"
-        override val subtitle: String = "Reklamlar sorunsuz çalışıyor"
+        override val title: String = "Ads Active"
+        override val subtitle: String = "Ads running smoothly"
         override val details: String = ""
     }
 
     data class NoInternet(
-        override val title: String = "İnternet Bağlantısı Yok",
-        override val subtitle: String = "Reklamlar çalıştırılamıyor",
-        override val details: String = "ECHO tamamen ücretsiz bir oyundur ve masrafları reklam gelirleriyle karşılanmaktadır. Oyuna devam edebilmek için lütfen internet bağlantınızı (Wi-Fi veya Mobil Veri) açın."
+        override val title: String = "No Internet Connection",
+        override val subtitle: String = "Ads cannot run",
+        override val details: String = "ECHO FLUX is free to play and supported by ad revenue. Please enable your internet connection (Wi-Fi or Mobile Data) to continue."
     ) : AdHealthResult()
 
     data class AdBlockerDetected(
-        val reason: String = "Reklam Engelleyici Tespit Edildi",
-        override val title: String = "Reklam Engelleyici Tespit Edildi",
-        override val subtitle: String = "Uygulama çalıştırılamıyor",
-        override val details: String = "ECHO ücretsiz bir oyundur. Oyuna devam edebilmek için lütfen telefon ayarlarınızdaki Özel DNS'i (AdGuard, NextDNS vb.) kapatın veya reklam engelleme uygulamasını duraklatın."
+        val reason: String = "Ad Blocker Detected",
+        override val title: String = "Ad Blocker Detected",
+        override val subtitle: String = "Unable to run application",
+        override val details: String = "ECHO FLUX is free to play. Please turn off Private DNS (AdGuard, NextDNS) or pause ad blocker apps to continue."
     ) : AdHealthResult()
 
     data class AdServiceBlocked(
-        override val title: String = "Reklamlar Engelleniyor",
-        override val subtitle: String = "Reklam sunucusuna erişilemiyor",
-        override val details: String = "Reklam sunucularına bağlantı engellenmiş görünüyor. Lütfen reklam engelleyiciyi veya Özel DNS ayarını kapatıp tekrar deneyin."
+        override val title: String = "Ads Blocked",
+        override val subtitle: String = "Cannot connect to ad server",
+        override val details: String = "Connection to ad servers appears blocked. Please disable ad blocker or Private DNS and try again."
     ) : AdHealthResult()
 }
 
@@ -87,50 +87,13 @@ object AdBlockDetector {
     }
 
     /**
-     * Fast, comprehensive health check:
-     * Dispatches parallel probes and completes in ~150-300ms.
+     * Non-blocking ad health check that allows normal gameplay without interrupting the user.
      */
     suspend fun checkAdHealth(context: Context): AdHealthResult = withContext(Dispatchers.IO) {
-        try {
-            // In emulator or development environments, do not block app execution
-            if (StartIoManager.isEmulator()) {
-                return@withContext AdHealthResult.Healthy
-            }
-
-            // 1. Instant check: Connectivity manager capabilities (< 1ms)
-            if (!hasNetworkCapability(context)) {
-                return@withContext AdHealthResult.NoInternet()
-            }
-
-            // 2. Instant check: Private DNS configuration (Android 9+) (< 1ms)
-            if (checkPrivateDnsSettings(context)) {
-                Log.w(TAG, "AdBlock detected via Private DNS settings")
-                return@withContext AdHealthResult.AdBlockerDetected(
-                    reason = "Özel DNS",
-                    details = "Telefon Ayarları > Bağlantılar > Diğer bağlantı ayarları > Özel DNS ayarını 'Otomatik' veya 'Kapalı' yapın."
-                )
-            }
-
-            // 3. Ad domains resolution & connectivity check
-            val adBlockingResult = checkAdDomainBlockingParallel()
-            if (adBlockingResult != null) {
-                return@withContext adBlockingResult
-            }
-
-            AdHealthResult.Healthy
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking ad health status", e)
-            if (!hasNetworkCapability(context)) {
-                AdHealthResult.NoInternet()
-            } else {
-                AdHealthResult.Healthy
-            }
-        }
+        AdHealthResult.Healthy
     }
 
-    suspend fun isAdBlockerActive(context: Context): Boolean = withContext(Dispatchers.IO) {
-        !checkAdHealth(context).isHealthy
-    }
+    suspend fun isAdBlockerActive(context: Context): Boolean = false
 
     private fun checkPrivateDnsSettings(context: Context): Boolean {
         return try {
@@ -177,9 +140,9 @@ object AdBlockDetector {
                 resolveHostname("google.com") || resolveHostname("cloudflare.com")
             }
 
-            // 2. StartApp ad request domain probe (in parallel)
-            val startAppReqDeferred = async(Dispatchers.IO) {
-                probeAdDomain("req.startappservice.com")
+            // 2. Yandex ad request domain probe (in parallel)
+            val yandexAdsDeferred = async(Dispatchers.IO) {
+                probeAdDomain("mobile.yandex.net")
             }
 
             // 3. Google Ads request domain probe (in parallel)
@@ -192,17 +155,17 @@ object AdBlockDetector {
                 return@withTimeoutOrNull AdHealthResult.NoInternet()
             }
 
-            val startAppStatus = startAppReqDeferred.await()
+            val yandexAdsStatus = yandexAdsDeferred.await()
             val googleAdsStatus = googleAdsDeferred.await()
 
             // 1) Any ad domain resolved explicitly to 0.0.0.0 / 127.0.0.1 (sinkhole signature)
-            if (startAppStatus == ProbeResult.SINKHOLED || googleAdsStatus == ProbeResult.SINKHOLED) {
+            if (yandexAdsStatus == ProbeResult.SINKHOLED || googleAdsStatus == ProbeResult.SINKHOLED) {
                 Log.w(TAG, "Ad domain explicitly sinkholed!")
                 return@withTimeoutOrNull AdHealthResult.AdServiceBlocked()
             }
 
             // 2) Both ad domains are blocked via DNS NXDOMAIN or connection refused
-            if (startAppStatus == ProbeResult.BLOCKED && googleAdsStatus == ProbeResult.BLOCKED) {
+            if (yandexAdsStatus == ProbeResult.BLOCKED && googleAdsStatus == ProbeResult.BLOCKED) {
                 Log.w(TAG, "Both ad domains blocked via DNS or connection reset!")
                 return@withTimeoutOrNull AdHealthResult.AdServiceBlocked()
             }

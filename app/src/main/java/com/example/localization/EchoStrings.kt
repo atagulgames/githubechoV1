@@ -2,7 +2,7 @@ package com.example.localization
 
 object EchoStrings {
 
-    fun get(key: String, lang: Language): String = when (key.lowercase()) {
+    fun get(key: String, lang: Language = Language.EN): String = when (key.lowercase()) {
         "play" -> play(lang)
         "levels" -> levels(lang)
         "level" -> level(lang)
@@ -22,143 +22,50 @@ object EchoStrings {
         else -> key
     }
 
-    fun level(lang: Language): String = when (lang) {
-        Language.TR -> "Bölüm"
-        Language.EN -> "Level"
-    }
+    fun level(lang: Language = Language.EN): String = "Level"
+    fun play(lang: Language = Language.EN): String = "PLAY"
+    fun levels(lang: Language = Language.EN): String = "Levels"
+    fun themes(lang: Language = Language.EN): String = "Themes"
+    fun shop(lang: Language = Language.EN): String = "Shop"
+    fun settings(lang: Language = Language.EN): String = "Settings"
+    fun language(lang: Language = Language.EN): String = "Language"
+    fun dailyChallenge(lang: Language = Language.EN): String = "DAILY CHALLENGE"
+    fun dailyCompleted(lang: Language = Language.EN): String = "Completed"
+    fun levelTitle(lang: Language = Language.EN, number: Int): String = "Level $number"
+    fun hint(lang: Language = Language.EN): String = "Hint"
+    fun breaker(lang: Language = Language.EN): String = "Breaker"
+    fun clearEchoes(lang: Language = Language.EN): String = "Clear"
+    fun levelComplete(lang: Language = Language.EN): String = "LEVEL COMPLETED!"
+    fun nextLevel(lang: Language = Language.EN): String = "Next Level"
+    fun retry(lang: Language = Language.EN): String = "Retry"
+    fun watchAd(lang: Language = Language.EN): String = "Watch Video"
+    fun adBlockWarningTitle(lang: Language = Language.EN): String = "Ad Blocker Detected"
+    fun adBlockWarningSubtitle(lang: Language = Language.EN): String = "Application cannot run"
+    fun adBlockWarningBody(lang: Language = Language.EN): String = "ECHO is a completely free indie game supported by advertisements.\n\nTo continue playing, please disable your ad blocker (Private DNS, AdGuard, Blokada, etc.)."
+    fun recheck(lang: Language = Language.EN): String = "Re-Check"
+    fun exitGame(lang: Language = Language.EN): String = "Exit Game"
+    fun sound(lang: Language = Language.EN): String = "Sound & Music"
+    fun haptics(lang: Language = Language.EN): String = "Haptic Feedback"
+    fun resetProgress(lang: Language = Language.EN): String = "Reset All Progress"
+    fun theme(lang: Language = Language.EN): String = "Theme (Dark / White)"
+    fun darkTheme(lang: Language = Language.EN): String = "Dark"
+    fun whiteTheme(lang: Language = Language.EN): String = "White"
 
-    fun play(lang: Language): String = when (lang) {
-        Language.TR -> "OYNA"
-        Language.EN -> "PLAY"
-    }
+    // Fantastic Boosters
+    fun arcaneBlast(lang: Language = Language.EN): String = "Arcane Blast"
+    fun timeFreeze(lang: Language = Language.EN): String = "Time Freeze"
+    fun numberShift(lang: Language = Language.EN): String = "Number Shift"
+    fun luckyCrystal(lang: Language = Language.EN): String = "Lucky Crystal"
 
-    fun levels(lang: Language): String = when (lang) {
-        Language.TR -> "Bölümler"
-        Language.EN -> "Levels"
-    }
-
-    fun themes(lang: Language): String = when (lang) {
-        Language.TR -> "Temalar"
-        Language.EN -> "Themes"
-    }
-
-    fun shop(lang: Language): String = when (lang) {
-        Language.TR -> "Mağaza"
-        Language.EN -> "Shop"
-    }
-
-    fun settings(lang: Language): String = when (lang) {
-        Language.TR -> "Ayarlar"
-        Language.EN -> "Settings"
-    }
-
-    fun language(lang: Language): String = when (lang) {
-        Language.TR -> "Dil"
-        Language.EN -> "Language"
-    }
-
-    fun dailyChallenge(lang: Language): String = when (lang) {
-        Language.TR -> "GÜNLÜK GÖREV"
-        Language.EN -> "DAILY CHALLENGE"
-    }
-
-    fun dailyCompleted(lang: Language): String = when (lang) {
-        Language.TR -> "Tamamlandı"
-        Language.EN -> "Completed"
-    }
-
-    fun levelTitle(lang: Language, number: Int): String = when (lang) {
-        Language.TR -> "Bölüm $number"
-        Language.EN -> "Level $number"
-    }
-
-    fun hint(lang: Language): String = when (lang) {
-        Language.TR -> "İpucu"
-        Language.EN -> "Hint"
-    }
-
-    fun breaker(lang: Language): String = when (lang) {
-        Language.TR -> "Kırıcı"
-        Language.EN -> "Breaker"
-    }
-
-    fun clearEchoes(lang: Language): String = when (lang) {
-        Language.TR -> "Temizle"
-        Language.EN -> "Clear"
-    }
-
-    fun levelComplete(lang: Language): String = when (lang) {
-        Language.TR -> "BÖLÜM TAMAMLANDI!"
-        Language.EN -> "LEVEL COMPLETED!"
-    }
-
-    fun nextLevel(lang: Language): String = when (lang) {
-        Language.TR -> "Sonraki Bölüm"
-        Language.EN -> "Next Level"
-    }
-
-    fun retry(lang: Language): String = when (lang) {
-        Language.TR -> "Tekrar Dene"
-        Language.EN -> "Retry"
-    }
-
-    fun watchAd(lang: Language): String = when (lang) {
-        Language.TR -> "Reklam İzle"
-        Language.EN -> "Watch Video"
-    }
-
-    fun adBlockWarningTitle(lang: Language): String = when (lang) {
-        Language.TR -> "Reklam Engelleyici Tespit Edildi"
-        Language.EN -> "Ad Blocker Detected"
-    }
-
-    fun adBlockWarningSubtitle(lang: Language): String = when (lang) {
-        Language.TR -> "Uygulama çalıştırılamıyor"
-        Language.EN -> "Application cannot run"
-    }
-
-    fun adBlockWarningBody(lang: Language): String = when (lang) {
-        Language.TR -> "ECHO tamamen ücretsiz bir oyundur ve sunucu/geliştirme masrafları reklam gelirleri sayesinde karşılanmaktadır.\n\nOyuna devam edebilmek için lütfen cihazınızdaki reklam engelleyiciyi (Özel DNS, AdGuard, Blokada vb.) kapatın."
-        Language.EN -> "ECHO is a completely free indie game supported by advertisements.\n\nTo continue playing, please disable your ad blocker (Private DNS, AdGuard, Blokada, etc.)."
-    }
-
-    fun recheck(lang: Language): String = when (lang) {
-        Language.TR -> "Tekrar Kontrol Et"
-        Language.EN -> "Re-Check"
-    }
-
-    fun exitGame(lang: Language): String = when (lang) {
-        Language.TR -> "Oyundan Çık"
-        Language.EN -> "Exit Game"
-    }
-
-    fun sound(lang: Language): String = when (lang) {
-        Language.TR -> "Ses Efektleri & Müzik"
-        Language.EN -> "Sound & Music"
-    }
-
-    fun haptics(lang: Language): String = when (lang) {
-        Language.TR -> "Titreşim (Haptik)"
-        Language.EN -> "Haptic Feedback"
-    }
-
-    fun resetProgress(lang: Language): String = when (lang) {
-        Language.TR -> "Tüm İlerlemeyi Sıfırla"
-        Language.EN -> "Reset All Progress"
-    }
-
-    fun theme(lang: Language): String = when (lang) {
-        Language.TR -> "Tema (Karanlık / Aydınlık)"
-        Language.EN -> "Theme (Dark / White)"
-    }
-
-    fun darkTheme(lang: Language): String = when (lang) {
-        Language.TR -> "Karanlık"
-        Language.EN -> "Dark"
-    }
-
-    fun whiteTheme(lang: Language): String = when (lang) {
-        Language.TR -> "Aydınlık"
-        Language.EN -> "White"
-    }
+    // Account & Guest
+    fun playAsGuest(lang: Language = Language.EN): String = "PLAY AS GUEST"
+    fun signOut(lang: Language = Language.EN): String = "Sign Out"
+    fun guestAccount(lang: Language = Language.EN): String = "Guest Player"
+    fun loginRequiredFeature(lang: Language = Language.EN): String = "Please sign in or register to access Leaderboard and Quests."
+    fun startNode(lang: Language = Language.EN): String = "START"
+    fun close(lang: Language = Language.EN): String = "Close"
+    fun back(lang: Language = Language.EN): String = "Back"
+    fun magicCombo(lang: Language = Language.EN): String = "Magic Combo!"
+    fun levelAlreadyCompleted(lang: Language = Language.EN): String = "Level already completed! Trophies are awarded only once, except on Level 150."
+    fun bossPuzzle(lang: Language = Language.EN): String = "Fantastic Boss Puzzle"
 }

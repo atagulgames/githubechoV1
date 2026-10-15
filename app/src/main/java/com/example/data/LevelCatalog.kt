@@ -38,27 +38,6 @@ object LevelCatalog {
         "Cosmic Infinity: Ultimate Nexus"   // Tier 18 (150)
     )
 
-    private val TIER_NAMES_TR = listOf(
-        "Temel Ağ",                         // Tier 1 (1..3)
-        "Karmaşık Ağ",                      // Tier 2 (4..10)
-        "Hareketli Düğümler",               // Tier 3 (11..20)
-        "Görünmez Işınlar",                 // Tier 4 (21..30)
-        "Zamanla Kaybolan Düğümler",        // Tier 5 (31..40)
-        "Yankıların Hareketi",              // Tier 6 (41..50)
-        "Sahte Hedefler",                   // Tier 7 (51..60)
-        "Ters Yönler",                      // Tier 8 (61..70)
-        "Ekranın Dönmesi",                  // Tier 9 (71..80)
-        "İki Ağ Aynı Anda",                 // Tier 10 (81..90)
-        "Önceki Hataların Birleşmesi",      // Tier 11 (91..99)
-        "Büyük Final: Omega Zirvesi",       // Tier 12 (100)
-        "Hiper Akı Matrisi",                // Tier 13 (101..110)
-        "Tekillik Boşluğu",                 // Tier 14 (111..120)
-        "Dolanık Kuantum Geçitleri",        // Tier 15 (121..130)
-        "Zamansal Kırılma",                 // Tier 16 (131..140)
-        "Göksel Zirve",                     // Tier 17 (141..149)
-        "Kozmik Sonsuzluk: Nihai Zirve"     // Tier 18 (150)
-    )
-
     fun getTierIndex(levelId: Int): Int = when (levelId) {
         in 1..3 -> 0
         in 4..10 -> 1
@@ -128,66 +107,12 @@ object LevelCatalog {
         "Titan Nexus", "Celestial Citadel", "The Sovereign Key", "Penultimate Convergence", "COSMIC INFINITY"
     )
 
-    private val UNIQUE_NAMES_TR = listOf(
-        // Tier 1 (1..10)
-        "Saf Üçgen", "Altın Kare", "Rezonans Beşgeni", "Kristal Altıgen", "Parlak Yıldız",
-        "Prizma Kubbesi", "Çifte Halka", "Lapis Çemberi", "Aura Kristali", "Geometrik Matris",
-        // Tier 2 (11..20)
-        "Vektör Akışı", "Polar Yay", "Sarmal Yörünge", "Nebula Omurgası", "Kozmik İğne",
-        "İyon Ağı", "Girdap Vektörü", "Zirve Işını", "Piramit Hattı", "Sonsuzluk Yayı",
-        // Tier 3 (21..30)
-        "Bakır Kilit", "Gümüş Geçit", "Safir Anahtar", "Yakut Bariyer", "Zümrüt Kapı",
-        "Gizemli Labirent", "Gizli Mahzen", "Kutsal Portal", "Kristal Mühür", "Açılan Kemer",
-        // Tier 4 (31..40)
-        "Sönen Kıvılcım", "Buharlaşan Hat", "Kırılgan Rezonans", "Zamansal İz", "Kayıp Dalga",
-        "Sönük Titreşim", "Geçici Köprü", "Dağılan Foton", "Eriyen Ağ", "Son Yankı",
-        // Tier 5 (41..50)
-        "Gölge İkizi", "Hayalet Yolu", "Görünmez Tel", "İllüzyon Ağı", "Karanlık Yansıma",
-        "Fantom Düğümü", "Yansıyan Sis", "Yıldız Tozu", "Gölge Koridoru", "Kırık Aynalar",
-        // Tier 6 (51..60)
-        "Fraktal Ağacı", "Çift Sarmal", "İkili Çekirdek", "Altıgen Petek", "Kristal Kafes",
-        "İç İçe Halkalar", "Kozmik Çiçek", "Fraktal Yıldız", "Matris Örgüsü", "Karmaşık Düğüm",
-        // Tier 7 (61..70)
-        "Kuantum Tüneli", "Dolanık Parçacık", "Süperpozisyon", "Fotonik Ağ", "Hiper Küp",
-        "Çoklu Geçit", "Boyut Kırılması", "Plazma Kapısı", "Çekim Dalgası", "Kuantum Çekirdeği",
-        // Tier 8 (71..80)
-        "Zaman Döngüsü", "Görecelik Hattı", "Kronos Sarmalı", "Işık Konisi", "Zaman Kristali",
-        "Yavaşlayan Akış", "Geri Dönen Hat", "Zaman Aynası", "Kozmik Saat", "Boyutlararası Akış",
-        // Tier 9 (81..90)
-        "Usta Labirenti", "Düğümler Şehri", "Büyük Dokuma", "Karmaşık Kafes", "Örümcek Ağı",
-        "Geometrik Kaos", "Harmonik Denge", "Yüce Ağ", "Kozmik Mimari", "Büyük Ağ Geçidi",
-        // Tier 10 (91..100)
-        "Zirve Yükselişi", "Yıldızlararası", "Süpernova", "Hiperuzay", "Galaktik Çekirdek",
-        "Son Sınav", "Kozmos Nabzı", "Büyük Birleşme", "Usta İmtihanı", "ECHO OMEGA",
-        // Tier 13 (101..110): Hiper Akı Matrisi
-        "Hiper Prizma", "Plazma Halkası", "Foton Çağlayanı", "Atomaltı Kafesi", "Graviton İlmeği",
-        "Takyon Işını", "Akı Kristali", "Yıldız Dinamosu", "Esir Girdabı", "Pulsar Kavşağı",
-        // Tier 14 (111..120): Tekillik Boşluğu
-        "Olay Ufku", "Karadelik Boğazı", "Uzayzaman Bükülmesi", "Yerçekimi Merceği", "Ergosfer Sürüklenişi",
-        "Hawking Işıması", "Gelgit Tekilliği", "Karanlık Madde Ağı", "Hiçlik Dikilitaşı", "Kozmik Uçurum",
-        // Tier 15 (121..130): Dolanık Kuantum Geçitleri
-        "Bell Durumu", "İkiz Foton Köprüsü", "Faz Kaydırıcı", "Kuantum Işınlama", "Dönü Rezonansı",
-        "Dalga Fonksiyonu Çöküşü", "Schrödinger Labirenti", "Dolanık Sarmal", "Eşevrelilik Odası", "Çoklu Durum Kapısı",
-        // Tier 16 (131..140): Zamansal Kırılma
-        "Zaman Paradoksu", "Donmuş Saniye", "Kronos Sarmalı II", "Entropi Tersinimi", "Geriye Dönük Vektör",
-        "Zaman Genleşmesi", "Kalıntı Frekans", "Sonsuz Yankı", "Sonsuzluk Döngüsü II", "Zamansal Cehennem",
-        // Tier 17 & 18 (141..150): Göksel Zirve & Kozmik Sonsuzluk
-        "Yıldız Takımyıldızı", "Galaktik Kale", "Süperküme Ağı", "Bulutsu Ocağı", "Omega Tacı",
-        "Titan Kavşağı", "Göksel Hisar", "Hükümdar Anahtarı", "Sondan Önceki Birleşme", "KOZMİK SONSUZLUK"
-    )
-
     fun getLevelTitle(id: Int, language: Language = Language.EN): String {
         val clampedId = id.coerceIn(1, TOTAL_LEVELS)
         val tierIndex = getTierIndex(clampedId)
-        return if (language == Language.TR) {
-            val name = UNIQUE_NAMES_TR.getOrNull(clampedId - 1) ?: "Seviye $clampedId"
-            val tier = TIER_NAMES_TR[tierIndex]
-            "$name ($tier)"
-        } else {
-            val name = UNIQUE_NAMES_EN.getOrNull(clampedId - 1) ?: "Level $clampedId"
-            val tier = TIER_NAMES_EN[tierIndex]
-            "$name ($tier)"
-        }
+        val name = UNIQUE_NAMES_EN.getOrNull(clampedId - 1) ?: "Level $clampedId"
+        val tier = TIER_NAMES_EN[tierIndex]
+        return "$name ($tier)"
     }
 
     private val cachedLevelDataMap = java.util.concurrent.ConcurrentHashMap<Int, LevelData>()
@@ -348,7 +273,6 @@ object LevelCatalog {
     }
 
     /**
-     * User request: "düğmelerin biraz arasını açarsan sevinirim çok dip dibe olmasınlar"
      * Enforces guaranteed minimum clearance distance between all level nodes.
      */
     fun ensureNodeSpacing(points: List<Pair<Float, Float>>, minDistance: Float = 42f): List<Pair<Float, Float>> {
@@ -386,7 +310,7 @@ object LevelCatalog {
     private fun computeLevelData(clampedId: Int): LevelData {
         val tierIndex = ((clampedId - 1) / 10).coerceIn(0, 9)
 
-        // Default title in English (as requested: "Herşey başlangıçta ingilizce olacak")
+        // Default title in English
         val title = getLevelTitle(clampedId, Language.EN)
 
         // Distinct node count from 3 to 24 for every level
@@ -571,10 +495,8 @@ object LevelCatalog {
     }
 
     /**
-     * User requirement:
-     * "ilk 3 bölüm dışında düğmeler biraz karşık yap düşün oyuncu"
-     * Levels 1, 2, 3 keep their natural sequential node layout (triangle, square, kite).
-     * Levels 4 to 100 have their nodes permuted in an intellectually engaging star-step pattern,
+     * Levels 1, 2, 3 keep their natural sequential node layout (triangle, square, pentagon).
+     * Levels 4 to 150 have their nodes permuted in an intellectually engaging pattern,
      * ensuring consecutive targets jump across opposite and diagonal sectors so the player
      * must actively examine the board and think about their path.
      */

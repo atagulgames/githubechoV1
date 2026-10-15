@@ -91,7 +91,7 @@ fun HintDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Lightbulb,
-                                contentDescription = "İpucu",
+                                contentDescription = "Hint",
                                 tint = Color(0xFFD97706),
                                 modifier = Modifier.size(24.dp)
                             )
@@ -99,13 +99,13 @@ fun HintDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Rota İpucu Rehberi",
+                                text = "Route Hint Guide",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary
                             )
                             Text(
-                                text = "1 Bölümlük Çözüm Rotası",
+                                text = "1 Level Solution Route",
                                 fontSize = 12.sp,
                                 color = Color(0xFFD97706),
                                 fontWeight = FontWeight.SemiBold
@@ -118,7 +118,7 @@ fun HintDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Kapat",
+                            contentDescription = "Close",
                             tint = textSecondary
                         )
                     }
@@ -127,7 +127,7 @@ fun HintDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Bu bölümün ideal çözüm sırasını açmak için 3 reklam izleyebilir veya 5 elmas kullanabilirsiniz:",
+                    text = "Watch 3 ads or spend 5 diamonds to unlock the optimal solution route for this level:",
                     fontSize = 13.sp,
                     color = textSecondary,
                     textAlign = TextAlign.Start,
@@ -137,7 +137,7 @@ fun HintDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // OPTION 1: 3 Reklam İzle
+                // OPTION 1: Watch 3 Ads
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
@@ -157,13 +157,13 @@ fun HintDialog(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.OndemandVideo,
-                                    contentDescription = "Reklam",
+                                    contentDescription = "Ad",
                                     tint = Color(0xFF0284C7),
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "3 Reklam İzle",
+                                    text = "Watch 3 Ads",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
                                     color = textPrimary
@@ -210,7 +210,7 @@ fun HintDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (hintAdsWatched == 0) "Reklam İzle (1/3)" else "Reklam İzle (${hintAdsWatched + 1}/3)",
+                                text = if (hintAdsWatched == 0) "Watch Ad (1/3)" else "Watch Ad (${hintAdsWatched + 1}/3)",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
@@ -220,7 +220,7 @@ fun HintDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // OPTION 2: 5 Elmas Kullan
+                // OPTION 2: Spend 5 Diamonds
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
@@ -244,20 +244,20 @@ fun HintDialog(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Diamond,
-                                    contentDescription = "Elmas",
+                                    contentDescription = "Diamond",
                                     tint = Color(0xFF06B6D4),
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "5 Elmas Harca",
+                                    text = "Spend 5 Diamonds",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
                                     color = textPrimary
                                 )
                             }
                             Text(
-                                text = "Mevcut: $diamonds 💎",
+                                text = "Available: $diamonds 💎",
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 12.sp,
                                 color = if (diamonds >= 5) Color(0xFF06B6D4) else textSecondary
@@ -267,7 +267,7 @@ fun HintDialog(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Reklamsız anında rehber rotayı ve düğüm sırasını açar.",
+                            text = "Instantly reveals the guided path and node sequence without ads.",
                             fontSize = 11.sp,
                             color = textSecondary
                         )
@@ -294,7 +294,7 @@ fun HintDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (diamonds >= 5) "5 Elmas İle Anında Aç" else "Yetersiz Elmas ($diamonds/5)",
+                                text = if (diamonds >= 5) "Unlock Instantly with 5 Diamonds" else "Not Enough Diamonds ($diamonds/5)",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
@@ -302,7 +302,7 @@ fun HintDialog(
                     }
                 }
 
-                // Optional Option 3: 1 İpucu Jetonu varsa kullan
+                // Optional Option 3: Use hint token if available
                 if (tokens > 0) {
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
@@ -321,7 +321,7 @@ fun HintDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Mevcut Jetonu Kullan ($tokens Jeton)",
+                            text = "Use Hint Token ($tokens available)",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFD97706)
@@ -332,7 +332,7 @@ fun HintDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "⚠️ İpucu yalnızca mevcut bölüm için geçerlidir.",
+                    text = "⚠️ Hint is valid for the current level only.",
                     fontSize = 11.sp,
                     color = textSecondary,
                     textAlign = TextAlign.Center

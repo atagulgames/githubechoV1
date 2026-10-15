@@ -80,10 +80,10 @@ object CollisionEngine {
     }
 
     /**
-     * Self-Intersection check (Anlık Yol Çarpışması):
+     * Self-Intersection check (Dynamic Path Collision):
      * Per user directives:
-     * - "Işınlar bir birinin içinde geçebilsin yankılardanda geçebilsin."
-     * - "düğümler içinden geçilebilinsin mesela sağ ya sola doğru sol alt çapraz iç içe geçsin yani."
+     * - Rays can pass through each other and through echoes.
+     * - Nodes can be passed through, e.g., diagonally or across lines.
      * Lasers, segments, and nodes can freely intertwine, cross diagonally, and pass through each other.
      */
     fun checkSelfIntersection(

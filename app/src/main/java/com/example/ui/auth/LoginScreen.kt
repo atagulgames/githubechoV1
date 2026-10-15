@@ -100,10 +100,10 @@ enum class AuthTab {
  * Enhanced Authentication Screen for ECHO FLUX.
  *
  * Implements:
- * - Stable, proportional layout with zero shifting (UI kayması giderildi).
+ * - Stable, proportional layout with zero shifting.
  * - High-contrast, balanced form fields with proportional spacing.
  * - Branded Google and Facebook Sign-In buttons with full Firebase Cloud Synchronization.
- * - Reliable "Beni Hatırla" (Remember Me) session persistence.
+ * - Reliable Remember Me session persistence.
  * - Guaranteed data isolation: keeps diamonds, trophies, tokens, and unlocked levels permanently intact.
  */
 @Composable
@@ -111,6 +111,7 @@ fun LoginScreen(
     initialUsername: String = "",
     initialRememberMe: Boolean = true,
     onLoginSuccess: (username: String, rememberMe: Boolean) -> Unit,
+    onPlayAsGuest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -172,7 +173,7 @@ fun LoginScreen(
         if (isLoading) return
         val currentActivity = activity
         if (currentActivity == null) {
-            errorMessage = "Oturum açma penceresi açılamadı."
+            errorMessage = "Could not open sign-in window."
             return
         }
         isLoading = true
@@ -192,7 +193,7 @@ fun LoginScreen(
                     syncManager.syncOnLogin(signedInUser)
 
                     isLoading = false
-                    successMessage = "Google ile başarıyla giriş yapıldı! Hoş geldin, $signedInUser"
+                    successMessage = "Signed in with Google! Welcome, $signedInUser"
                     HarmonicAudioEngine.playParty()
                     onLoginSuccess(signedInUser, rememberMe)
                 }
@@ -212,7 +213,7 @@ fun LoginScreen(
         if (isLoading) return
         val currentActivity = activity
         if (currentActivity == null) {
-            errorMessage = "Oturum açma penceresi açılamadı."
+            errorMessage = "Could not open sign-in window."
             return
         }
         isLoading = true
@@ -232,7 +233,7 @@ fun LoginScreen(
                     syncManager.syncOnLogin(signedInUser)
 
                     isLoading = false
-                    successMessage = "Facebook ile başarıyla giriş yapıldı! Hoş geldin, $signedInUser"
+                    successMessage = "Signed in with Facebook! Welcome, $signedInUser"
                     HarmonicAudioEngine.playParty()
                     onLoginSuccess(signedInUser, rememberMe)
                 }
@@ -263,12 +264,12 @@ fun LoginScreen(
             if (fbResult.isSuccess) {
                 val signedInUser = fbResult.getOrThrow()
                 isLoading = false
-                successMessage = "Facebook ile başarıyla giriş yapıldı! Hoş geldin, $signedInUser"
+                successMessage = "Signed in with Facebook! Welcome, $signedInUser"
                 HarmonicAudioEngine.playParty()
                 onLoginSuccess(signedInUser, rememberMe)
             } else {
                 isLoading = false
-                errorMessage = fbResult.exceptionOrNull()?.message ?: "Facebook bağlantısı başarısız oldu."
+                errorMessage = fbResult.exceptionOrNull()?.message ?: "Facebook connection failed."
                 HarmonicAudioEngine.playHataSound()
             }
         }
@@ -280,12 +281,12 @@ fun LoginScreen(
         val password = loginPassword.trim()
 
         if (username.isBlank()) {
-            errorMessage = "Lütfen kullanıcı adınızı girin."
+            errorMessage = "Please enter your username."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password.isBlank()) {
-            errorMessage = "Lütfen şifrenizi girin."
+            errorMessage = "Please enter your password."
             HarmonicAudioEngine.playHataSound()
             return
         }
@@ -321,11 +322,11 @@ fun LoginScreen(
                     isLoading = false
                     val fbErr = firebaseResult.exceptionOrNull()?.message ?: ""
                     errorMessage = if (fbErr.contains("invalid", ignoreCase = true) || fbErr.contains("password", ignoreCase = true) || fbErr.contains("credential", ignoreCase = true)) {
-                        "Kullanıcı adı veya şifre hatalı."
+                        "Invalid username or password."
                     } else if (fbErr.contains("network", ignoreCase = true)) {
-                        "Ağ bağlantısı hatası. Lütfen internet bağlantınızı kontrol edin."
+                        "Network connection error. Please check your internet."
                     } else {
-                        "Giriş başarısız: Kullanıcı adı veya şifre hatalı."
+                        "Sign-in failed: Invalid username or password."
                     }
                     HarmonicAudioEngine.playHataSound()
                 }
@@ -340,32 +341,32 @@ fun LoginScreen(
         val confirmPassword = registerConfirmPassword.trim()
 
         if (username.isBlank()) {
-            errorMessage = "Kullanıcı adı boş bırakılamaz."
+            errorMessage = "Username cannot be empty."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (username.length < 3) {
-            errorMessage = "Kullanıcı adı en az 3 karakter olmalıdır."
+            errorMessage = "Username must be at least 3 characters."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (username.length > 20) {
-            errorMessage = "Kullanıcı adı 20 karakterden uzun olamaz."
+            errorMessage = "Username cannot exceed 20 characters."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password.isBlank()) {
-            errorMessage = "Şifre boş bırakılamaz."
+            errorMessage = "Password cannot be empty."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password.length < 4) {
-            errorMessage = "Şifre en az 4 karakter olmalıdır."
+            errorMessage = "Password must be at least 4 characters."
             HarmonicAudioEngine.playHataSound()
             return
         }
         if (password != confirmPassword) {
-            errorMessage = "Girdiğiniz şifreler uyuşmuyor."
+            errorMessage = "Passwords do not match."
             HarmonicAudioEngine.playHataSound()
             return
         }
@@ -386,7 +387,7 @@ fun LoginScreen(
                 )
                 isLoading = false
                 HarmonicAudioEngine.playLoginEffect(context)
-                successMessage = "Firebase ile kayıt başarılı! Hoş geldin, $createdUser"
+                successMessage = "Account registered successfully! Welcome, $createdUser"
                 onLoginSuccess(createdUser, true)
             } else {
                 // Offline or local fallback
@@ -399,17 +400,17 @@ fun LoginScreen(
                     val newUser = regResult.getOrThrow()
                     isLoading = false
                     HarmonicAudioEngine.playLoginEffect(context)
-                    successMessage = "Kayıt başarılı! Giriş yapılıyor..."
+                    successMessage = "Registration successful! Signing in..."
                     onLoginSuccess(newUser.username, true)
                 } else {
                     isLoading = false
                     val fbErr = fbReg.exceptionOrNull()?.localizedMessage ?: ""
                     errorMessage = if (fbErr.contains("already in use", ignoreCase = true) || fbErr.contains("already exists", ignoreCase = true)) {
-                        "Bu kullanıcı adı zaten alınmış. Lütfen başka bir ad seçin."
+                        "This username is already taken. Please choose another."
                     } else if (fbErr.contains("network", ignoreCase = true)) {
-                        "Ağ bağlantısı kurulamadı. Lütfen internetinizi kontrol edin."
+                        "Network connection error. Please check your internet."
                     } else {
-                        fbErr.ifBlank { regResult.exceptionOrNull()?.message ?: "Kayıt işlemi tamamlanamadı." }
+                        fbErr.ifBlank { regResult.exceptionOrNull()?.message ?: "Registration could not be completed." }
                     }
                     HarmonicAudioEngine.playHataSound()
                 }
@@ -539,7 +540,7 @@ fun LoginScreen(
                             )
                         }
                         Text(
-                            text = "BULUT SENKRONİZASYONLU HESAP",
+                            text = "CLOUD SYNC ACCOUNT",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp,
@@ -569,7 +570,7 @@ fun LoginScreen(
                             .padding(horizontal = 20.dp, vertical = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // --- TAB SWITCHER: GİRİŞ YAP | KAYIT OL ---
+                        // --- TAB SWITCHER: SIGN IN | REGISTER ---
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -579,7 +580,7 @@ fun LoginScreen(
                                 .padding(4.dp)
                         ) {
                             Row(modifier = Modifier.fillMaxWidth()) {
-                                // GİRİŞ YAP TAB
+                                // SIGN IN TAB
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
@@ -598,7 +599,7 @@ fun LoginScreen(
                                             successMessage = null
                                         }
                                         .testTag("tab_login"),
-                                    contentAlignment = Alignment.Center
+                                     contentAlignment = Alignment.Center
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
@@ -609,7 +610,7 @@ fun LoginScreen(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "GİRİŞ YAP",
+                                            text = "SIGN IN",
                                             color = if (selectedTab == AuthTab.LOGIN) Color.White else Color(0xFF94A3B8),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Black,
@@ -618,7 +619,7 @@ fun LoginScreen(
                                     }
                                 }
 
-                                // KAYIT OL TAB
+                                // REGISTER TAB
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
@@ -648,7 +649,7 @@ fun LoginScreen(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "KAYIT OL",
+                                            text = "REGISTER",
                                             color = if (selectedTab == AuthTab.REGISTER) Color.White else Color(0xFF94A3B8),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Black,
@@ -712,14 +713,14 @@ fun LoginScreen(
                         }
 
                         if (selectedTab == AuthTab.LOGIN) {
-                            // --- GİRİŞ YAP FORMU ---
+                            // --- SIGN IN FORM ---
                             ProportionalTextField(
                                 value = loginUsername,
                                 onValueChange = {
                                     loginUsername = it
                                     errorMessage = null
                                 },
-                                label = "Kullanıcı Adı",
+                                label = "Username",
                                 icon = Icons.Default.Person,
                                 testTag = "login_username_field",
                                 keyboardType = KeyboardType.Text,
@@ -734,7 +735,7 @@ fun LoginScreen(
                                     loginPassword = it
                                     errorMessage = null
                                 },
-                                label = "Şifre",
+                                label = "Password",
                                 icon = Icons.Default.Lock,
                                 testTag = "login_password_field",
                                 isPassword = true,
@@ -747,7 +748,7 @@ fun LoginScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Beni Hatırla (Remember Me)
+                            // Remember Me
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -770,7 +771,7 @@ fun LoginScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Beni Hatırla (Oturumu Açık Tut)",
+                                    text = "Remember Me (Keep Signed In)",
                                     color = Color(0xFFE2E8F0),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -780,7 +781,7 @@ fun LoginScreen(
                             Spacer(modifier = Modifier.height(14.dp))
 
                             Proportional3DButton(
-                                text = "GİRİŞ YAP",
+                                text = "SIGN IN",
                                 icon = Icons.Default.Login,
                                 primaryColor = Color(0xFF0284C7),
                                 highlightColor = Color(0xFF38BDF8),
@@ -791,14 +792,14 @@ fun LoginScreen(
                                 testTag = "login_submit_button"
                             )
                         } else {
-                            // --- KAYIT OL FORMU ---
+                            // --- REGISTER FORM ---
                             ProportionalTextField(
                                 value = registerUsername,
                                 onValueChange = {
                                     registerUsername = it
                                     errorMessage = null
                                 },
-                                label = "Kullanıcı Adı (3-20 karakter)",
+                                label = "Username (3-20 characters)",
                                 icon = Icons.Default.Person,
                                 testTag = "register_username_field",
                                 keyboardType = KeyboardType.Text,
@@ -813,7 +814,7 @@ fun LoginScreen(
                                     registerPassword = it
                                     errorMessage = null
                                 },
-                                label = "Şifre (En az 4 karakter)",
+                                label = "Password (Min 4 characters)",
                                 icon = Icons.Default.Lock,
                                 testTag = "register_password_field",
                                 isPassword = true,
@@ -831,7 +832,7 @@ fun LoginScreen(
                                     registerConfirmPassword = it
                                     errorMessage = null
                                 },
-                                label = "Şifre Tekrar",
+                                label = "Confirm Password",
                                 icon = Icons.Default.Key,
                                 testTag = "register_confirm_password_field",
                                 isPassword = true,
@@ -845,7 +846,7 @@ fun LoginScreen(
                             Spacer(modifier = Modifier.height(14.dp))
 
                             Proportional3DButton(
-                                text = "HESAP OLUŞTUR VE KAYDOL",
+                                text = "CREATE ACCOUNT & REGISTER",
                                 icon = Icons.Default.PersonAdd,
                                 primaryColor = Color(0xFF16A34A),
                                 highlightColor = Color(0xFF22C55E),
@@ -859,7 +860,7 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(18.dp))
 
-                        // --- AYIRICI ÇİZGİ: YA DA SOSYAL HESAPLA GİRİŞ YAP ---
+                        // --- DIVIDER: OR SIGN IN WITH SOCIAL ACCOUNT ---
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -870,7 +871,7 @@ fun LoginScreen(
                                 color = Color(0xFF1E4FB8).copy(alpha = 0.5f)
                             )
                             Text(
-                                text = "  VEYA SOSYAL HESAPLA GİRİŞ YAP  ",
+                                text = "  OR SIGN IN WITH SOCIAL ACCOUNT  ",
                                 color = Color(0xFF94A3B8),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -885,12 +886,11 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // --- GOOGLE & FACEBOOK BUTONLARI (YAN YANA, TAM VE ORANTILI) ---
+                        // --- GOOGLE & FACEBOOK BUTTONS ---
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // GOOGLE İLE GİRİŞ YAP
                             ProportionalSocialButton(
                                 text = "Google",
                                 provider = SocialProvider.GOOGLE,
@@ -900,7 +900,6 @@ fun LoginScreen(
                                 modifier = Modifier.weight(1f)
                             )
 
-                            // FACEBOOK İLE GİRİŞ YAP
                             ProportionalSocialButton(
                                 text = "Facebook",
                                 provider = SocialProvider.FACEBOOK,
@@ -913,9 +912,9 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // --- MİSAFİR OLARAK OYNA (HIZLI BAŞLA) ---
+                        // --- PLAY AS GUEST (FAST START) ---
                         Proportional3DButton(
-                            text = "MİSAFİR OLARAK OYNA (Hemen Başla)",
+                            text = "PLAY AS GUEST (Start Now)",
                             icon = Icons.Default.Person,
                             primaryColor = Color(0xFF0F266A),
                             highlightColor = Color(0xFF1E3A8A),
@@ -924,14 +923,11 @@ fun LoginScreen(
                             isLoading = isLoading,
                             onClick = {
                                 if (isLoading) return@Proportional3DButton
-                                val guestName = "Player_${(1000..9999).random()}"
-                                coroutineScope.launch {
-                                    prefs.rememberMe = true
-                                    prefs.isAuthenticated = true
-                                    prefs.authenticatedUsername = guestName
-                                    HarmonicAudioEngine.playParty()
-                                    onLoginSuccess(guestName, true)
-                                }
+                                prefs.rememberMe = false
+                                prefs.isAuthenticated = false
+                                prefs.authenticatedUsername = ""
+                                HarmonicAudioEngine.playParty()
+                                onPlayAsGuest()
                             },
                             testTag = "play_as_guest_button"
                         )
@@ -942,7 +938,7 @@ fun LoginScreen(
 
                 // FOOTNOTE
                 Text(
-                    text = "★ ECHO FLUX • Tüm İlerlemeniz ve Kupalarınız Firebase ile Güvende ★",
+                    text = "★ ECHO FLUX • Cloud Saved & Secure with Firebase ★",
                     color = Color(0xFF94A3B8),
                     fontSize = 11.sp,
                     textAlign = TextAlign.Center,
@@ -957,12 +953,12 @@ fun LoginScreen(
         AlertDialog(
             onDismissRequest = { showFacebookPlayerDialog = false },
             title = {
-                Text("Facebook ile Bağlan", fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Connect with Facebook", fontWeight = FontWeight.Bold, color = Color.White)
             },
             text = {
                 Column {
                     Text(
-                        "Facebook Oyuncu adınızı onaylayın. Tüm kupalarınız ve elmaslarınız Firebase bulutunda bu hesapla kalıcı olarak kaydedilecektir.",
+                        "Confirm your Facebook Player Name. All your trophies and progress will be securely saved to Firebase cloud.",
                         color = Color(0xFFCBD5E1),
                         fontSize = 13.sp
                     )
@@ -970,7 +966,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = facebookPlayerName,
                         onValueChange = { facebookPlayerName = it },
-                        label = { Text("Facebook Oyuncu Adı") },
+                        label = { Text("Facebook Player Name") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF38BDF8),
@@ -983,12 +979,12 @@ fun LoginScreen(
             },
             confirmButton = {
                 TextButton(onClick = { completeFacebookDirectConnect(facebookPlayerName) }) {
-                    Text("Giriş Yap", fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
+                    Text("Sign In", fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showFacebookPlayerDialog = false }) {
-                    Text("İptal", color = Color(0xFF94A3B8))
+                    Text("Cancel", color = Color(0xFF94A3B8))
                 }
             },
             containerColor = Color(0xFF0F1E4A),
@@ -998,7 +994,7 @@ fun LoginScreen(
 }
 
 /* ========================================================================== */
-/*                      ORANTILI & ESTETİK ARAYÜZ BİLEŞENLERİ                 */
+/*                      PROPORTIONAL UI COMPONENTS                            */
 /* ========================================================================== */
 
 @Composable
@@ -1045,7 +1041,7 @@ private fun ProportionalTextField(
                 IconButton(onClick = onTogglePassword, modifier = Modifier.size(28.dp)) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = "Şifre görünürlüğü",
+                        contentDescription = "Password visibility",
                         tint = Color(0xFFFFD54F),
                         modifier = Modifier.size(18.dp)
                     )

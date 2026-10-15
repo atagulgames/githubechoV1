@@ -86,9 +86,9 @@ fun IntroVideoScreen(
         }
     }
 
-    // Watchdog timer: Automatically advance after 5 seconds if VideoView completion stalls or in emulator
+    // Watchdog timer: Automatically advance after 2.5 seconds if VideoView completion stalls or in emulator
     LaunchedEffect(Unit) {
-        delay(5_000L)
+        delay(2_500L)
         finishOnce()
     }
 
@@ -154,7 +154,7 @@ fun IntroVideoScreen(
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
             ) {
                 Text(
-                    text = "ATLA  ✕",
+                    text = "SKIP  ✕",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )

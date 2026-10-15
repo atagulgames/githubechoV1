@@ -26,16 +26,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -229,31 +231,50 @@ fun Season2WelcomeDialog(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Top Radiant Season 2 Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(30.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFFFFB703), Color(0xFFFB8500))
-                                )
-                            )
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    // Top Radiant Season 2 Header with Close Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(30.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color(0xFFFFB703), Color(0xFFFB8500))
+                                    )
+                                )
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "✨ SEASON 2 LAUNCHED ✨",
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 12.sp,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onClaimAndStart,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("close_season2_top_button")
+                        ) {
                             Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "✨ SEASON 2 LAUNCHED ✨",
-                                color = Color.Black,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 13.sp,
-                                letterSpacing = 1.sp
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = if (isDarkTheme) Color.White else Color(0xFF0F172A)
                             )
                         }
                     }
@@ -297,7 +318,7 @@ fun Season2WelcomeDialog(
                             desc = "Stars and stages start anew with the season; climb to the top!"
                         )
                         Season2FeatureRow(
-                            icon = Icons.Default.AutoAwesome,
+                            icon = Icons.Default.Star,
                             iconTint = Color(0xFFFFB703),
                             title = "100 New & Unique Levels",
                             desc = "Distinct angles, refreshed node placements, and rotations crafted for Season 2."
@@ -389,6 +410,27 @@ fun Season2WelcomeDialog(
                                 color = Color.White
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = onClaimAndStart,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("dismiss_season2_bottom_button"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFF94A3B8)
+                        )
+                    ) {
+                        Text(
+                            text = "Close",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF94A3B8)
+                        )
                     }
                 }
             }

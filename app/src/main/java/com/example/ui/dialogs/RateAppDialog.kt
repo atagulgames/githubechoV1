@@ -53,13 +53,11 @@ import com.example.audio.hapticClick
 import com.example.data.EchoPreferences
 
 /**
- * 3. Bölüm tamamlandığında her cihazda yalnızca 1 KERE açılan Derecelendirme Paneli.
- *
- * Başlık: "ECHOFLUX'u değerlendir"
- * Açıklama: "Deneyiminizi bizimle paylaşın."
- * 5 interaktif yıldız (başlangıçta boş ☆ ☆ ☆ ☆ ☆)
- * Ana buton: "Gönder"
- * Altında küçük, sade, altı çizili: "Daha sonra"
+ * Rating dialog shown once upon level 3 completion.
+ * Title: "Rate ECHOFLUX"
+ * Subtitle: "Share your experience with us."
+ * 5 interactive stars
+ * Action: "Submit" / "Maybe later"
  */
 @Composable
 fun RateAppDialog(

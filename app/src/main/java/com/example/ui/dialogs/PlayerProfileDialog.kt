@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,6 +73,7 @@ fun PlayerProfileDialog(
     player: LeaderboardPlayer,
     isDarkTheme: Boolean = true,
     onUpdateProfile: ((avatarUri: String, customTitle: String) -> Unit)? = null,
+    onSignOut: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val bgColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFFFFFFF)
@@ -467,6 +469,32 @@ fun PlayerProfileDialog(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
+                }
+
+                if (player.isCurrentUser && onSignOut != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            onSignOut()
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("profile_sign_out_button"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFFEF4444)
+                        ),
+                        border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = "Sign Out",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFEF4444)
+                        )
+                    }
                 }
             }
         }

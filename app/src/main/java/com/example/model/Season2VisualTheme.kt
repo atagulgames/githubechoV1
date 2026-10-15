@@ -43,8 +43,8 @@ enum class Season2VisualTheme(
 ) {
     COSMIC_NEBULA(
         id = "COSMIC_NEBULA",
-        displayName = "Kozmik Nebula",
-        subtitle = "Yıldız tozu, takımyıldız hatları ve mor ışık",
+        displayName = "Cosmic Nebula",
+        subtitle = "Stardust, constellation lines, and violet glow",
         iconEmoji = "🌌",
         patternType = Season2PatternType.COSMIC_CONSTELLATION,
         darkBackgroundTop = Color(0xFF070514),
@@ -66,8 +66,8 @@ enum class Season2VisualTheme(
 
     NEON_AURORA(
         id = "NEON_AURORA",
-        displayName = "Neon Kutup Işığı",
-        subtitle = "Kutup zümrüdü, sibernetik dalgalar ve akış",
+        displayName = "Neon Aurora",
+        subtitle = "Emerald aurora, cybernetic waves, and flux",
         iconEmoji = "✨",
         patternType = Season2PatternType.AURORA_WAVES,
         darkBackgroundTop = Color(0xFF031412),
@@ -89,8 +89,8 @@ enum class Season2VisualTheme(
 
     SOLAR_FLARE(
         id = "SOLAR_FLARE",
-        displayName = "Güneş Parlaması",
-        subtitle = "Magma ışıltısı, güneş halkaları ve kor ateşi",
+        displayName = "Solar Flare",
+        subtitle = "Magma glow, solar rings, and embers",
         iconEmoji = "☀️",
         patternType = Season2PatternType.SOLAR_RINGS,
         darkBackgroundTop = Color(0xFF140601),
@@ -112,8 +112,8 @@ enum class Season2VisualTheme(
 
     QUANTUM_CYBER(
         id = "QUANTUM_CYBER",
-        displayName = "Kuantum Siber",
-        subtitle = "Kuantum veri ızgarası, elmas düğümler ve neon mavi",
+        displayName = "Quantum Cyber",
+        subtitle = "Quantum data grid, diamond nodes, and neon blue",
         iconEmoji = "🔮",
         patternType = Season2PatternType.QUANTUM_GRID,
         darkBackgroundTop = Color(0xFF050B1B),

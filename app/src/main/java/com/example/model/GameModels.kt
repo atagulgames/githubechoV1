@@ -77,10 +77,10 @@ enum class EchoBeastState(
     val color: Color,
     val level: Int // 0: Calm, 1: Awakening, 2: Enraged, 3: Dominion
 ) {
-    CALM("Sakin Evren", "Yankı uykuda, evren sakin.", "✨", Color(0xFF10B981), 0),
-    AWAKENING("Yankı Uyanıyor", "Kozmik bozulmalar ve hafif titreşimler.", "⚡", Color(0xFFF59E0B), 1),
-    ENRAGED("Canavar Harekete Geçti", "Yankı ışınları dalgalanıyor, gölgeler büyüyor!", "🔥", Color(0xFFEA580C), 2),
-    DOMINION("Yankı Hakimiyeti", "Canavar hareketlerini taklit ediyor!", "😈", Color(0xFFDC2626), 3);
+    CALM("Calm Universe", "Echo is sleeping, serenity reigns.", "✨", Color(0xFF10B981), 0),
+    AWAKENING("Echo Awakening", "Cosmic ripples and slight vibrations.", "⚡", Color(0xFFF59E0B), 1),
+    ENRAGED("Beast Unleashed", "Echo rays fluctuate, shadows grow!", "🔥", Color(0xFFEA580C), 2),
+    DOMINION("Echo Dominion", "The beast mimics your moves!", "😈", Color(0xFFDC2626), 3);
 
     companion object {
         fun fromEchoCount(echoes: Int): EchoBeastState = when {
@@ -127,10 +127,10 @@ enum class ThemeRarity(
     val coinCost: Int = 40,
     val diamondCost: Int = 0
 ) {
-    COMMON("Yaygın", Color(0xFF64748B), Color(0xFFF1F5F9), requiredAds = 1, coinCost = 40, diamondCost = 0),
-    RARE("Nadir", Color(0xFF0284C7), Color(0xFFE0F2FE), requiredAds = 3, coinCost = 120, diamondCost = 0),
-    EPIC("Epik", Color(0xFF9333EA), Color(0xFFF3E8FF), requiredAds = 6, coinCost = 300, diamondCost = 1),
-    LEGENDARY("Çok Nadir (Efsanevi)", Color(0xFFD97706), Color(0xFFFEF3C7), requiredAds = 10, coinCost = 600, diamondCost = 4)
+    COMMON("Common", Color(0xFF64748B), Color(0xFFF1F5F9), requiredAds = 1, coinCost = 40, diamondCost = 0),
+    RARE("Rare", Color(0xFF0284C7), Color(0xFFE0F2FE), requiredAds = 3, coinCost = 120, diamondCost = 0),
+    EPIC("Epic", Color(0xFF9333EA), Color(0xFFF3E8FF), requiredAds = 6, coinCost = 300, diamondCost = 1),
+    LEGENDARY("Legendary", Color(0xFFD97706), Color(0xFFFEF3C7), requiredAds = 10, coinCost = 600, diamondCost = 4)
 }
 
 enum class StrokeTheme(
@@ -140,12 +140,12 @@ enum class StrokeTheme(
     val rarity: ThemeRarity = ThemeRarity.COMMON,
     val requiredStars: Int = 0
 ) {
-    NEON_CYAN("Okyanus Mavisi", Color(0xFF0284C7), Color(0x440284C7), ThemeRarity.COMMON, 0),
-    SOLAR_FLAME("Güneş Turuncusu", Color(0xFFEA580C), Color(0x44EA580C), ThemeRarity.COMMON, 0),
-    CYBER_MAGENTA("Fuşya Enerji", Color(0xFFD946EF), Color(0x44D946EF), ThemeRarity.RARE, 30),
-    ZEN_INK("Gece Kobaltı", Color(0xFF312E81), Color(0x44312E81), ThemeRarity.RARE, 60),
-    AURORA_EMERALD("Kutup Zümrüdü", Color(0xFF10B981), Color(0x4410B981), ThemeRarity.EPIC, 120),
-    GOLDEN_PULSE("Altın Lazer", Color(0xFFF59E0B), Color(0x44F59E0B), ThemeRarity.LEGENDARY, 200)
+    NEON_CYAN("Ocean Blue", Color(0xFF0284C7), Color(0x440284C7), ThemeRarity.COMMON, 0),
+    SOLAR_FLAME("Solar Flame", Color(0xFFEA580C), Color(0x44EA580C), ThemeRarity.COMMON, 0),
+    CYBER_MAGENTA("Cyber Magenta", Color(0xFFD946EF), Color(0x44D946EF), ThemeRarity.RARE, 30),
+    ZEN_INK("Midnight Cobalt", Color(0xFF312E81), Color(0x44312E81), ThemeRarity.RARE, 60),
+    AURORA_EMERALD("Aurora Emerald", Color(0xFF10B981), Color(0x4410B981), ThemeRarity.EPIC, 120),
+    GOLDEN_PULSE("Golden Pulse", Color(0xFFF59E0B), Color(0x44F59E0B), ThemeRarity.LEGENDARY, 200)
 }
 
 enum class EchoTheme(
@@ -155,11 +155,11 @@ enum class EchoTheme(
     val rarity: ThemeRarity = ThemeRarity.COMMON,
     val requiredStars: Int = 0
 ) {
-    ELECTRIC_RED("Kızıl Lazer", Color(0xFFDC2626), Color(0x44DC2626), ThemeRarity.COMMON, 0),
-    SHATTERED_ICE("Buz Mavisi", Color(0xFF0284C7), Color(0x440284C7), ThemeRarity.COMMON, 0),
-    VOID_DARK("Mor Sis", Color(0xFF7C3AED), Color(0x447C3AED), ThemeRarity.RARE, 45),
-    CRIMSON_NEBULA("Karanlık Nebula", Color(0xFFBE123C), Color(0x44BE123C), ThemeRarity.EPIC, 100),
-    SOLAR_PLASMA("Güneş Plazması", Color(0xFFF97316), Color(0x44F97316), ThemeRarity.LEGENDARY, 180)
+    ELECTRIC_RED("Crimson Laser", Color(0xFFDC2626), Color(0x44DC2626), ThemeRarity.COMMON, 0),
+    SHATTERED_ICE("Glacial Ice", Color(0xFF0284C7), Color(0x440284C7), ThemeRarity.COMMON, 0),
+    VOID_DARK("Void Mist", Color(0xFF7C3AED), Color(0x447C3AED), ThemeRarity.RARE, 45),
+    CRIMSON_NEBULA("Dark Nebula", Color(0xFFBE123C), Color(0x44BE123C), ThemeRarity.EPIC, 100),
+    SOLAR_PLASMA("Solar Plasma", Color(0xFFF97316), Color(0x44F97316), ThemeRarity.LEGENDARY, 180)
 }
 
 data class DailyQuest(

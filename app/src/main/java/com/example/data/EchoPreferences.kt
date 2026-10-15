@@ -246,7 +246,7 @@ class EchoPreferences(context: Context) {
                 val time = parts[2].toFloatOrNull() ?: 0f
                 val stars = parts[3].toIntOrNull() ?: 3
                 val trEarned = if (parts.size >= 5) parts[4].toIntOrNull() ?: 50 else 50
-                val title = "Bölüm $lvlId"
+                val title = "Level $lvlId"
                 results.add(
                     com.example.model.LevelRecord(
                         levelId = lvlId,
@@ -548,6 +548,14 @@ class EchoPreferences(context: Context) {
         totalEchoes += 1
     }
 
+    var freeCartoonCredits: Int
+        get() = prefs.getInt("echo_free_cartoon_credits", 0)
+        set(value) = prefs.edit().putInt("echo_free_cartoon_credits", value).apply()
+
+    fun addCartoonCredits(amount: Int = 1) {
+        freeCartoonCredits += amount
+    }
+
     fun addTokens(count: Int) {
         tokens += count
     }
@@ -581,6 +589,13 @@ class EchoPreferences(context: Context) {
     fun useToken(): Boolean {
         return if (tokens > 0) {
             tokens -= 1
+            true
+        } else false
+    }
+
+    fun useTokens(count: Int = 1): Boolean {
+        return if (tokens >= count) {
+            tokens -= count
             true
         } else false
     }
@@ -656,7 +671,7 @@ class EchoPreferences(context: Context) {
         return lastFreeChestDate != todayDate
     }
 
-    // Weekly Ad Chest: Sandık 1 hafta içerisinde sadece bir kere reklam ile açılabilecek
+    // Weekly Ad Chest: Chest can be opened once per week via ad
     var lastWeeklyAdChestTime: Long
         get() = prefs.getLong(KEY_LAST_WEEKLY_AD_CHEST_TIME, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_WEEKLY_AD_CHEST_TIME, value).apply()
@@ -678,14 +693,14 @@ class EchoPreferences(context: Context) {
     }
 
     fun formatWeeklyAdRemaining(millis: Long): String {
-        if (millis <= 0L) return "Hazır"
+        if (millis <= 0L) return "Ready"
         val days = millis / (24 * 60 * 60 * 1000L)
         val hours = (millis % (24 * 60 * 60 * 1000L)) / (60 * 60 * 1000L)
         val minutes = (millis % (60 * 60 * 1000L)) / (60 * 1000L)
         return when {
-            days > 0 -> "$days gün $hours sa"
-            hours > 0 -> "$hours sa $minutes dk"
-            else -> "$minutes dk"
+            days > 0 -> "${days}d ${hours}h"
+            hours > 0 -> "${hours}h ${minutes}m"
+            else -> "${minutes}m"
         }
     }
 
@@ -721,19 +736,11 @@ class EchoPreferences(context: Context) {
     }
 
     fun shouldShowInterstitial(levelId: Int): Boolean {
-        if (levelId <= 5) return false
-        val threshold = if (levelId > 50) 2 else nextInterstitialThreshold
-        return levelsSinceLastInterstitial >= threshold
+        return true // Mandatory live ads on every level transition
     }
 
     fun onInterstitialDisplayed(levelId: Int) {
         levelsSinceLastInterstitial = 0
-        if (levelId in 6..50) {
-            // Alternate between 2 and 3 levels: 2 -> 3 -> 2 -> 3
-            nextInterstitialThreshold = if (nextInterstitialThreshold == 2) 3 else 2
-        } else if (levelId > 50) {
-            nextInterstitialThreshold = 2
-        }
     }
 
     fun incrementLevelsSinceInterstitial() {
@@ -761,7 +768,7 @@ class EchoPreferences(context: Context) {
     }
 
     /**
-     * User request: "eğer reklam izlersen 15 sn ek süre eklensin."
+     * User request: "If an ad is watched, add 15s extra time."
      * Adds extra seconds to current level deadline.
      */
     fun addLevelTime(levelId: Int, additionalSeconds: Int = 15) {
@@ -802,7 +809,7 @@ class EchoPreferences(context: Context) {
         get() = prefs.getString(KEY_LOOTLOCKER_LEADERBOARD_KEY, "ekoleadbordglobal") ?: "ekoleadbordglobal"
         set(value) = prefs.edit().putString(KEY_LOOTLOCKER_LEADERBOARD_KEY, value.trim()).apply()
 
-    // --- Ghost Error Trails (Geçmişin Hayaletleri) ---
+    // --- Ghost Error Trails (Past Echoes) ---
     fun saveGhostStroke(levelId: Int, points: List<Pair<Float, Float>>) {
         if (points.isEmpty()) return
         val currentRaw = prefs.getString("echo_ghost_strokes_$levelId", "") ?: ""
@@ -833,7 +840,7 @@ class EchoPreferences(context: Context) {
         prefs.edit().remove("echo_ghost_strokes_$levelId").apply()
     }
 
-    // --- Perfect Echo (Kusursuzluk & Kendi Hayaletinle Yarış) ---
+    // --- Perfect Echo (Perfection & Ghost Racing) ---
     fun savePerfectRun(levelId: Int, points: List<Pair<Float, Float>>, durationMs: Long) {
         if (points.isEmpty()) return
         val pathStr = points.joinToString(";") { "${it.first.toInt()},${it.second.toInt()}" }
@@ -862,7 +869,7 @@ class EchoPreferences(context: Context) {
         return prefs.contains("echo_perfect_run_path_$levelId")
     }
 
-    // --- Behavioral Telemetry (Oyuncu Davranış Analizi) ---
+    // --- Behavioral Telemetry (Player Behavior Analysis) ---
     fun recordBehaviorError(x: Float, y: Float, isRetreat: Boolean, isFast: Boolean) {
         val quadKey = if (y < 300f) {
             if (x < 220f) "quad_top_left" else "quad_top_right"
@@ -892,14 +899,14 @@ class EchoPreferences(context: Context) {
 
         val totalErrors = tl + tr + bl + br
         return when {
-            totalErrors == 0 -> "Analiz: Kusursuz Yolculuk"
-            tr > tl && tr > bl && tr > br -> "Analiz: Sağ Üstte Tereddüt Tespit Edildi"
-            tl > tr && tl > bl && tl > br -> "Analiz: Sol Üst Dönüşlerde Hata Eğilimi"
-            bl > tr && bl > tl && bl > br -> "Analiz: Sol Alt Köşede Kararsızlık"
-            br > tr && br > tl && br > bl -> "Analiz: Sağ Alt Bölgede Odaklanma"
-            retreats >= 3 -> "Analiz: Geri Çekilme & İkilem Eğilimi"
-            fastMoves >= 4 -> "Analiz: Yüksek Hızlı Refleks Oyuncusu"
-            else -> "Analiz: Zihinsel Rota Hesaplaması Aktif"
+            totalErrors == 0 -> "Analysis: Flawless Journey"
+            tr > tl && tr > bl && tr > br -> "Analysis: Top-Right Hesitation Detected"
+            tl > tr && tl > bl && tl > br -> "Analysis: Top-Left Corner Error Tendency"
+            bl > tr && bl > tl && bl > br -> "Analysis: Bottom-Left Corner Indecision"
+            br > tr && br > tl && br > bl -> "Analysis: Bottom-Right Focus Needed"
+            retreats >= 3 -> "Analysis: Hesitation & Retreat Tendency"
+            fastMoves >= 4 -> "Analysis: High-Speed Reflex Player"
+            else -> "Analysis: Strategic Path Navigation"
         }
     }
 

@@ -88,7 +88,6 @@ fun SettingsDialog(
         val textPrimary = if (isDarkTheme) Color.White else Color(0xFF0F172A)
         val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
         val borderColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
-        val isTr = currentLanguage == Language.TR
 
         Surface(
             modifier = Modifier
@@ -141,7 +140,7 @@ fun SettingsDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = if (isTr) "Kapat" else "Close",
+                            contentDescription = "Close",
                             tint = textSecondary
                         )
                     }
@@ -149,7 +148,7 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Language Selection Section (English & Türkçe)
+                // Language Section (English Locked)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -158,67 +157,39 @@ fun SettingsDialog(
                         .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = null,
-                            tint = Color(0xFF0284C7),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = EchoStrings.get("language", currentLanguage),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = textPrimary
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "(English & Türkçe)",
-                            fontSize = 11.sp,
-                            color = textSecondary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Language.entries.forEach { lang ->
-                            val isSelected = lang == currentLanguage
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(
-                                        if (isSelected) Color(0xFF0284C7) else (if (isDarkTheme) Color(0xFF1E293B) else Color.White)
-                                    )
-                                    .border(
-                                        width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) Color(0xFF0369A1) else borderColor,
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { onSelectLanguage(lang) }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                                    .testTag("lang_chip_${lang.code}"),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = lang.flag,
-                                        fontSize = 18.sp
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = lang.displayName,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else textPrimary
-                                    )
-                                }
-                            }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = null,
+                                tint = Color(0xFF0284C7),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Language",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = textPrimary
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFE0F2FE))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                .testTag("lang_chip_en")
+                        ) {
+                            Text(
+                                text = "🇬🇧 English",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF0284C7)
+                            )
                         }
                     }
                 }
@@ -366,7 +337,7 @@ fun SettingsDialog(
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = if (isTr) "Akıllı müzik kısma (ducking) aktif" else "Smart music ducking active",
+                                text = "Smart music ducking active",
                                 color = textSecondary,
                                 fontSize = 11.sp
                             )
@@ -418,7 +389,7 @@ fun SettingsDialog(
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = if (isTr) "Düğmeler ve bağlantı titreşim geri bildirimi" else "Haptic feedback for buttons & connections",
+                                text = "Haptic feedback for buttons & connections",
                                 color = textSecondary,
                                 fontSize = 11.sp
                             )
@@ -467,13 +438,13 @@ fun SettingsDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = if (isTr) "Ödüllü Reklamlar" else "Rewarded Ads",
+                                text = "Rewarded Ads",
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = if (isTr) "Ödüllü video ve bonuslar hazır" else "Rewarded video & bonuses ready",
+                                text = "Rewarded video & bonuses ready",
                                 color = Color(0xFF16A34A),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -490,7 +461,7 @@ fun SettingsDialog(
                             .testTag("test_ads_toggle")
                     ) {
                         Text(
-                            text = if (isTr) "AKTİF" else "ACTIVE",
+                            text = "ACTIVE",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF16A34A)
@@ -524,13 +495,13 @@ fun SettingsDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = if (isTr) "Dünya Sıralaması" else "Global Leaderboard",
+                                text = "Global Leaderboard",
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = if (isTr) "Skorlar senkronize ediliyor" else "Scores syncing",
+                                text = "Scores syncing",
                                 color = textSecondary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -546,7 +517,7 @@ fun SettingsDialog(
                             .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Text(
-                            text = if (isTr) "BAĞLI" else "CONNECTED",
+                            text = "CONNECTED",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF16A34A)
@@ -556,7 +527,7 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Check for Updates Button ("Güncellemeleri Denetle")
+                // Check for Updates Button
                 OutlinedButton(
                     onClick = hapticClick(action = onCheckForUpdates),
                     modifier = Modifier
@@ -577,7 +548,7 @@ fun SettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isTr) "Güncellemeleri Denetle" else "Check for Updates",
+                        text = "Check for Updates",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -585,7 +556,7 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Support & Contact Button ("Destek & İletişim")
+                // Support & Contact Button
                 Button(
                     onClick = hapticClick(action = onOpenSupport),
                     modifier = Modifier
@@ -605,7 +576,7 @@ fun SettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isTr) "Destek & İletişim (E-posta)" else "Support & Contact (Email)",
+                        text = "Support & Contact (Email)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -613,7 +584,7 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Reset All Progress Button ("Sıfırdan Başla")
+                // Reset All Progress Button
                 OutlinedButton(
                     onClick = hapticClick(isHeavy = true) {
                         onResetAllProgress()
@@ -636,7 +607,7 @@ fun SettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isTr) "Tüm İlerlemeyi Sıfırla (Bölüm 1'e Dön)" else "Reset All Progress (Return to Level 1)",
+                        text = "Reset All Progress (Return to Level 1)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -660,7 +631,7 @@ fun SettingsDialog(
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1))
                     ) {
                         Text(
-                            text = if (isTr) "Oturumu Kapat / Çıkış Yap" else "Log Out / Sign Out",
+                            text = "Log Out / Sign Out",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )

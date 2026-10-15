@@ -166,7 +166,7 @@ fun EchoCanvas(
         }
 
         val isRotatingTier = state.level.mechanicType in listOf("ROTATING_WEB", "OMEGA_SYNTHESIS")
-        // User request: "sadece düğmeler topluluğu dönsün ekran deyil"
+        // Only the node cluster rotates, background remains stable
         // Graceful, smooth continuous rotation of the node cluster (7 deg/sec)
         val rotationAngle = if (isRotatingTier) (timeSec * 7.0f) % 360f else 0f
 
@@ -243,7 +243,7 @@ fun EchoCanvas(
                     rotate(degrees = rotationAngle, pivot = Offset(canvasWidth / 2f, canvasHeight / 2f))
                 }
             }) {
-                // 1.5. Living Web (Yaşayan Ağ) - harmonic breathing connective threads & player tension
+                // 1.5. Living Web - harmonic breathing connective threads & player tension
                 drawLivingWebMesh(
                     nodes = state.nodes,
                     visitedNodeIds = state.visitedNodeIds,
@@ -255,7 +255,7 @@ fun EchoCanvas(
                     scale = scale
                 )
 
-                // 1.8. Past Ghost Stroke Labyrinth (Geçmişin Hayaletleri - Yaşayan Labirent)
+                // 1.8. Past Ghost Stroke Labyrinth - living labyrinth of previous attempts
                 drawPastGhostLabyrinth(
                     ghosts = state.pastGhostStrokes,
                     mechanicType = state.level.mechanicType,
@@ -264,7 +264,7 @@ fun EchoCanvas(
                     scale = scale
                 )
 
-                // 1.9. Perfect Echo Ghost Race (Kusursuz Hayaletle Canlı Yarış)
+                // 1.9. Perfect Echo Ghost Race - live race against ghost runner
                 if (state.isGhostRaceAvailable && state.isGhostRaceActive && state.ghostReplayPoints.isNotEmpty()) {
                     drawPerfectGhostRace(
                         replayPoints = state.ghostReplayPoints,
@@ -336,10 +336,11 @@ fun EchoCanvas(
                     timeSec = timeSec,
                     toScreen = ::toScreen,
                     scale = scale,
-                    textPaint = nodeTextPaint
+                    textPaint = nodeTextPaint,
+                    language = state.language
                 )
 
-                // 6.5. Echo Beast Corruption Aura & DOMINION Mimicry (Yankı Canavarı Atmosferi)
+                // 6.5. Echo Beast Corruption Aura & DOMINION Mimicry (Echo Beast Atmosphere)
                 drawEchoBeastAtmosphere(
                     beastState = state.echoBeastState,
                     timeSec = timeSec,
@@ -680,7 +681,7 @@ private fun DrawScope.drawPlayerStroke(
     val currentGlowColor = strokeTheme.glowColor.copy(alpha = strokeTheme.glowColor.alpha * rayAlpha)
     val currentPrimaryColor = strokeTheme.primaryColor.copy(alpha = strokeTheme.primaryColor.alpha * rayAlpha)
 
-    // Older rays vibrate under cosmic tension ("Eski ışınlar titreşsin")
+    // Older rays vibrate under cosmic tension
     for ((idx, seg) in segments.withIndex()) {
         val start = toScreen(seg.p1)
         val end = toScreen(seg.p2)
@@ -790,7 +791,8 @@ private fun DrawScope.drawNodes(
     timeSec: Float,
     toScreen: (Point) -> Offset,
     scale: Float,
-    textPaint: android.graphics.Paint
+    textPaint: android.graphics.Paint,
+    language: com.example.localization.Language = com.example.localization.Language.EN
 ) {
     val nodeDensityFactor = if (nodes.size >= 28) 0.65f else if (nodes.size >= 16) 0.82f else 1.0f
     val baseRadius = 20f * (scale / 1.5f).coerceAtLeast(1f) * nodeDensityFactor
@@ -804,20 +806,12 @@ private fun DrawScope.drawNodes(
         val basePos = toScreen(node.toPoint())
         val isVisited = visitedNodeIds.contains(node.id)
 
-        // Living Web node shifting ("Bazı düğümler yer değiştirsin")
-        val driftAmp = if (isFloatingTier) 8.5f * scale else 3.2f * scale
-        val floatDx = if (!isVisited) sin(timeSec * 1.8f + node.id * 1.5f) * driftAmp else 0f
-        val floatDy = if (!isVisited) cos(timeSec * 1.5f + node.id * 1.3f) * driftAmp else 0f
-
-        // Düğümler / Düğmeler titreşsin: Harmonic micro-vibration tremor on nodes awaiting connection
-        val vibAmp = if (!isVisited) 1.6f * scale else 0.4f * scale
-        val vibDx = sin(timeSec * 26f + node.id * 3.7f) * vibAmp
-        val vibDy = cos(timeSec * 30f + node.id * 2.3f) * vibAmp
-        val pos = Offset(basePos.x + floatDx + vibDx, basePos.y + floatDy + vibDy)
+        // Firmly anchor crystals to exact virtual coordinate basePos to eliminate sliding/misalignment
+        val pos = basePos
 
         val isCharacterStart = node.id == 1
 
-        // Highlight next target node in the sequence (sıra numarası ve hedef rehberi)
+        // Highlight next target node in the sequence
         val lastVisited = visitedNodeIds.lastOrNull()
         val nextExpectedId = if (lastVisited == null) {
             1
@@ -829,16 +823,17 @@ private fun DrawScope.drawNodes(
         }
         val isNextTarget = (levelId <= 3 || isHintActive) && isDrawing && node.id == nextExpectedId
 
-        // When idle before drawing, show "KARAKTER" tag above Node 1
+        // When idle before drawing, show "START" tag above Node 1
         if (isCharacterStart && visitedNodeIds.isEmpty() && !isDrawing) {
             drawContext.canvas.nativeCanvas.apply {
                 val labelPaint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.parseColor("#0284C7")
-                    textSize = baseRadius * 0.75f
-                    isFakeBoldText = true
+                    color = android.graphics.Color.parseColor("#38BDF8")
+                    textSize = (baseRadius * 0.70f).coerceIn(12f, 22f)
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
-                drawText("KARAKTER", pos.x, pos.y - baseRadius * 1.65f, labelPaint)
+                val startLabel = "START"
+                drawText(startLabel, pos.x, pos.y - baseRadius * 1.55f, labelPaint)
             }
         }
 
@@ -917,7 +912,7 @@ private val CRYSTAL_UNIT_FACETS: Array<FloatArray> = Array(16) { id ->
 }
 
 /**
- * Fantastic Crystal node drawing (Kristal Düğüm Çizimi).
+ * Fantastic Crystal node drawing.
  * Replaces meteor stones with luminous, multi-faceted cosmic crystals,
  * sparkling prismatic facets, glowing gem refractions, specular highlights, and clear numerals.
  */
@@ -1176,24 +1171,28 @@ private fun DrawScope.drawCrystalNode(
         )
     }
 
-    // 6. Crystal Numerals (1, 2, 3...) - Ultra Crisp & Glowing
+    // 6. Crystal Numerals (1, 2, 3...) - Ultra Crisp, Centered & Highly Legible on ALL Screen Sizes
     val textColor = when {
         isVisited -> android.graphics.Color.WHITE
         isCharacterStart -> android.graphics.Color.WHITE
         node.type == NodeType.KEY -> android.graphics.Color.parseColor("#FFFBEB")
         node.type == NodeType.GATE -> if (isUnlockedGate) android.graphics.Color.parseColor("#D1FAE5") else android.graphics.Color.parseColor("#FEE2E2")
-        else -> if (isDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#0F172A")
+        else -> android.graphics.Color.WHITE // Crystal gem facets are vibrant; crisp white ensures top readability
     }
 
-    textPaint.textSize = baseRadius * 1.05f
+    textPaint.textSize = (baseRadius * 0.95f).coerceIn(16f, 36f)
+    textPaint.typeface = android.graphics.Typeface.DEFAULT_BOLD
     val textY = pos.y - ((textPaint.descent() + textPaint.ascent()) / 2f)
 
-    // Crystal Depth Shadow
-    val shadowPaint = android.graphics.Paint(textPaint).apply {
-        color = android.graphics.Color.argb(190, 2, 8, 28)
+    // Cosmic depth outline so numbers are 100% visible against any background or particle
+    val outlinePaint = android.graphics.Paint(textPaint).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 3.5f
+        color = android.graphics.Color.argb(220, 10, 15, 36)
     }
-    drawContext.canvas.nativeCanvas.drawText(displayText, pos.x + 1f, textY + 1.4f, shadowPaint)
+    drawContext.canvas.nativeCanvas.drawText(displayText, pos.x, textY, outlinePaint)
 
+    textPaint.style = android.graphics.Paint.Style.FILL
     textPaint.color = textColor
     drawContext.canvas.nativeCanvas.drawText(displayText, pos.x, textY, textPaint)
 }
@@ -1248,7 +1247,7 @@ private fun DrawScope.drawLivingWebMesh(
             val p1 = Offset(rawP1.x + beamShiftX, rawP1.y + beamShiftY)
             val p2 = Offset(rawP2.x - beamShiftX * 0.7f, rawP2.y + beamShiftY * 0.7f)
 
-            // Dynamic tension stretch towards active drag cursor ("Ağ oyuncunun hamlelerine göre yeniden şekillensin")
+            // Dynamic tension stretch towards active drag cursor
             val midX: Float
             val midY: Float
             if (dragPos != null) {

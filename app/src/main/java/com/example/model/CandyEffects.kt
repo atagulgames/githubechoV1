@@ -101,30 +101,19 @@ object CandyEffectsFactory {
         connectedCount: Int,
         language: com.example.localization.Language = com.example.localization.Language.EN
     ): Pair<String, Color> {
-        return if (language == com.example.localization.Language.TR) {
-            when (connectedCount) {
-                2 -> "GÜZEL! ✨" to Color(0xFF38BDF8)
-                3 -> "HARİKA! 💫" to Color(0xFF34D399)
-                4 -> "MÜKEMMEL! 🌟" to Color(0xFFFBBF24)
-                5 -> "ŞAHANE! 🍬" to Color(0xFFF472B6)
-                6 -> "HARMONİK CRUSH! 🔥" to Color(0xFFFB923C)
-                else -> "EFSANEVİ KOMBO! 👑" to Color(0xFFA78BFA)
-            }
-        } else {
-            when (connectedCount) {
-                2 -> "NICE! ✨" to Color(0xFF38BDF8)
-                3 -> "GREAT! 💫" to Color(0xFF34D399)
-                4 -> "PERFECT! 🌟" to Color(0xFFFBBF24)
-                5 -> "AMAZING! 🍬" to Color(0xFFF472B6)
-                6 -> "HARMONIC CRUSH! 🔥" to Color(0xFFFB923C)
-                else -> "LEGENDARY COMBO! 👑" to Color(0xFFA78BFA)
-            }
+        return when (connectedCount) {
+            2 -> "NICE! ✨" to Color(0xFF38BDF8)
+            3 -> "GREAT! 💫" to Color(0xFF34D399)
+            4 -> "PERFECT! 🌟" to Color(0xFFFBBF24)
+            5 -> "AMAZING! 🍬" to Color(0xFFF472B6)
+            6 -> "HARMONIC CRUSH! 🔥" to Color(0xFFFB923C)
+            else -> "LEGENDARY COMBO! 👑" to Color(0xFFA78BFA)
         }
     }
 
     fun getVictoryCalloutText(
         language: com.example.localization.Language = com.example.localization.Language.EN
     ): String {
-        return if (language == com.example.localization.Language.TR) "BÖLÜM TAMAMLANDI! 🏆" else "LEVEL COMPLETED! 🏆"
+        return "LEVEL COMPLETED! 🏆"
     }
 }

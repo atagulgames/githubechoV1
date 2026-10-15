@@ -80,32 +80,39 @@ fun EchoGameScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Strict gatekeeper: Anyone not authenticated is immediately routed to registration/login
-    LaunchedEffect(state.isAuthenticated, state.screenState) {
-        if (!state.isAuthenticated &&
-            state.screenState != ScreenState.INTRO &&
-            state.screenState != ScreenState.LEGAL_CONSENT &&
-            state.screenState != ScreenState.LOGIN
-        ) {
-            viewModel.requireAuthentication()
-        }
-    }
-
-    // Handle system back button to return to Main Menu from game (disabled during Intro, Legal Consent and Login)
+    // Handle system back button to return to Main Menu from game (with mandatory transition ad)
     BackHandler(
         enabled = state.screenState != ScreenState.MAIN_MENU &&
                 state.screenState != ScreenState.INTRO &&
                 state.screenState != ScreenState.LEGAL_CONSENT &&
                 state.screenState != ScreenState.LOGIN
     ) {
-        viewModel.returnToMainMenu()
+        onShowInterstitialAd {
+            viewModel.returnToMainMenu()
+        }
     }
 
     Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag("echo_game_scaffold"),
-        containerColor = if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+        containerColor = if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC),
+        bottomBar = {
+            if (state.screenState != ScreenState.INTRO && state.screenState != ScreenState.LEGAL_CONSENT) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding(),
+                    color = Color(0xFF030D2B)
+                ) {
+                    com.example.ads.YandexBannerAdView(
+                        modifier = Modifier.fillMaxWidth(),
+                        onAdLoaded = { viewModel.onBannerAdLoaded() },
+                        onAdFailedToLoad = { err -> viewModel.onBannerAdFailed(err) }
+                    )
+                }
+            }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -134,12 +141,14 @@ fun EchoGameScreen(
                 }
 
                 ScreenState.LOGIN -> {
-                    // Mandatory authentication gatekeeper: Main Menu strictly inaccessible until verified
                     LoginScreen(
                         initialUsername = state.authenticatedUser,
                         initialRememberMe = state.rememberMe,
                         onLoginSuccess = { username, rememberMe ->
                             viewModel.onLoginSuccess(username, rememberMe)
+                        },
+                        onPlayAsGuest = {
+                            viewModel.playAsGuest()
                         }
                     )
                 }
@@ -147,7 +156,11 @@ fun EchoGameScreen(
                 ScreenState.MAIN_MENU -> {
                     EchoMainMenu(
                         state = state,
-                        onPlay = { viewModel.startPlayingLevel() },
+                        onPlay = {
+                            onShowInterstitialAd {
+                                viewModel.startPlayingLevel()
+                            }
+                        },
                         onDailyChallenge = { viewModel.startDailyChallenge() },
                         onOpenLevelSelect = { viewModel.setLevelSelectVisible(true) },
                         onOpenShop = { viewModel.setShopVisible(true) },
@@ -161,12 +174,9 @@ fun EchoGameScreen(
                         onOpenDailyLogin = { viewModel.setDailyLoginVisible(true) },
                         onOpenChest = { viewModel.setChestVisible(true) },
                         onWatchRewardedAd = {
-                            if (viewModel.canClaimReward("REWARD_DAILY")) {
-                                onShowRewardedAd("REWARD_DAILY")
-                            } else {
-                                viewModel.notifyRewardOnCooldown("REWARD_DAILY")
-                            }
+                            onShowRewardedAd("CARTOON_MAIN_MENU")
                         },
+                        onOpenCartoonStudio = { viewModel.openCartoonStudio() },
                         onBannerAdLoaded = { viewModel.onBannerAdLoaded() },
                         onBannerAdFailed = { err -> viewModel.onBannerAdFailed(err) },
                         onOpenSeason2Info = { viewModel.openSeason2Info() }
@@ -180,7 +190,11 @@ fun EchoGameScreen(
                         // Top HUD
                         EchoTopHUD(
                             state = state,
-                            onBackToMenu = { viewModel.returnToMainMenu() },
+                            onBackToMenu = {
+                                onShowInterstitialAd {
+                                    viewModel.returnToMainMenu()
+                                }
+                            },
                             onOpenLevelSelect = { viewModel.setLevelSelectVisible(true) },
                             onOpenShop = { viewModel.setShopVisible(true) },
                             onAddTimeWithAd = { onShowRewardedAd("EXTRA_TIME_15S") },
@@ -197,30 +211,18 @@ fun EchoGameScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Bottom Action Bar: Reset, Clear Echoes, Power-ups, Hint
+                        // Bottom Action Bar: Reset, Fantastic Boosters, Hint
                         EchoBottomHUD(
                             state = state,
                             onReset = { viewModel.restartLevel(clearEchoes = false) },
-                            onClearEchoes = { viewModel.clearAllEchoes() },
-                            onUseBreaker = { viewModel.useEchoBreaker() },
-                            onActivateShrinker = {
-                                viewModel.activateEchoShrinker()
-                            },
+                            onUseArcaneBlast = { viewModel.useArcaneBlast() },
+                            onUseTimeFreeze = { viewModel.useTimeFreeze() },
+                            onUseNumberShift = { viewModel.useNumberShift() },
+                            onUseLuckyCrystal = { viewModel.useLuckyCrystal() },
                             onHint = {
                                 viewModel.useHint()
                             }
                         )
-
-                        // Bottom docked Banner Ad - always visible
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9))
-                                .padding(vertical = 2.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            com.example.ads.StartAppBannerView()
-                        }
                     }
                 }
             }
@@ -251,24 +253,21 @@ fun EchoGameScreen(
                                 return@VictoryDialog
                             }
                             isNextLevelTransitioning = true
-                            if (viewModel.shouldShowInterstitialOnNextLevel()) {
-                                onShowInterstitialAd {
-                                    viewModel.onInterstitialAdShownOrSkipped(true)
-                                    viewModel.nextLevel()
-                                }
-                            } else {
-                                viewModel.onInterstitialAdShownOrSkipped(false)
+                            onShowInterstitialAd {
+                                viewModel.onInterstitialAdShownOrSkipped(true)
                                 viewModel.nextLevel()
                             }
                         }
                     },
                     onReplay = {
-                        viewModel.restartLevel(clearEchoes = true)
+                        onShowInterstitialAd {
+                            viewModel.restartLevel(clearEchoes = true)
+                        }
                     }
                 )
             }
 
-            // 1.5. Rate App Dialog (Sadece 3. bölüm bitince çıkar)
+            // 1.5. Rate App Dialog (Shown once after completing level 3)
             if (state.isRateAppDialogVisible) {
                 RateAppDialog(
                     onRateSubmitted = { stars ->
@@ -298,7 +297,11 @@ fun EchoGameScreen(
                     isTimeUp = state.isGameOverTimeUpDialogVisible,
                     onClearWithAd = if (!state.isGameOverTimeUpDialogVisible) { { onShowRewardedAd("CLEAR_ECHOES") } } else null,
                     onAddTimeWithAd = if (state.isGameOverTimeUpDialogVisible) { { onShowRewardedAd("EXTRA_TIME_15S") } } else null,
-                    onRestartLevel = { viewModel.restartLevel(clearEchoes = true) }
+                    onRestartLevel = {
+                        onShowInterstitialAd {
+                            viewModel.restartLevel(clearEchoes = true)
+                        }
+                    }
                 )
             }
 
@@ -308,7 +311,7 @@ fun EchoGameScreen(
                 LevelRuleOnboardingOverlay(
                     currentLevelId = targetLevelId,
                     isDarkTheme = state.isDarkTheme,
-                    isTurkish = true,
+                    isTurkish = false,
                     initialEncyclopediaMode = state.isRuleEncyclopediaOpen,
                     onToggleAutoShowForTier = { enabled ->
                         viewModel.setAutoShowLevelRules(enabled)
@@ -358,7 +361,9 @@ fun EchoGameScreen(
                     isDarkTheme = state.isDarkTheme,
                     onSelectLevel = { idx ->
                         viewModel.setLevelSelectVisible(false)
-                        viewModel.startPlayingLevel(idx)
+                        onShowInterstitialAd {
+                            viewModel.startPlayingLevel(idx)
+                        }
                     },
                     onOpenRulesGuide = {
                         viewModel.setLevelSelectVisible(false)
@@ -482,7 +487,7 @@ fun EchoGameScreen(
                 )
             }
 
-            // 14. Player Profile Dialog (Kaç yankı ve süreyle tamamladığı detayları + fotoğraf ve unvan)
+            // 14. Player Profile Dialog (Profile details, stats, photo and title)
             if (state.isProfileDialogVisible && state.selectedPlayerProfile != null) {
                 PlayerProfileDialog(
                     player = state.selectedPlayerProfile!!,
@@ -490,11 +495,12 @@ fun EchoGameScreen(
                     onUpdateProfile = { avatarUri, customTitle ->
                         viewModel.updateProfile(avatarUri, customTitle)
                     },
+                    onSignOut = { viewModel.signOut() },
                     onDismiss = { viewModel.closePlayerProfile() }
                 )
             }
 
-            // 15. Destek & İletişim Dialog (atagulgamesdestek@gmail.com)
+            // 15. Support & Contact Dialog (atagulgamesdestek@gmail.com)
             if (state.isSupportDialogVisible) {
                 SupportDialog(
                     isDarkTheme = state.isDarkTheme,
@@ -502,7 +508,7 @@ fun EchoGameScreen(
                 )
             }
 
-            // 16. Hint Unlock Dialog (3 Reklam veya 5 Elmas)
+            // 16. Hint Unlock Dialog (3 Ads or 5 Diamonds)
             if (state.isHintPurchaseDialogVisible) {
                 com.example.ui.dialogs.HintDialog(
                     hintAdsWatched = state.hintAdsWatched,
@@ -528,8 +534,8 @@ fun EchoGameScreen(
             if (state.isAdBlockerDetected) {
                 val context = LocalContext.current
                 com.example.ui.dialogs.AdBlockerWarningOverlay(
-                    title = if (state.adBlockerTitle.isNotBlank()) state.adBlockerTitle else "Reklamlar ve İnternet Gerekli",
-                    subtitle = if (state.adBlockerSubtitle.isNotBlank()) state.adBlockerSubtitle else "Uygulama çalıştırılamıyor",
+                    title = if (state.adBlockerTitle.isNotBlank()) state.adBlockerTitle else "Internet & Ads Required",
+                    subtitle = if (state.adBlockerSubtitle.isNotBlank()) state.adBlockerSubtitle else "Unable to load ads",
                     details = state.adBlockerDetails,
                     isChecking = state.isCheckingAdBlocker,
                     onRecheck = { viewModel.checkInternetAndAdHealth() },
@@ -541,7 +547,7 @@ fun EchoGameScreen(
                 )
             }
 
-            // 18. 5-Second Preview Countdown with Shake Animation (User: 5sn sayarken ekranını görebilelim)
+            // 18. 5-Second Preview Countdown with Shake Animation
             if (state.isPreviewActive && state.screenState == ScreenState.PLAYING_LEVEL) {
                 PreviewCountdownShakeOverlay(
                     countdownSeconds = state.previewCountdownSeconds,
@@ -549,14 +555,30 @@ fun EchoGameScreen(
                 )
             }
 
-            // 19. "Süre Başladı!" Shake Banner with party.mp3 (User: party.mp3 çalıp ekranda shake animasyonu ile Süre Başladı Yazsın)
+            // 19. "Timer Started!" Shake Banner with party.mp3
             if (state.showDurationStartedBanner && state.screenState == ScreenState.PLAYING_LEVEL) {
                 DurationStartedShakeBanner(
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
 
-            // 20. Sezon 2 Hoş Geldin & Sıfırlama Diyaloğu kaldırıldı (kullanıcı talebiyle)
+            // 20. Season 2 Welcome Dialog removed per user requirement
+
+            // 21. Interactive Cartoon Studio Dialog (Ödüllü Reklam ile Karikatür Hakkı & Tasarım)
+            if (state.isCartoonStudioDialogVisible) {
+                com.example.ui.dialogs.CartoonStudioDialog(
+                    credits = state.freeCartoonCredits,
+                    onWatchRewardedAd = {
+                        onShowRewardedAd("CARTOON_STUDIO")
+                    },
+                    onUseCredit = {
+                        viewModel.useCartoonCredit()
+                    },
+                    onDismiss = {
+                        viewModel.closeCartoonStudio()
+                    }
+                )
+            }
         }
     }
 }
@@ -619,7 +641,7 @@ fun PreviewCountdownShakeOverlay(
                 .padding(horizontal = 28.dp, vertical = 12.dp)
         ) {
             Text(
-                text = "ÖN İZLEME - BULMACAYI İNCELE",
+                text = "PREVIEW - STUDY THE PUZZLE",
                 color = Color(0xFF38BDF8),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -627,7 +649,7 @@ fun PreviewCountdownShakeOverlay(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${countdownSeconds}sn",
+                text = "${countdownSeconds}s",
                 color = Color(0xFFFBBF24),
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Black,
@@ -691,14 +713,14 @@ fun DurationStartedShakeBanner(
                 .padding(horizontal = 30.dp, vertical = 14.dp)
         ) {
             Text(
-                text = "⚡ SÜRE BAŞLADI! ⚡",
+                text = "⚡ TIME STARTED! ⚡",
                 color = Color.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.2.sp
             )
             Text(
-                text = "60 Saniyen Var!",
+                text = "60 Seconds Left!",
                 color = Color(0xFFFEF08A),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold

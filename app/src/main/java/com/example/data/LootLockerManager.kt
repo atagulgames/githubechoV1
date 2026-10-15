@@ -112,7 +112,7 @@ class LootLockerManager private constructor(context: Context) {
     ) {
         if (!isConfigured()) {
             Log.i(TAG, "LootLocker not configured, fallback to local")
-            onFailure?.invoke("Çevrimdışı moddasınız.")
+            onFailure?.invoke("You are in offline mode.")
             return
         }
 
@@ -120,8 +120,8 @@ class LootLockerManager private constructor(context: Context) {
 
         // Concurrency guard: avoid launching multiple concurrent guest login calls
         if (!isLoggingIn.compareAndSet(false, true)) {
-            Log.d(TAG, "Giriş işlemi zaten devam ediyor...")
-            onFailure?.invoke("Giriş devam ediyor")
+            Log.d(TAG, "Login already in progress...")
+            onFailure?.invoke("Login in progress")
             return
         }
 
@@ -142,9 +142,9 @@ class LootLockerManager private constructor(context: Context) {
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     isLoggingIn.set(false)
-                    val errorMsg = "Guest Login bağlantı hatası: ${e.message}"
+                    val errorMsg = "Guest Login connection error: ${e.message}"
                     Log.w(TAG, errorMsg)
-                    onFailure?.invoke("Bağlantı kurulamadı.")
+                    onFailure?.invoke("Connection failed.")
                 }
 
                 override fun onResponse(call: Call, response: Response) {
@@ -156,11 +156,11 @@ class LootLockerManager private constructor(context: Context) {
                         if (!resp.isSuccessful) {
                             if (resp.code == 400 && result.contains("invalid game_api_key")) {
                                 hasInvalidGameKey = true
-                                Log.w(TAG, "LootLocker Game API Key geçersiz veya dashboard'da henüz oluşturulmamış. Yerel skorlar kullanılmaya devam edecek.")
+                                Log.w(TAG, "LootLocker Game API Key invalid. Falling back to local/cloud scores.")
                             } else {
                                 Log.w(TAG, "LootLocker Login HTTP ${resp.code}: $result")
                             }
-                            onFailure?.invoke("Bağlantı kurulamadı.")
+                            onFailure?.invoke("Connection failed.")
                             return
                         }
 
@@ -175,23 +175,23 @@ class LootLockerManager private constructor(context: Context) {
                                 prefs.lootLockerSessionToken = token
                                 prefs.lootLockerPlayerId = pId
                                 hasInvalidGameKey = false
-                                Log.i(TAG, "LootLocker giriş başarılı! Player ID: $pId")
+                                Log.i(TAG, "LootLocker login successful! Player ID: $pId")
                                 onSuccess?.invoke(pId, token)
                             } else {
-                                Log.w(TAG, "Giriş yanıtında session_token bulunamadı: $result")
-                                onFailure?.invoke("Bağlantı kurulamadı.")
+                                Log.w(TAG, "No session_token found in login response: $result")
+                                onFailure?.invoke("Connection failed.")
                             }
                         } catch (e: Exception) {
-                            Log.w(TAG, "JSON ayrıştırma hatası: ${e.message}")
-                            onFailure?.invoke("Bağlantı kurulamadı.")
+                            Log.w(TAG, "JSON parse error: ${e.message}")
+                            onFailure?.invoke("Connection failed.")
                         }
                     }
                 }
             })
         } catch (e: Exception) {
             isLoggingIn.set(false)
-            Log.w(TAG, "Login istisna: ${e.message}")
-            onFailure?.invoke("Bağlantı kurulamadı.")
+            Log.w(TAG, "Login exception: ${e.message}")
+            onFailure?.invoke("Connection failed.")
         }
     }
 
@@ -209,13 +209,13 @@ class LootLockerManager private constructor(context: Context) {
         onComplete: ((success: Boolean, message: String) -> Unit)? = null
     ) {
         if (!isConfigured()) {
-            onComplete?.invoke(false, "Çevrimdışı moddasınız.")
+            onComplete?.invoke(false, "You are in offline mode.")
             return
         }
 
         val currentToken = sessionToken
         if (currentToken.isNullOrBlank()) {
-            Log.d(TAG, "Oturum açık değil, önce loginGuest çalıştırılıyor...")
+            Log.d(TAG, "No session token, running loginGuest first...")
             loginGuest(
                 onSuccess = { _, _ ->
                     // Set player name as well for LootLocker profile
@@ -223,8 +223,8 @@ class LootLockerManager private constructor(context: Context) {
                     executeSubmitScore(playerName, score, metadata, onComplete)
                 },
                 onFailure = { err ->
-                    Log.d(TAG, "Skor sunucuya gönderilemedi: $err")
-                    onComplete?.invoke(false, "Skor kaydedilemedi.")
+                    Log.d(TAG, "Score could not be submitted: $err")
+                    onComplete?.invoke(false, "Score could not be saved.")
                 }
             )
             return
@@ -263,27 +263,27 @@ class LootLockerManager private constructor(context: Context) {
 
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    val msg = "Skor gönderilemedi: ${e.message}"
+                    val msg = "Score submit error: ${e.message}"
                     Log.w(TAG, msg)
-                    onComplete?.invoke(false, "Skor gönderilemedi.")
+                    onComplete?.invoke(false, "Score could not be submitted.")
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     response.use { resp ->
                         val result = resp.body?.string() ?: ""
                         if (resp.isSuccessful) {
-                            Log.i(TAG, "SKOR BAŞARIYLA GÖNDERİLDİ! Oyuncu: $playerName, Skor: $score")
-                            Log.d(TAG, "LootLocker yanıt: $result")
-                            onComplete?.invoke(true, "Başarılı")
+                            Log.i(TAG, "SCORE SUCCESSFULLY SUBMITTED! Player: $playerName, Score: $score")
+                            Log.d(TAG, "LootLocker response: $result")
+                            onComplete?.invoke(true, "Success")
                         } else {
-                            val msg = "Skor gönderme HTTP ${resp.code}: $result"
+                            val msg = "Score submit HTTP ${resp.code}: $result"
                             Log.w(TAG, msg)
                             // If session expired, clear token to relogin next time
                             if (resp.code == 401) {
                                 sessionToken = null
                                 prefs.lootLockerSessionToken = null
                             }
-                            onComplete?.invoke(false, "Skor gönderilemedi.")
+                            onComplete?.invoke(false, "Score could not be submitted.")
                         }
                     }
                 }
@@ -291,7 +291,7 @@ class LootLockerManager private constructor(context: Context) {
         } catch (e: Exception) {
             val msg = "Submit exception: ${e.message}"
             Log.w(TAG, msg)
-            onComplete?.invoke(false, "Skor gönderilemedi.")
+            onComplete?.invoke(false, "Score could not be submitted.")
         }
     }
 
@@ -339,7 +339,7 @@ class LootLockerManager private constructor(context: Context) {
         onResult: (Result<List<LeaderboardPlayer>>) -> Unit
     ) {
         if (!isConfigured()) {
-            onResult(Result.failure(IllegalStateException("Çevrimdışı moddasınız.")))
+            onResult(Result.failure(IllegalStateException("You are in offline mode.")))
             return
         }
 
@@ -350,7 +350,7 @@ class LootLockerManager private constructor(context: Context) {
                     executeGetLeaderboard(count, currentUsername, onResult)
                 },
                 onFailure = { err ->
-                    onResult(Result.failure(IOException("Bağlantı kurulamadı.")))
+                    onResult(Result.failure(IOException("Connection failed.")))
                 }
             )
             return
@@ -365,7 +365,7 @@ class LootLockerManager private constructor(context: Context) {
         onResult: (Result<List<LeaderboardPlayer>>) -> Unit
     ) {
         val token = sessionToken ?: run {
-            onResult(Result.failure(IllegalStateException("Bağlantı kurulamadı.")))
+            onResult(Result.failure(IllegalStateException("Connection failed.")))
             return
         }
 
@@ -379,16 +379,16 @@ class LootLockerManager private constructor(context: Context) {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.w(TAG, "Liderlik tablosu alınamadı: ${e.message}")
-                onResult(Result.failure(IOException("Bağlantı kurulamadı.")))
+                Log.w(TAG, "Leaderboard fetch error: ${e.message}")
+                onResult(Result.failure(IOException("Connection failed.")))
             }
 
             override fun onResponse(call: Call, response: Response) {
                 response.use { resp ->
                     val result = resp.body?.string() ?: ""
                     if (!resp.isSuccessful) {
-                        Log.e(TAG, "Liderlik tablosu HTTP ${resp.code}: $result")
-                        onResult(Result.failure(IOException("Sıralamaya şu anda ulaşılamıyor.")))
+                        Log.e(TAG, "Leaderboard HTTP ${resp.code}: $result")
+                        onResult(Result.failure(IOException("Leaderboard currently unavailable.")))
                         return
                     }
 
@@ -411,7 +411,7 @@ class LootLockerManager private constructor(context: Context) {
                                 val resolvedName = when {
                                     pName.isNotBlank() -> pName
                                     memberId.isNotBlank() -> memberId
-                                    else -> "Oyuncu #$rank"
+                                    else -> "Player #$rank"
                                 }
 
                                 val isCurrent = (currentUsername.isNotBlank() && (resolvedName.equals(currentUsername, ignoreCase = true) || memberId.equals(currentUsername, ignoreCase = true)))
@@ -426,11 +426,11 @@ class LootLockerManager private constructor(context: Context) {
                                 }
 
                                 val customTitle = when {
-                                    rank == 1 -> "🏆 Dünya Birincisi"
-                                    rank in 2..3 -> "🥈 Elit Yankı Ustası"
-                                    rank in 4..10 -> "⭐ Global İlk 10"
-                                    score >= 1000 -> "⚡ Yankı Şampiyonu"
-                                    else -> "Ses Kaşifi"
+                                    rank == 1 -> "🏆 World #1"
+                                    rank in 2..3 -> "🥈 Elite Echo Master"
+                                    rank in 4..10 -> "⭐ Global Top 10"
+                                    score >= 1000 -> "⚡ Echo Champion"
+                                    else -> "Sound Explorer"
                                 }
 
                                 playersList.add(
@@ -452,10 +452,10 @@ class LootLockerManager private constructor(context: Context) {
                             }
                         }
 
-                        Log.i(TAG, "LootLocker liderlik tablosu başarıyla yüklendi: ${playersList.size} oyuncu")
+                        Log.i(TAG, "LootLocker leaderboard successfully loaded: ${playersList.size} players")
                         onResult(Result.success(playersList))
                     } catch (e: Exception) {
-                        Log.e(TAG, "Liderlik JSON ayrıştırma hatası: ${e.message}")
+                        Log.e(TAG, "Leaderboard JSON parse error: ${e.message}")
                         onResult(Result.failure(e))
                     }
                 }

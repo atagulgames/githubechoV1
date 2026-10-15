@@ -92,11 +92,11 @@ fun LeaderboardDialog(
     onViewMyProfile: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedCategory by remember { mutableStateOf(0) } // 0: Global, 1: Türkiye, 2: Top 10
+    var selectedCategory by remember { mutableStateOf(0) } // 0: Global, 1: Regional, 2: Top 10
 
     val filteredPlayers = remember(players, selectedCategory) {
         when (selectedCategory) {
-            1 -> players.filter { it.username.contains("🇹🇷") || it.username.contains("TR") || it.isCurrentUser }
+            1 -> players.filter { it.isCurrentUser || it.trophies >= 100 }
             2 -> players.take(10)
             else -> players
         }
@@ -161,7 +161,7 @@ fun LeaderboardDialog(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // 2. SEGMENTED CATEGORY TABS: Global | Türkiye | Top 10
+                        // 2. SEGMENTED CATEGORY TABS: Global | Regional | Top 10
                         LeaderboardCategoryTabs(
                             selectedCategory = selectedCategory,
                             onSelectCategory = { selectedCategory = it }
@@ -370,7 +370,7 @@ private fun LeaderboardHeaderBar(
             } else {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Yenile",
+                    contentDescription = "Refresh",
                     tint = Color.White,
                     modifier = Modifier.size(22.dp)
                 )

@@ -53,8 +53,8 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun AdBlockerWarningOverlay(
-    title: String = "Reklamlar Çalışmıyor",
-    subtitle: String = "Uygulama çalıştırılamıyor",
+    title: String = "Ads Not Working",
+    subtitle: String = "Unable to run application",
     details: String = "",
     isChecking: Boolean,
     onRecheck: () -> Unit,
@@ -129,7 +129,7 @@ fun AdBlockerWarningOverlay(
                     ) {
                         Icon(
                             imageVector = Icons.Default.WarningAmber,
-                            contentDescription = "Uyarı",
+                            contentDescription = "Warning",
                             tint = Color(0xFFEF4444),
                             modifier = Modifier.size(42.dp)
                         )
@@ -139,7 +139,7 @@ fun AdBlockerWarningOverlay(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = title.ifEmpty { "Reklamlar Çalışmıyor" },
+                    text = title.ifEmpty { "Ads Not Working" },
                     fontSize = 21.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
@@ -149,7 +149,7 @@ fun AdBlockerWarningOverlay(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = subtitle.ifEmpty { "Oyuna girebilmek için reklamların çalışması gerekmektedir" },
+                    text = subtitle.ifEmpty { "Ads must be available to play the game" },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFFF87171),
@@ -195,7 +195,7 @@ fun AdBlockerWarningOverlay(
                 ) {
                     Column {
                         Text(
-                            text = if (details.isNotBlank()) details else "ECHOFLUX tamamen ücretsiz bir oyundur ve oyun deneyimi reklam gelirleri sayesinde desteklenmektedir.",
+                            text = if (details.isNotBlank()) details else "ECHO FLUX is completely free to play and supported by advertisement revenue.",
                             fontSize = 13.sp,
                             color = Color(0xFFCBD5E1),
                             lineHeight = 19.sp,
@@ -205,7 +205,7 @@ fun AdBlockerWarningOverlay(
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
-                            text = "Oyuna devam edebilmek için:",
+                            text = "To continue playing:",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
@@ -215,22 +215,22 @@ fun AdBlockerWarningOverlay(
 
                         InfoRow(
                             number = "1",
-                            text = "İnternet bağlantınızın (Wi-Fi veya Mobil Veri) açık olduğundan emin olun."
+                            text = "Make sure your internet connection (Wi-Fi or Mobile Data) is active."
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         InfoRow(
                             number = "2",
-                            text = "Telefon Ayarları > Bağlantılar > Özel DNS ayarını 'Otomatik' veya 'Kapalı' yapın."
+                            text = "Check Settings > Connections > Private DNS: set to 'Automatic' or 'Off'."
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         InfoRow(
                             number = "3",
-                            text = "AdGuard, Blokada vb. reklam engelleyici uygulamaları duraklatın."
+                            text = "Pause any ad-blocking VPN or DNS tools (AdGuard, Blokada, etc.)."
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         InfoRow(
                             number = "4",
-                            text = "Aşağıdaki 'Tekrar Kontrol Et' butonuna dokunun."
+                            text = "Tap the 'Check Again' button below."
                         )
                     }
                 }
@@ -259,7 +259,7 @@ fun AdBlockerWarningOverlay(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Kontrol Ediliyor...",
+                            text = "Checking...",
                             color = Color.White,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
@@ -272,7 +272,7 @@ fun AdBlockerWarningOverlay(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Tekrar Kontrol Et",
+                            text = "Check Again",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -293,7 +293,7 @@ fun AdBlockerWarningOverlay(
                         )
                     ) {
                         Text(
-                            text = "Oyuna Devam Et",
+                            text = "Continue Playing",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -322,7 +322,7 @@ fun AdBlockerWarningOverlay(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Oyundan Çık",
+                        text = "Exit Game",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )

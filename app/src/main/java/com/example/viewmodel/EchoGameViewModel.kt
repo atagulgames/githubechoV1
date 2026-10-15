@@ -14,7 +14,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ads.AdBlockDetector
-import com.example.ads.StartIoManager
+import com.example.ads.YandexAdsManager
 import com.example.audio.HarmonicAudioEngine
 import com.example.data.EchoPreferences
 import com.example.data.EchoRepository
@@ -160,6 +160,8 @@ data class EchoUiState(
     val shrinkerAdsWatched: Int = 0,
     val userAvatarUri: String = "",
     val userCustomTitle: String = "",
+    val isTimeFrozen: Boolean = false,
+    val isLuckyCrystalActive: Boolean = false,
     val hintAdsWatched: Int = 0,
     val isHintPurchaseDialogVisible: Boolean = false,
     val isKvkkConsentAccepted: Boolean = false,
@@ -175,21 +177,21 @@ data class EchoUiState(
     val showDurationStartedBanner: Boolean = false,
     val levelRemainingTimeSec: Int = 60,
     val isGameOverTimeUpDialogVisible: Boolean = false,
-    // Ghost Trails of Past Errors (Geçmişin Hayalet Labirenti)
+    // Ghost Trails of Past Errors (Ghost Labyrinth)
     val pastGhostStrokes: List<List<com.example.model.Point>> = emptyList(),
-    // Perfect Echo & Race Against Your Ghost (Kendi Hayaletinle Yarış)
+    // Perfect Echo & Race Against Your Ghost
     val isGhostRaceAvailable: Boolean = false,
     val isGhostRaceActive: Boolean = true,
     val ghostReplayPoints: List<com.example.model.Point> = emptyList(),
     val ghostReplayDurationMs: Long = 0L,
     val ghostRunnerCurrentPoint: com.example.model.Point? = null,
     val ghostRacePlayerWon: Boolean = false,
-    // Behavioral Intelligence (Oyuncu Davranış Analizi)
+    // Behavioral Intelligence (Player Behavior Analysis)
     val playerBehaviorInsight: String = "Analysis: Flawless Journey",
     val adaptiveTendencyQuadrant: Int? = null,
-    // Echo Beast Corruption System (Yankı Canavarı)
+    // Echo Beast Corruption System
     val echoBeastState: com.example.model.EchoBeastState = com.example.model.EchoBeastState.CALM,
-    // 10 Evolution Tiers Tutorial Dialog System (Her kademenin ilk bölümü tutorial)
+    // 10 Evolution Tiers Tutorial Dialog System (First level of each tier shows tutorial)
     val isLevelMechanicIntroVisible: Boolean = false,
     val activeMechanicInfo: com.example.ui.dialogs.LevelMechanicInfo? = null,
     val activeLevelRule: com.example.model.LevelRule? = null,
@@ -200,7 +202,9 @@ data class EchoUiState(
     val isSeason2BackgroundEffectsEnabled: Boolean = true,
     val isSeason2ThemeSelectorVisible: Boolean = false,
     val isUpdateDialogVisible: Boolean = false,
-    val updateInfo: com.example.data.UpdateInfo? = null
+    val updateInfo: com.example.data.UpdateInfo? = null,
+    val isCartoonStudioDialogVisible: Boolean = false,
+    val freeCartoonCredits: Int = 0
 )
 
 class EchoGameViewModel(application: Application) : AndroidViewModel(application) {
@@ -311,6 +315,25 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         // Background non-blocking update check (https://echoflux-kbh9.onrender.com/version.json)
         checkForUpdates(silent = true)
+
+        // Real-time Firestore Live Leaderboard Listener
+        listenToLiveLeaderboard()
+    }
+
+    private var liveLeaderboardListener: com.google.firebase.firestore.ListenerRegistration? = null
+
+    fun listenToLiveLeaderboard() {
+        try {
+            val username = prefs.authenticatedUsername.ifBlank { "Guest" }
+            liveLeaderboardListener?.remove()
+            liveLeaderboardListener = firestoreRepo.listenToLeaderboard(username) { livePlayers ->
+                if (livePlayers.isNotEmpty()) {
+                    _uiState.update { it.copy(leaderboardPlayers = livePlayers) }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("EchoGameViewModel", "Live leaderboard listener warning: ${e.message}")
+        }
     }
 
     private fun startRewardCooldownTicker() {
@@ -396,6 +419,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 soundEnabled = prefs.soundEnabled,
                 hapticsEnabled = prefs.hapticsEnabled,
                 testAdsEnabled = prefs.isTestAdsEnabled,
+                freeCartoonCredits = prefs.freeCartoonCredits,
                 isDarkTheme = prefs.isDarkTheme,
                 isDailyCompletedToday = isDailyDone,
                 authenticatedUser = prefs.authenticatedUsername,
@@ -426,10 +450,6 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun startPlayingLevel(levelIndex: Int? = null) {
-        if (!_uiState.value.isAuthenticated) {
-            _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
-            return
-        }
         val targetIdx = (levelIndex ?: _uiState.value.currentLevelIndex).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
         viewModelScope.launch {
             loadAndStartLevel(targetIdx)
@@ -561,7 +581,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         previewJob = viewModelScope.launch {
             for (sec in 5 downTo 1) {
                 _uiState.update { it.copy(previewCountdownSeconds = sec) }
-                // User requirement: "5second da dıt dıt diye sesler geliyorya ya onlar tam süreye denk gelecek mesela 5 sn ilk dıt 4 sn 2inci dır diye devam etsin"
+                // Cadenced countdown tick
                 HarmonicAudioEngine.playCountdownTick(sec)
                 delay(1000L)
             }
@@ -573,7 +593,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 )
             }
 
-            // 2. Countdown reaches 0: party.mp3 plays cleanly and "Süre Başladı" banner pops up
+            // 2. Countdown reaches 0: party.mp3 plays cleanly and "Timer Started!" banner pops up
             HarmonicAudioEngine.stopCurrentSfx()
             HarmonicAudioEngine.playParty()
 
@@ -675,8 +695,6 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private val isIntroFinishedHandled = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /**
-     * User requirement:
-     * "intro başta başlayack o bitince oyun başlayaca müzik ana menüdede olsun."
      * When the intro completes, transition directly into the game (Main Menu)
      * and start background music immediately.
      */
@@ -737,18 +755,31 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         } else {
-            // First time or logged out: redirect to login
+            // First time or guest: launch straight into Main Menu in Guest Mode
             _uiState.update {
                 it.copy(
-                    screenState = ScreenState.LOGIN,
+                    screenState = ScreenState.MAIN_MENU,
                     isAuthenticated = false,
+                    authenticatedUser = "Guest",
                     isKvkkConsentAccepted = true
                 )
             }
+            HarmonicAudioEngine.startBgm()
         }
 
         // Check for app update in background
         checkForUpdates(silent = true)
+    }
+
+    fun playAsGuest() {
+        _uiState.update {
+            it.copy(
+                screenState = ScreenState.MAIN_MENU,
+                isAuthenticated = false,
+                authenticatedUser = "Guest"
+            )
+        }
+        HarmonicAudioEngine.startBgm()
     }
 
     /**
@@ -1056,7 +1087,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             findNodeAtPoint(point, state.nodes)
         }
         if (hitNode != null) {
-            // "Karakter 1'den başlayacak" kuralı: Çizim mutlaka 1 numaralı başlangıç düğümünden başlamalıdır.
+            // Character starts at node 1 rule: drawing must begin from starting node 1.
             if (hitNode.id != 1) {
                 showToast("Character starts at 1! Begin drawing from point 1. (+1 Echo)")
                 HarmonicAudioEngine.playHataSound()
@@ -1121,9 +1152,8 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             if (isNear) triggerProximityHaptic()
         }
 
-        // Note: Per user request:
-        // "Işınlar bir birinin içinde geçebilsin yankılardanda geçebilsin. Her bir yapılacak hata yankı olarak sayılacak."
-        // Lasers and strokes can freely pass through each other and past echoes without failing!
+        // Note:
+        // Lasers and strokes can freely pass through each other and past echoes without failing.
 
         // Expected next node determination:
         val hintOrder = state.level.hintOrder
@@ -1138,7 +1168,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val hitNode = findTargetNodeForDrag(point, lastNode, state.nodes, state.visitedNodeIds, expectedNextId)
         if (hitNode != null && hitNode.id != lastVisitedId) {
             val attemptedSeg = Segment(lastNode.toPoint(), hitNode.toPoint(), lastVisitedId, hitNode.id)
-            // Already visited node? (User request: "örneğin önceki düğüme geri dönmesi bir yankı sayılsın")
+            // Already visited node check (returning to previous node counts as an echo)
             if (state.visitedNodeIds.contains(hitNode.id)) {
                 val isPrevNode = state.visitedNodeIds.size >= 2 && hitNode.id == state.visitedNodeIds[state.visitedNodeIds.size - 2]
                 val msg = if (isPrevNode) {
@@ -1298,17 +1328,16 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val echoCount = state.echoCountForLevel
         val parEchoes = state.level.parEchoes
 
-        // User requirement:
-        // "yankılar kaç yıldızla bitireceğini belirlesin bölümler 3 yıldızla değerlendirilecek"
-        // Levels 1..3: 0 mistakes = 3 stars, <= 2 mistakes = 2 stars, > 2 = 1 star (forgiving for beginners)
-        // Levels 4..100: 0 mistakes = 3 stars (Perfect Echo), 1 mistake = 2 stars, >= 2 = 1 star (Harder!)
+        // Star rating based on mistake count:
+        // Levels 1..3: 0 mistakes = 3 stars, <= 2 mistakes = 2 stars, > 2 = 1 star
+        // Levels 4..150: 0 mistakes = 3 stars (Perfect Echo), 1 mistake = 2 stars, >= 2 = 1 star
         val stars = when {
             echoCount == 0 -> 3
             echoCount <= (if (state.level.levelId <= 3) 2 else 1) -> 2
             else -> 1
         }
 
-        // User requirement: "★★★ Kusursuz: Perfect Echo. Oyuncu 3 yıldız aldığında o bölümün kusursuz yolu kaydedilir."
+        // Perfect Echo: when player achieves 3 stars, record perfect run path
         if (stars == 3) {
             val durationMs = (System.currentTimeMillis() - state.levelStartTimeMs).coerceAtLeast(1000L)
             val pts = completedSegments.flatMap { listOf(Pair(it.p1.x, it.p1.y), Pair(it.p2.x, it.p2.y)) }.distinct()
@@ -1352,7 +1381,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         if (totalLevelTrophies > 0) {
             prefs.addTrophies(totalLevelTrophies)
         } else if (isLevelAlreadyCompleted && !isLevel150) {
-            showToast("Bölüm daha önce tamamlandı. Kupalar yalnızca ilk tamamlamada veya 150. Bölümde verilir!")
+            showToast("Level previously completed. Trophies are awarded on first clear only!")
         }
         prefs.addPlayTime(durationSeconds.toLong())
 
@@ -1411,10 +1440,10 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             prefs.dailyChallengeCompletedToday = true
             showToast("Congratulations! Daily Challenge Completed (+10 Tokens, +3 Diamonds!)")
         } else {
-            // Season 2: Normal level gives +3 tokens, and flawless gives +5 tokens + 1 Diamond!
-            val wonTokens = if (echoCount == 0) 5 else 3
+            // First completion awards +3 (or +5 flawless) tokens + 1 Diamond. Replays award 1 symbolic token.
+            val wonTokens = if (isLevelAlreadyCompleted) 1 else (if (echoCount == 0) 5 else 3)
             prefs.addTokens(wonTokens)
-            if (echoCount == 0) {
+            if (echoCount == 0 && !isLevelAlreadyCompleted) {
                 prefs.addDiamonds(1)
             }
             viewModelScope.launch {
@@ -1523,7 +1552,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 prefs.recordBehaviorError(
                     lastPt.first,
                     lastPt.second,
-                    isRetreat = reason.contains("Incomplete") || reason.contains("Retreat") || reason.contains("Geri") || reason.contains("Yarım"),
+                    isRetreat = reason.contains("Incomplete") || reason.contains("Retreat") || reason.contains("Reverse"),
                     isFast = (System.currentTimeMillis() - state.levelStartTimeMs) < 4000L
                 )
             }
@@ -1639,53 +1668,89 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // --- Power-ups & Monetization ---
+    // --- Fantastic Power-ups & Boosters ---
 
-    fun useEchoBreaker() {
+    fun useArcaneBlast() {
         val state = _uiState.value
-        if (state.echoes.isEmpty()) {
-            showToast("No active echoes to break.")
-            return
-        }
         val isInfiniteActive = System.currentTimeMillis() < prefs.infiniteBreakersExpiresAt
-        if (isInfiniteActive || prefs.useBreaker()) {
+        if (isInfiniteActive || prefs.useBreaker() || prefs.useTokens(1)) {
             HarmonicAudioEngine.playBrokenRedLine()
             triggerHapticClick()
-            // Remove the most recent echo stroke
-            val remainingEchoes = state.echoes.dropLast(1)
+            val explosion = com.example.model.CandyEffectsFactory.createNodeExplosion(
+                state.nodes.firstOrNull()?.x ?: 300f,
+                state.nodes.firstOrNull()?.y ?: 400f,
+                count = 35
+            )
             _uiState.update {
                 it.copy(
-                    echoes = remainingEchoes,
-                    echoBreakers = prefs.echoBreakers
+                    echoes = emptyList(),
+                    candyParticles = it.candyParticles + explosion,
+                    echoBreakers = prefs.echoBreakers,
+                    tokens = prefs.tokens
                 )
             }
-            showToast(if (isInfiniteActive) "⏱️ Infinite Drill active: Echo destroyed!" else "Drill laser destroyed the last echo!")
+            showToast("🔮 Arcane Blast: Obstacles shattered!")
         } else {
-            showToast("Insufficient Drill Tokens! You can obtain more in the Shop.")
+            showToast("Insufficient boosters! Obtain more in Shop.")
             setShopVisible(true)
         }
     }
 
-    fun activateEchoShrinker(onTriggerAd: () -> Unit = {}) {
+    fun useTimeFreeze() {
         val state = _uiState.value
-        if (state.isEchoShrinkerActive) {
-            showToast("🌟 Flexible Mode is already active for this level!")
+        if (state.isTimeFrozen) {
+            showToast("❄️ Time Freeze is already active!")
             return
         }
+        val levelId = state.level.levelId
+        prefs.addLevelTime(levelId, 15)
+        val newRem = prefs.getLevelRemainingSeconds(levelId)
+        val frostParticles = com.example.model.CandyEffectsFactory.createNodeExplosion(360f, 400f, count = 25)
         _uiState.update {
             it.copy(
-                isEchoShrinkerActive = true,
-                gameStatus = GameStatus.PLAYING
+                isTimeFrozen = true,
+                levelRemainingTimeSec = newRem,
+                candyParticles = it.candyParticles + frostParticles
+            )
+        }
+        HarmonicAudioEngine.playParty()
+        triggerHapticClick()
+        showToast("❄️ Time Freeze activated for 15s!")
+    }
+
+    fun useNumberShift() {
+        useHint()
+        showToast("🔢 Number Shift: Path revealed!")
+    }
+
+    fun useLuckyCrystal() {
+        val state = _uiState.value
+        if (state.isLuckyCrystalActive) {
+            showToast("🌟 Lucky Crystal already active!")
+            return
+        }
+        val goldStars = com.example.model.CandyEffectsFactory.createConfettiVictory(360f, 400f, count = 30)
+        _uiState.update {
+            it.copy(
+                isLuckyCrystalActive = true,
+                candyParticles = it.candyParticles + goldStars
             )
         }
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticClick()
-        showToast("🌟 Flexible Mode Active! Echo barriers reduced by 50% (This level only).")
+        showToast("🌟 Lucky Crystal active: 2X bonus trophies & tokens!")
+    }
+
+    fun useEchoBreaker() {
+        useArcaneBlast()
+    }
+
+    fun activateEchoShrinker(onTriggerAd: () -> Unit = {}) {
+        useTimeFreeze()
     }
 
     /**
-     * User request: "eğer reklam izlersen 15 sn ek süre eklensin."
-     * Adds +15s to level deadline and resumes timer loop cleanly.
+     * Adds +15s to level deadline upon watching rewarded ad.
      */
     fun addExtraTimeFromAd() {
         val levelId = _uiState.value.level.levelId
@@ -2012,6 +2077,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                     breakersAdded = 1
                 )
             }
+            "CARTOON_REWARD", "FREE_CARTOON", "WATCH_REWARDED_CARTOON" -> {
+                _uiState.update {
+                    it.copy(
+                        isRewardedSimulating = false,
+                        isAdLoading = false
+                    )
+                }
+                RewardClaimedInfo(
+                    title = "🎨 Karikatür Hakkı Kazandınız!",
+                    subtitle = "Tebrikler! 1 Ücretsiz Karikatür Oluşturma Hakkı hesabınıza tanımlandı.",
+                    rewardType = type
+                )
+            }
             else -> {
                 prefs.addTokens(1)
                 _uiState.update {
@@ -2023,12 +2101,14 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 }
                 RewardClaimedInfo(
                     title = "Reward Claimed!",
-                    subtitle = "+1 Hint Token added to your account.",
+                    subtitle = "+1 Hint Token & +1 Karikatür Hakkı eklendi.",
                     rewardType = type,
                     tokensAdded = 1
                 )
             }
         }
+        prefs.addCartoonCredits(1)
+        showToast("🎨 1 Ücretsiz Karikatür Hakkı Kazandınız! (Toplam: ${prefs.freeCartoonCredits})")
         HarmonicAudioEngine.playVictoryCascade()
         val u = _uiState.value.authenticatedUser
         if (u.isNotBlank()) {
@@ -2049,10 +2129,32 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         _uiState.update {
             it.copy(
                 rewardClaimedData = rewardInfo,
-                isShopDialogVisible = false
+                isShopDialogVisible = false,
+                freeCartoonCredits = prefs.freeCartoonCredits
             )
         }
         showToast(rewardInfo.title)
+    }
+
+    fun openCartoonStudio() {
+        _uiState.update { it.copy(isCartoonStudioDialogVisible = true, freeCartoonCredits = prefs.freeCartoonCredits) }
+    }
+
+    fun closeCartoonStudio() {
+        _uiState.update { it.copy(isCartoonStudioDialogVisible = false) }
+    }
+
+    fun useCartoonCredit(): Boolean {
+        return if (prefs.freeCartoonCredits > 0) {
+            prefs.freeCartoonCredits -= 1
+            _uiState.update { it.copy(freeCartoonCredits = prefs.freeCartoonCredits) }
+            HarmonicAudioEngine.playNodeVisitedHarmonic(1)
+            showToast("🎨 1 Karikatür Hakkı Kullanıldı! Kalan: ${prefs.freeCartoonCredits}")
+            true
+        } else {
+            showToast("Ücretsiz karikatür hakkınız bitti. Lütfen reklam izleyerek hak kazanın!")
+            false
+        }
     }
 
     fun dismissRewardClaimedDialog() {
@@ -2082,7 +2184,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 isRewardedSimulating = false
             )
         }
-        // Strict policy: "sadece rewarda eğer gerçek reklam gösterilmediyse ödülü vermesin"
+        // Strict policy: Only grant rewards when ad is successfully viewed
         showToast("Reward not granted because ad was not completed.")
     }
 
@@ -2100,7 +2202,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun checkInternetAndAdHealth(silent: Boolean = false) {
+    fun checkInternetAndAdHealth(silent: Boolean = true) {
         viewModelScope.launch {
             _uiState.update { it.copy(isCheckingAdBlocker = true) }
             val healthResult = AdBlockDetector.checkAdHealth(getApplication())
@@ -2117,12 +2219,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             } else {
                 _uiState.update {
                     it.copy(
-                        isAdBlockerDetected = true,
+                        isAdBlockerDetected = false,
                         isCheckingAdBlocker = false,
                         adBlockerTitle = healthResult.title,
                         adBlockerSubtitle = healthResult.subtitle,
                         adBlockerDetails = healthResult.details
                     )
+                }
+                if (!silent) {
+                    showToast(healthResult.title)
                 }
             }
         }
@@ -2174,23 +2279,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun toggleTestAds(enabled: Boolean) {
         prefs.isTestAdsEnabled = enabled
         _uiState.update { it.copy(testAdsEnabled = enabled) }
-        com.example.ads.StartIoManager.setTestModeEnabled(enabled, getApplication())
-        showToast(
-            if (enabled) "Test Ad Mode Active"
-            else "Live Ad Mode Active (Google Play)"
-        )
+        showToast("Yandex Canlı Reklamlar Aktif (RM-20228995-*)")
     }
 
     fun checkAdBlocker(autoStartPending: Boolean = true) {
-        // Tüm reklam engelleyici uyarıları kullanıcı isteğiyle tamamen kaldırıldı
+        // Non-blocking ad blocker check
     }
 
     fun onBannerAdLoaded() {
-        Log.d("EchoGame", "StartApp Banner loaded")
+        Log.d("EchoGame", "Yandex Banner loaded successfully")
     }
 
     fun onBannerAdFailed(error: String) {
-        Log.d("EchoGame", "StartApp Banner info: $error")
+        Log.d("EchoGame", "Yandex Banner info: $error")
     }
 
     fun clearEchoesAction() {
@@ -2454,6 +2555,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun setSettingsVisible(visible: Boolean) { _uiState.update { it.copy(isSettingsDialogVisible = visible) } }
     fun setSkinsVisible(visible: Boolean) { _uiState.update { it.copy(isSkinsDialogVisible = visible) } }
     fun setDailyQuestsVisible(visible: Boolean) {
+        if (visible && !_uiState.value.isAuthenticated) {
+            showToast("Please sign in or register to access Daily Quests.")
+            _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+            return
+        }
         if (visible) refreshDailySystems()
         _uiState.update { it.copy(isDailyQuestsDialogVisible = visible) }
     }
@@ -2574,7 +2680,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             )
         }
 
-        // 3. Mystery Echo Chest (Günde 1 Ücretsiz, Haftada 1 Reklamlı, 250 Jeton ile Limitsiz)
+        // 3. Mystery Echo Chest (1 Free Daily, 1 Weekly Ad, Unlimited with 250 Tokens)
         val freeChestAvail = prefs.isFreeChestAvailable(todayStr)
         val weeklyAdAvail = prefs.isWeeklyAdChestAvailable()
         val remainingMillis = prefs.getWeeklyAdChestRemainingMillis()
@@ -2672,7 +2778,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             }
             prefs.lastFreeChestDate = todayStr
         } else {
-            // User request: "sandık 1 hafta içerisinde sadece birkere reklam ile açılabilecek"
+            // Weekly ad chest can only be opened once per week via ad
             if (!prefs.isWeeklyAdChestAvailable()) {
                 val rem = prefs.getWeeklyAdChestRemainingMillis()
                 val remText = prefs.formatWeeklyAdRemaining(rem)
@@ -2686,7 +2792,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * User request: "250 jeton ile de sandık açılabilsin"
+     * Unlock chest using 250 tokens
      */
     fun openEchoChestWithCoins() {
         val cost = 250
@@ -2924,6 +3030,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     // --- Leaderboard & Player Profile Systems ---
 
     fun openLeaderboard() {
+        if (!_uiState.value.isAuthenticated) {
+            showToast("Please sign in or register to access the Leaderboard.")
+            _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+            return
+        }
         _uiState.update { it.copy(isLeaderboardDialogVisible = true) }
         loadLeaderboardData()
     }
@@ -3028,6 +3139,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun openMyProfile() {
+        if (!_uiState.value.isAuthenticated) {
+            showToast("Please sign in or register to view your profile.")
+            _uiState.update { it.copy(screenState = ScreenState.LOGIN) }
+            return
+        }
         viewModelScope.launch {
             val list = authRepo.getLeaderboardPlayers()
             val me = list.find { it.isCurrentUser } ?: com.example.model.LeaderboardPlayer(
@@ -3080,18 +3196,44 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun updateProfile(avatarUri: String, customTitle: String) {
         viewModelScope.launch {
-            authRepo.updateUserProfile(avatarUri, customTitle)
+            val fbAuth = com.example.data.FirebaseAuthManager(getApplication())
+            val uploadResult = if (avatarUri.isNotBlank() && !avatarUri.startsWith("http")) {
+                fbAuth.uploadProfilePhoto(android.net.Uri.parse(avatarUri))
+            } else {
+                Result.success(avatarUri)
+            }
+            val finalAvatarUri = uploadResult.getOrDefault(avatarUri)
+
+            authRepo.updateUserProfile(finalAvatarUri, customTitle)
             val updatedPlayers = authRepo.getLeaderboardPlayers()
             val myPlayer = updatedPlayers.firstOrNull { it.isCurrentUser }
             _uiState.update {
                 it.copy(
-                    userAvatarUri = avatarUri,
+                    userAvatarUri = finalAvatarUri,
                     userCustomTitle = customTitle,
                     leaderboardPlayers = updatedPlayers,
                     selectedPlayerProfile = if (it.selectedPlayerProfile?.isCurrentUser == true) myPlayer else it.selectedPlayerProfile
                 )
             }
             showToast("Profile updated successfully!")
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            val fbAuth = com.example.data.FirebaseAuthManager(getApplication())
+            fbAuth.signOut()
+            prefs.isAuthenticated = false
+            prefs.authenticatedUsername = ""
+            prefs.rememberMe = false
+            _uiState.update {
+                it.copy(
+                    isAuthenticated = false,
+                    authenticatedUser = "Guest",
+                    userAvatarUri = ""
+                )
+            }
+            showToast("Signed out successfully")
         }
     }
 

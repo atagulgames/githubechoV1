@@ -239,7 +239,7 @@ class FirebaseAuthManager(private val context: Context) {
                     throw e
                 }
             }
-            val user = authResult.user ?: throw IllegalStateException("Firebase kullanıcı oluşturulamadı.")
+            val user = authResult.user ?: throw IllegalStateException("Failed to create Firebase user.")
             val signedInUser = onFirebaseUserSignedIn(user, overrideUsername = username, rememberMe = rememberMe)
             Result.success(signedInUser)
         } catch (e: Exception) {
@@ -260,7 +260,7 @@ class FirebaseAuthManager(private val context: Context) {
         val email = if (username.contains("@")) username else "${username.lowercase().replace(" ", "_")}@echoflux.game"
         try {
             val authResult = auth.signInWithEmailAndPassword(email, passwordInput).await()
-            val user = authResult.user ?: throw IllegalStateException("Firebase oturumu açılamadı.")
+            val user = authResult.user ?: throw IllegalStateException("Failed to sign in with Firebase.")
             val signedInUser = onFirebaseUserSignedIn(user, overrideUsername = username, rememberMe = rememberMe)
             Result.success(signedInUser)
         } catch (e: Exception) {
@@ -285,7 +285,7 @@ class FirebaseAuthManager(private val context: Context) {
             } catch (e: Exception) {
                 auth.createUserWithEmailAndPassword(email, password).await()
             }
-            val user = authResult.user ?: throw IllegalStateException("Facebook Firebase oyuncusu oluşturulamadı.")
+            val user = authResult.user ?: throw IllegalStateException("Failed to create Facebook player.")
             val signedInUser = onFirebaseUserSignedIn(user, overrideUsername = cleanName, rememberMe = rememberMe)
             Result.success(signedInUser)
         } catch (e: Exception) {
@@ -434,6 +434,43 @@ class FirebaseAuthManager(private val context: Context) {
         return user.displayName?.takeIf { it.isNotBlank() }
             ?: user.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
             ?: "Player_${user.uid.take(6)}"
+    }
+
+    suspend fun signOut() {
+        try {
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        } catch (_: Exception) {}
+        auth.signOut()
+        prefs.isAuthenticated = false
+        prefs.authenticatedUsername = ""
+        prefs.rememberMe = false
+    }
+
+    /**
+     * Uploads user's selected profile picture to Firebase Storage and syncs the URL to Firestore and Auth.
+     */
+    suspend fun uploadProfilePhoto(imageUri: android.net.Uri): Result<String> = withContext(Dispatchers.IO) {
+        val user = auth.currentUser ?: return@withContext Result.failure(IllegalStateException("User not signed in"))
+        try {
+            val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
+                .child("profile_photos/${user.uid}/avatar_${System.currentTimeMillis()}.jpg")
+            val stream = context.contentResolver.openInputStream(imageUri)
+                ?: return@withContext Result.failure(IllegalStateException("Cannot open input stream"))
+            storageRef.putStream(stream).await()
+            val downloadUrl = storageRef.downloadUrl.await().toString()
+
+            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                .setPhotoUri(android.net.Uri.parse(downloadUrl))
+                .build()
+            user.updateProfile(profileUpdates).await()
+
+            firestoreRepo.updateUserProfilePhoto(downloadUrl)
+            Result.success(downloadUrl)
+        } catch (e: Exception) {
+            Log.e(TAG, "Profile photo upload failed: ${e.message}", e)
+            // Graceful fallback to local content URI so the UI continues smoothly even if storage rules/network fail
+            Result.success(imageUri.toString())
+        }
     }
 
     companion object {

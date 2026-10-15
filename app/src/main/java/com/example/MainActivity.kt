@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ads.StartIoManager
+import com.example.ads.YandexAdsManager
 import com.example.ui.EchoGameScreen
 import com.example.ui.components.PortraitRequiredOverlay
 import com.example.ui.theme.MyApplicationTheme
@@ -23,9 +23,9 @@ class MainActivity : ComponentActivity() {
     try {
       val echoPrefs = com.example.data.EchoPreferences(this)
       echoPrefs.isTestAdsEnabled = false
-      StartIoManager.initialize(this, testMode = false)
+      YandexAdsManager.initialize(this)
     } catch (e: Exception) {
-      android.util.Log.e("MainActivity", "StartIoManager error", e)
+      android.util.Log.e("MainActivity", "YandexAdsManager error", e)
     }
 
     try {
@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
             viewModel = gameViewModel,
             onShowRewardedAd = { type ->
               gameViewModel.setAdLoading(true, type)
-              StartIoManager.showRewardedVideoAd(
+              YandexAdsManager.showRewardedVideoAd(
                 activity = this,
                 onRewardEarned = {
                   gameViewModel.grantRewardedReward(type)
@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
               )
             },
             onShowInterstitialAd = { onAdFinished ->
-              StartIoManager.showInterstitialAd(
+              YandexAdsManager.showInterstitialAd(
                 activity = this,
                 onAdDisplayed = {
                   com.example.audio.HarmonicAudioEngine.pauseBgm()
@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
         activeGameViewModel?.uiState?.value?.screenState != com.example.model.ScreenState.INTRO) {
       com.example.audio.HarmonicAudioEngine.resumeBgm()
     }
-    StartIoManager.preloadAds(this)
+    YandexAdsManager.preloadAds(this)
   }
 
   override fun onPause() {
@@ -119,7 +119,6 @@ class MainActivity : ComponentActivity() {
 
   @Deprecated("Deprecated in Java")
   override fun onBackPressed() {
-    StartIoManager.onBackPressed(this)
     super.onBackPressed()
   }
 }

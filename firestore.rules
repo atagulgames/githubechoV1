@@ -29,6 +29,7 @@ service cloud.firestore {
              (!('maxCombo' in data) || data.maxCombo is int) &&
              (!('totalEchoes' in data) || data.totalEchoes is int) &&
              (!('totalPlayTimeSec' in data) || data.totalPlayTimeSec is int) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 2000)) &&
              (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 

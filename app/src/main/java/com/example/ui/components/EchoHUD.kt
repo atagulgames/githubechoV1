@@ -84,6 +84,7 @@ fun EchoTopHUD(
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val isCompact = maxWidth < 400.dp
             val horizontalPadding = if (isCompact) 8.dp else 14.dp
+            val isTr = state.language == com.example.localization.Language.TR
 
             Column(
                 modifier = Modifier
@@ -125,7 +126,7 @@ fun EchoTopHUD(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Menüye Dön",
+                                contentDescription = "Return to Menu",
                                 tint = Color.White,
                                 modifier = Modifier.size(if (isCompact) 20.dp else 22.dp)
                             )
@@ -157,13 +158,13 @@ fun EchoTopHUD(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.GridOn,
-                                    contentDescription = "Bölüm Seç",
+                                    contentDescription = "Select Level",
                                     tint = Color(0xFF451A03),
                                     modifier = Modifier.size(if (isCompact) 14.dp else 16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
-                                    text = if (state.isDailyChallenge) "GÜNLÜK" else "BÖLÜM ${state.level.levelId}",
+                                    text = if (state.isDailyChallenge) "DAILY" else "LEVEL ${state.level.levelId}",
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFF451A03),
                                     fontSize = if (isCompact) 12.sp else 14.sp
@@ -314,7 +315,7 @@ fun EchoTopHUD(
                             }
                         }
 
-                        // Echo count & Star status 3D Pill
+                        // 3-Star Rating 3D Pill (Echo indicator completely removed per user request)
                         val currentStars = when {
                             state.echoCountForLevel == 0 -> 3
                             state.echoCountForLevel <= 2 -> 2
@@ -326,32 +327,21 @@ fun EchoTopHUD(
                                 .shadow(3.dp, RoundedCornerShape(14.dp))
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(
-                                    if (state.echoCountForLevel > 0) {
-                                        Brush.verticalGradient(listOf(Color(0xFF4C0519), Color(0xFF1F030A)))
-                                    } else {
-                                        Brush.verticalGradient(listOf(Color(0xFF0C4A6E), Color(0xFF032238)))
-                                    }
+                                    Brush.verticalGradient(listOf(Color(0xFF3B0764), Color(0xFF1E1B4B)))
                                 )
                                 .border(
                                     1.5.dp,
-                                    if (state.echoCountForLevel > 0) Color(0xFFFB7185) else Color(0xFF38BDF8),
+                                    Color(0xFFA855F7),
                                     RoundedCornerShape(14.dp)
                                 )
                                 .padding(
-                                    horizontal = if (isCompact) 6.dp else 9.dp,
+                                    horizontal = if (isCompact) 8.dp else 10.dp,
                                     vertical = if (isCompact) 5.dp else 6.dp
                                 )
-                                .testTag("echo_counter_chip"),
+                                .testTag("star_rating_chip"),
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (isCompact) "${state.echoCountForLevel}" else "Yankı:${state.echoCountForLevel}",
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White,
-                                    fontSize = if (isCompact) 11.sp else 12.sp
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = when (currentStars) {
                                         3 -> "★★★"
@@ -361,9 +351,9 @@ fun EchoTopHUD(
                                     color = when (currentStars) {
                                         3 -> Color(0xFFFFD700)
                                         2 -> Color(0xFFFBBF24)
-                                        else -> Color(0xFF94A3B8)
+                                        else -> Color(0xFFC084FC)
                                     },
-                                    fontSize = if (isCompact) 9.sp else 11.sp,
+                                    fontSize = if (isCompact) 13.sp else 14.sp,
                                     fontWeight = FontWeight.Black
                                 )
                             }
@@ -373,8 +363,8 @@ fun EchoTopHUD(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // ROW 2: Dynamic Level Rule & Onboarding Guide Pill (Notice: "2. Sezon" text completely removed!)
-                val levelRule = com.example.data.LevelRuleCatalog.getRuleForLevel(state.level.levelId, isTurkish = true)
+                // ROW 2: Dynamic Level Rule & Onboarding Guide Pill
+                val levelRule = com.example.data.LevelRuleCatalog.getRuleForLevel(state.level.levelId, isTurkish = false)
                 val badgeColor = Color(levelRule.badgeColor)
 
                 Row(
@@ -393,7 +383,7 @@ fun EchoTopHUD(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "${levelRule.icon} Kural: ${levelRule.ruleTitle}",
+                                text = "${levelRule.icon} Rule: ${levelRule.ruleTitle}",
                                 color = badgeColor,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Black
@@ -426,12 +416,15 @@ fun EchoTopHUD(
 fun EchoBottomHUD(
     state: EchoUiState,
     onReset: () -> Unit,
-    onClearEchoes: () -> Unit,
-    onUseBreaker: () -> Unit,
-    onActivateShrinker: () -> Unit,
+    onUseArcaneBlast: () -> Unit,
+    onUseTimeFreeze: () -> Unit,
+    onUseNumberShift: () -> Unit,
+    onUseLuckyCrystal: () -> Unit,
     onHint: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isTr = state.language == com.example.localization.Language.TR
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -443,47 +436,43 @@ fun EchoBottomHUD(
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val isCompact = maxWidth < 400.dp
-            val horizontalPadding = if (isCompact) 8.dp else 14.dp
-            val btnHeight = if (isCompact) 42.dp else 46.dp
+            val horizontalPadding = if (isCompact) 6.dp else 12.dp
+            val btnHeight = if (isCompact) 40.dp else 44.dp
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 640.dp)
                     .align(Alignment.Center)
-                    .padding(horizontal = horizontalPadding, vertical = if (isCompact) 8.dp else 10.dp)
+                    .padding(horizontal = horizontalPadding, vertical = if (isCompact) 6.dp else 8.dp)
             ) {
-                // ROW 1: TACTICAL POWER-UPS (Matkap Lazer & Esnek Alan)
+                // ROW 1: FANTASTIC MAGIC BOOSTERS (Arcane Blast, Time Freeze, Number Shift, Lucky Crystal)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 8.dp)
                 ) {
-                    // 3D Cartoon Echo Breaker (Matkap Lazer)
+                    // 1. Arcane Blast
                     CartoonChunkyButton(
-                        onClick = hapticClick(isHeavy = true, action = onUseBreaker),
+                        onClick = hapticClick(isHeavy = true, action = onUseArcaneBlast),
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)
-                            .testTag("echo_breaker_button"),
-                        gradientColors = if (state.echoBreakers > 0) {
-                            listOf(Color(0xFFFF9800), Color(0xFFE65100))
-                        } else {
-                            listOf(Color(0xFF334155), Color(0xFF1E293B))
-                        },
-                        borderColor = if (state.echoBreakers > 0) Color(0xFF7C2D12) else Color(0xFF475569),
+                            .testTag("arcane_blast_button"),
+                        gradientColors = listOf(Color(0xFF9333EA), Color(0xFF6B21A8)),
+                        borderColor = Color(0xFFC084FC),
                         textColor = Color.White
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Bolt,
-                                contentDescription = "Matkap Lazeri",
+                                contentDescription = "Arcane Blast",
                                 tint = Color.White,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
-                            Spacer(modifier = Modifier.width(3.dp))
+                            Spacer(modifier = Modifier.width(2.dp))
                             Text(
-                                text = "Matkap (${state.echoBreakers})",
-                                fontSize = if (isCompact) 11.sp else 12.sp,
+                                text = "Blast",
+                                fontSize = if (isCompact) 10.sp else 11.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White,
                                 maxLines = 1,
@@ -492,34 +481,98 @@ fun EchoBottomHUD(
                         }
                     }
 
-                    // 3D Cartoon Echo Shrinker (Esnek Mod)
+                    // 2. Time Freeze
                     CartoonChunkyButton(
-                        onClick = hapticClick(isHeavy = true, action = onActivateShrinker),
+                        onClick = hapticClick(isHeavy = true, action = onUseTimeFreeze),
                         modifier = Modifier
                             .weight(1f)
                             .height(btnHeight)
-                            .testTag("echo_shrinker_button"),
-                        gradientColors = if (state.isEchoShrinkerActive) {
-                            listOf(Color(0xFF22C55E), Color(0xFF15803D))
+                            .testTag("time_freeze_button"),
+                        gradientColors = if (state.isTimeFrozen) {
+                            listOf(Color(0xFF06B6D4), Color(0xFF0891B2))
                         } else {
-                            listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                            listOf(Color(0xFF0E7490), Color(0xFF155E75))
                         },
-                        borderColor = if (state.isEchoShrinkerActive) Color(0xFF14532D) else Color(0xFF334155),
-                        textColor = if (state.isEchoShrinkerActive) Color.White else Color(0xFF94A3B8)
+                        borderColor = if (state.isTimeFrozen) Color(0xFF67E8F9) else Color(0xFF22D3EE),
+                        textColor = Color.White
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.FilterCenterFocus,
-                                contentDescription = "Esnek Mod",
-                                tint = if (state.isEchoShrinkerActive) Color.White else Color(0xFF94A3B8),
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Time Freeze",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
                             )
-                            Spacer(modifier = Modifier.width(3.dp))
+                            Spacer(modifier = Modifier.width(2.dp))
                             Text(
-                                text = if (state.isEchoShrinkerActive) "🌟 Esnek Aktif" else "🌟 Esnek",
+                                text = "Freeze",
                                 fontSize = if (isCompact) 10.sp else 11.sp,
                                 fontWeight = FontWeight.Black,
-                                color = if (state.isEchoShrinkerActive) Color.White else Color(0xFF94A3B8),
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // 3. Number Shift
+                    CartoonChunkyButton(
+                        onClick = hapticClick(isHeavy = true, action = onUseNumberShift),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(btnHeight)
+                            .testTag("number_shift_button"),
+                        gradientColors = listOf(Color(0xFF6366F1), Color(0xFF4338CA)),
+                        borderColor = Color(0xFFA5B4FC),
+                        textColor = Color.White
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.GridOn,
+                                contentDescription = "Number Shift",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "Shift",
+                                fontSize = if (isCompact) 10.sp else 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // 4. Lucky Crystal
+                    CartoonChunkyButton(
+                        onClick = hapticClick(isHeavy = true, action = onUseLuckyCrystal),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(btnHeight)
+                            .testTag("lucky_crystal_button"),
+                        gradientColors = if (state.isLuckyCrystalActive) {
+                            listOf(Color(0xFFFBBF24), Color(0xFFD97706))
+                        } else {
+                            listOf(Color(0xFFB45309), Color(0xFF78350F))
+                        },
+                        borderColor = if (state.isLuckyCrystalActive) Color(0xFFFDE68A) else Color(0xFFF59E0B),
+                        textColor = Color.White
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Diamond,
+                                contentDescription = "Lucky Crystal",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "Lucky",
+                                fontSize = if (isCompact) 10.sp else 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -527,15 +580,15 @@ fun EchoBottomHUD(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 8.dp))
+                Spacer(modifier = Modifier.height(if (isCompact) 5.dp else 7.dp))
 
-                // ROW 2: Reset, Clear Echoes, Hint
+                // ROW 2: Reset & Hint
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 3D Cartoon "Yeniden" (Reset)
+                    // Reset Button
                     CartoonChunkyButton(
                         onClick = {
                             HapticEngine.triggerButtonDoublePulse()
@@ -552,13 +605,13 @@ fun EchoBottomHUD(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Yeniden Başla",
+                                contentDescription = "Reset Level",
                                 tint = Color.White,
                                 modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(3.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Yeniden",
+                                text = "Reset",
                                 fontSize = if (isCompact) 11.sp else 12.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White,
@@ -568,48 +621,11 @@ fun EchoBottomHUD(
                         }
                     }
 
-                    // 3D Cartoon "Yankı Sil" (Clear Echoes)
-                    CartoonChunkyButton(
-                        onClick = {
-                            HapticEngine.triggerButtonDoublePulse()
-                            onClearEchoes()
-                        },
-                        modifier = Modifier
-                            .weight(1.3f)
-                            .height(btnHeight)
-                            .testTag("clear_echoes_button"),
-                        gradientColors = if (state.echoes.isNotEmpty()) {
-                            listOf(Color(0xFFEF4444), Color(0xFFB91C1C))
-                        } else {
-                            listOf(Color(0xFF334155), Color(0xFF1E293B))
-                        },
-                        borderColor = if (state.echoes.isNotEmpty()) Color(0xFF7F1D1D) else Color(0xFF475569),
-                        textColor = Color.White
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.RemoveCircleOutline,
-                                contentDescription = "Yankı Sil",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = if (state.echoes.isNotEmpty()) "Yankı Sil (${state.echoes.size})" else "Yankı Sil",
-                                fontSize = if (isCompact) 11.sp else 12.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    // 3D Cartoon "İpucu" (Hint)
+                    // Hint Button
                     CartoonChunkyButton(
                         onClick = hapticClick(action = onHint),
                         modifier = Modifier
-                            .weight(1.1f)
+                            .weight(1f)
                             .height(btnHeight)
                             .testTag("hint_button"),
                         gradientColors = if (state.isHintActive) {
@@ -623,14 +639,14 @@ fun EchoBottomHUD(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Lightbulb,
-                                contentDescription = "İpucu",
+                                contentDescription = "Hint",
                                 tint = if (state.isHintActive) Color(0xFF78350F) else Color.White,
                                 modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(3.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (state.isHintActive) "💡 Aktif" else if (state.hintAdsWatched in 1..2) "İpucu(${state.hintAdsWatched}/3)" else "İpucu",
-                                fontSize = if (isCompact) 10.sp else 11.sp,
+                                text = if (state.isHintActive) "💡 Active" else "Hint",
+                                fontSize = if (isCompact) 11.sp else 12.sp,
                                 fontWeight = FontWeight.Black,
                                 color = if (state.isHintActive) Color(0xFF78350F) else Color.White,
                                 maxLines = 1,

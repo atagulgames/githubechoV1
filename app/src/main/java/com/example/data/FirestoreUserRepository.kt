@@ -36,6 +36,7 @@ data class FirestoreUser(
     val maxCombo: Long = 0L,
     val totalEchoes: Long = 0L,
     val totalPlayTimeSec: Long = 0L,
+    val photoUrl: String = "",
     @ServerTimestamp val createdAt: Timestamp? = null,
     @ServerTimestamp val updatedAt: Timestamp? = null
 )
@@ -325,6 +326,122 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
             Result.success(players)
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.LIST, "users")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Real-time Firestore snapshot listener for live leaderboard updates.
+     */
+    fun listenToLeaderboard(
+        currentUsername: String,
+        onUpdate: (List<LeaderboardPlayer>) -> Unit
+    ): com.google.firebase.firestore.ListenerRegistration {
+        val avatarEmojis = listOf("⚡", "🌌", "🔮", "💠", "🌟", "✨", "🎯", "🌀", "🪐", "🚀", "🔥")
+        return db.collection("users")
+            .orderBy("trophies", Query.Direction.DESCENDING)
+            .limit(50)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) {
+                    return@addSnapshotListener
+                }
+                val players = snapshot.documents.mapIndexed { index, doc ->
+                    val username = doc.getString("username") ?: "Player_${doc.id.take(4)}"
+                    val photoUrl = doc.getString("photoUrl") ?: ""
+                    val trophies = (doc.getLong("trophies") ?: 0L).toInt()
+                    val totalEchoes = (doc.getLong("totalEchoes") ?: 0L).toInt()
+                    val totalPlayTimeSec = doc.getLong("totalPlayTimeSec") ?: 0L
+                    val maxCombo = (doc.getLong("maxCombo") ?: 0L).toInt()
+                    val completedCount = (doc.get("completedLevels") as? List<*>)?.size ?: 0
+                    val title = when {
+                        trophies >= 1000 -> "Grand Master"
+                        trophies >= 500 -> "Echo Master"
+                        trophies >= 200 -> "Harmonic Adept"
+                        else -> "Seeker"
+                    }
+                    LeaderboardPlayer(
+                        id = doc.id,
+                        rank = index + 1,
+                        username = username,
+                        avatarEmoji = avatarEmojis[index % avatarEmojis.size],
+                        avatarUri = photoUrl,
+                        title = title,
+                        trophies = trophies,
+                        totalEchoes = totalEchoes,
+                        totalPlayTimeSec = totalPlayTimeSec,
+                        maxCombo = maxCombo,
+                        completedLevelsCount = completedCount,
+                        isCurrentUser = username.equals(currentUsername, ignoreCase = true)
+                    )
+                }
+                cachedLeaderboard = players
+                onUpdate(players)
+            }
+    }
+
+    /**
+     * Updates user profile picture in Firestore.
+     */
+    suspend fun updateUserProfilePhoto(photoUrl: String): Result<Unit> {
+        val uid = auth.currentUser?.uid ?: return Result.failure(IllegalStateException("Not signed in"))
+        val docRef = db.collection("users").document(uid)
+        return try {
+            docRef.update("photoUrl", photoUrl, "updatedAt", FieldValue.serverTimestamp()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.WRITE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Secure Firestore transaction to award trophies.
+     * Guaranteed enforcement: only Level 150 awards trophies on replay!
+     * Levels 1..149 award trophies and first-time rewards ONLY ONCE.
+     */
+    suspend fun recordLevelVictorySecure(
+        levelId: Int,
+        baseTrophies: Int,
+        stars: Int,
+        durationSec: Long
+    ): Result<Int> {
+        val uid = auth.currentUser?.uid ?: return Result.success(if (levelId == 150) baseTrophies else baseTrophies)
+        val userRef = db.collection("users").document(uid)
+
+        return try {
+            val earnedTrophies = db.runTransaction { tx ->
+                val snapshot = tx.get(userRef)
+                val completedList = (snapshot.get("completedLevels") as? List<*>)?.mapNotNull { (it as? Number)?.toLong() } ?: emptyList()
+                val alreadyCompleted = completedList.contains(levelId.toLong())
+
+                val trophiesToAward = if (!alreadyCompleted || levelId == 150) {
+                    baseTrophies
+                } else {
+                    0
+                }
+
+                val currentTrophies = snapshot.getLong("trophies") ?: 0L
+                val currentStars = snapshot.getLong("stars") ?: 0L
+                val currentPlayTime = snapshot.getLong("totalPlayTimeSec") ?: 0L
+
+                val updatedCompleted = if (!alreadyCompleted) {
+                    completedList + levelId.toLong()
+                } else {
+                    completedList
+                }
+
+                tx.update(userRef, mapOf(
+                    "trophies" to (currentTrophies + trophiesToAward),
+                    "stars" to maxOf(currentStars, stars.toLong()),
+                    "completedLevels" to updatedCompleted,
+                    "totalPlayTimeSec" to (currentPlayTime + durationSec),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                ))
+
+                trophiesToAward
+            }.await()
+            Result.success(earnedTrophies)
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }
