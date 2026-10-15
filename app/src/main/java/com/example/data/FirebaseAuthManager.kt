@@ -31,17 +31,27 @@ import kotlinx.coroutines.withContext
  */
 class FirebaseAuthManager(private val context: Context) {
 
-    private val auth: FirebaseAuth get() = Firebase.auth
+    private val safeAuth: FirebaseAuth?
+        get() = try {
+            if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) {
+                Firebase.auth
+            } else null
+        } catch (_: Exception) {
+            null
+        }
+    private val auth: FirebaseAuth
+        get() = safeAuth ?: throw IllegalStateException("Firebase is not initialized")
+
     private val credentialManager = CredentialManager.create(context)
     private val firestoreRepo = FirestoreUserRepository(context)
     private val prefs = EchoPreferences(context)
     private val localAuthRepo = AuthRepository(context)
 
     val currentUser: FirebaseUser?
-        get() = auth.currentUser
+        get() = safeAuth?.currentUser
 
     val isUserSignedIn: Boolean
-        get() = auth.currentUser != null
+        get() = safeAuth?.currentUser != null
 
     /**
      * Attempts silent background sign-in using existing Google credentials.
@@ -51,7 +61,7 @@ class FirebaseAuthManager(private val context: Context) {
         onSuccess: (username: String) -> Unit,
         onUnauthenticated: () -> Unit
     ) {
-        val existing = auth.currentUser
+        val existing = safeAuth?.currentUser
         if (existing != null) {
             val username = deriveUsername(existing)
             onSuccess(username)
@@ -298,7 +308,7 @@ class FirebaseAuthManager(private val context: Context) {
      * Signs out of Firebase and clears Credential Manager state.
      */
     fun signOut(scope: CoroutineScope, onComplete: () -> Unit) {
-        auth.signOut()
+        safeAuth?.signOut()
         scope.launch {
             try {
                 credentialManager.clearCredentialState(ClearCredentialStateRequest())

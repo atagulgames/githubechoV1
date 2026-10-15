@@ -64,6 +64,7 @@ fun YandexBannerAdView(
                     val screenWidthDp = (displayMetrics.widthPixels / displayMetrics.density).toInt()
                     setAdSize(BannerAdSize.stickySize(ctx, screenWidthDp.coerceAtLeast(320)))
 
+                    var retriedWithRawId = false
                     var retriedWithFallback = false
 
                     setBannerAdEventListener(object : BannerAdEventListener {
@@ -74,8 +75,19 @@ fun YandexBannerAdView(
                         }
 
                         override fun onAdFailedToLoad(error: AdRequestError) {
-                            Log.w("YandexBanner", "Live banner load failed: ${error.description} (code: ${error.code})")
-                            if (!retriedWithFallback) {
+                            Log.w("YandexBanner", "Banner load failed: ${error.description} (code: ${error.code})")
+                            if (!retriedWithRawId && primaryId != adUnitId) {
+                                retriedWithRawId = true
+                                Log.d("YandexBanner", "Retrying banner with raw ID: $adUnitId")
+                                post {
+                                    try {
+                                        setAdUnitId(adUnitId)
+                                        loadAd(AdRequest.Builder().build())
+                                    } catch (e: Exception) {
+                                        Log.e("YandexBanner", "Error loading raw banner", e)
+                                    }
+                                }
+                            } else if (!retriedWithFallback) {
                                 retriedWithFallback = true
                                 Log.d("YandexBanner", "Retrying with Yandex demo banner fallback...")
                                 post {

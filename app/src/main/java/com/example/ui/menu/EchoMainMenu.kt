@@ -89,6 +89,7 @@ fun EchoMainMenu(
     onOpenDailyLogin: () -> Unit = {},
     onOpenChest: () -> Unit = {},
     onWatchRewardedAd: () -> Unit = {},
+    onOpenCartoonStudio: () -> Unit = {},
     onOpenSeason2Info: () -> Unit = {},
     onOpenSeason2Themes: () -> Unit = {},
     onBannerAdLoaded: () -> Unit = {},
@@ -192,17 +193,20 @@ fun EchoMainMenu(
                         verticalArrangement = Arrangement.spacedBy(if (isShortScreen) 12.dp else 22.dp),
                         modifier = Modifier.width(84.dp)
                     ) {
+                        val isTr = state.language == com.example.localization.Language.TR
                         SideBadgeItem(
-                            title = "Gift",
+                            title = if (isTr) "Hediye" else "Gift",
                             badgeType = BadgeType.GIFT,
                             testTag = "btn_badge_hediye",
+                            showNotificationDot = state.isFreeChestAvailable,
                             onClick = onOpenChest
                         )
 
                         SideBadgeItem(
-                            title = "Quests",
+                            title = if (isTr) "Görevler" else "Quests",
                             badgeType = BadgeType.COIN_QUEST,
                             testTag = "btn_badge_jeton_gorevi",
+                            notificationCount = state.unclaimedQuestsCount,
                             onClick = onOpenDailyQuests
                         )
                     }
@@ -216,17 +220,26 @@ fun EchoMainMenu(
                         onSelectLevel = onOpenLevelSelect
                     )
 
-                    // RIGHT COLUMN: Daily Reward with Video Play Icon
+                    // RIGHT COLUMN: Daily Reward (Günlük Ödül) & Karikatür Stüdyosu
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Top,
+                        verticalArrangement = Arrangement.spacedBy(if (isShortScreen) 12.dp else 22.dp),
                         modifier = Modifier.width(84.dp)
                     ) {
+                        val isTr = state.language == com.example.localization.Language.TR
                         SideBadgeItem(
-                            title = "Daily Reward",
+                            title = if (isTr) "Günlük Ödül" else "Daily Reward",
                             badgeType = BadgeType.DAILY_REWARD,
                             testTag = "btn_badge_gunluk_odul",
-                            onClick = onWatchRewardedAd
+                            showNotificationDot = state.isLoginRewardAvailableToday,
+                            onClick = onOpenDailyLogin
+                        )
+
+                        SideBadgeItem(
+                            title = if (isTr) "Karikatür" else "Cartoon",
+                            badgeType = BadgeType.CARTOON,
+                            testTag = "btn_badge_karikatur",
+                            onClick = onOpenCartoonStudio
                         )
                     }
                 }
@@ -446,7 +459,7 @@ private fun TopMenuNavBar(
 /* ========================================================================== */
 
 private enum class BadgeType {
-    GIFT, COIN_QUEST, DAILY_REWARD
+    GIFT, COIN_QUEST, DAILY_REWARD, CARTOON
 }
 
 @Composable
@@ -454,6 +467,8 @@ private fun SideBadgeItem(
     title: String,
     badgeType: BadgeType,
     testTag: String,
+    showNotificationDot: Boolean = false,
+    notificationCount: Int = 0,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -473,8 +488,7 @@ private fun SideBadgeItem(
     ) {
         // Upper Icon Container
         Box(
-            modifier = Modifier
-                .size(60.dp),
+            modifier = Modifier.size(60.dp),
             contentAlignment = Alignment.Center
         ) {
             when (badgeType) {
@@ -487,6 +501,40 @@ private fun SideBadgeItem(
                 BadgeType.DAILY_REWARD -> {
                     DailyRewardChestArt()
                 }
+                BadgeType.CARTOON -> {
+                    CartoonStudioBadgeArt()
+                }
+            }
+
+            // Notification indicator
+            if (showNotificationDot || notificationCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-2).dp)
+                        .size(if (notificationCount > 0) 20.dp else 14.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEF4444))
+                        .border(1.5.dp, Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (notificationCount > 0) {
+                        Text(
+                            text = if (notificationCount > 9) "9+" else "$notificationCount",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        )
+                    }
+                }
             }
         }
 
@@ -497,11 +545,13 @@ private fun SideBadgeItem(
             BadgeType.GIFT -> Color(0xFFD4141E)
             BadgeType.COIN_QUEST -> Color(0xFF091F60)
             BadgeType.DAILY_REWARD -> Color(0xFF091F60)
+            BadgeType.CARTOON -> Color(0xFF6A1B9A)
         }
         val borderColor = when (badgeType) {
             BadgeType.GIFT -> Color(0xFFFF6B6B)
             BadgeType.COIN_QUEST -> Color(0xFF2962FF)
             BadgeType.DAILY_REWARD -> Color(0xFF00B0FF)
+            BadgeType.CARTOON -> Color(0xFFFFD54F)
         }
 
         Box(
@@ -619,12 +669,16 @@ private fun TrophyArt() {
     }
 }
 
-// 3D Cyan Daily Reward Chest with Play Icon
+// 3D Golden Star & Cyan Daily Reward Chest (Calendar/Gift)
 @Composable
 private fun DailyRewardChestArt() {
     Canvas(modifier = Modifier.size(54.dp)) {
         val w = size.width
         val h = size.height
+
+        // Sparkle stars
+        drawCircle(Color(0xFFFFD54F), radius = 2.dp.toPx(), center = Offset(w * 0.15f, h * 0.20f))
+        drawCircle(Color(0xFFFFD54F), radius = 2.dp.toPx(), center = Offset(w * 0.85f, h * 0.24f))
 
         // Cyan Chest Body
         drawRoundRect(
@@ -641,25 +695,51 @@ private fun DailyRewardChestArt() {
             style = Stroke(width = 2.dp.toPx())
         )
 
-        // Dark Screen Center
+        // Dark Screen / Gold Badge Center
         drawRoundRect(
             color = Color(0xFF002244),
-            topLeft = Offset(w * 0.28f, h * 0.34f),
-            size = Size(w * 0.44f, h * 0.38f),
-            cornerRadius = CornerRadius(4.dp.toPx())
+            topLeft = Offset(w * 0.26f, h * 0.34f),
+            size = Size(w * 0.48f, h * 0.38f),
+            cornerRadius = CornerRadius(6.dp.toPx())
         )
 
-        // White Video Play Triangle
-        val playPath = Path().apply {
-            moveTo(w * 0.44f, h * 0.42f)
-            lineTo(w * 0.60f, h * 0.53f)
-            lineTo(w * 0.44f, h * 0.64f)
-            close()
-        }
-        drawPath(playPath, Color.White)
+        // Golden Coin in center representing Daily Reward
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(Color(0xFFFFEA79), Color(0xFFFFB800), Color(0xFFD47C00))
+            ),
+            radius = 8.dp.toPx(),
+            center = Offset(w * 0.5f, h * 0.53f)
+        )
+        drawCircle(
+            color = Color(0xFF8B4700),
+            radius = 8.dp.toPx(),
+            center = Offset(w * 0.5f, h * 0.53f),
+            style = Stroke(width = 1.dp.toPx())
+        )
 
         // Chest Top Golden Clasp
         drawCircle(Color(0xFFFFD54F), radius = 3.dp.toPx(), center = Offset(w * 0.5f, h * 0.24f))
+    }
+}
+
+// 3D Cartoon Studio Artist Badge
+@Composable
+private fun CartoonStudioBadgeArt() {
+    Box(
+        modifier = Modifier
+            .size(54.dp)
+            .shadow(6.dp, CircleShape)
+            .clip(CircleShape)
+            .background(
+                Brush.radialGradient(
+                    listOf(Color(0xFFAB47BC), Color(0xFF6A1B9A))
+                )
+            )
+            .border(2.dp, Color(0xFFFFD54F), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("🎨", fontSize = 28.sp)
     }
 }
 

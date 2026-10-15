@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingBag
@@ -401,12 +402,12 @@ fun ShopDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Ad 2: 3x Hint Tokens
+                // Ad 2: Free 100 Coins
                 AdRewardCard(
-                    title = "3x Hint Tokens (+3 🪙)",
-                    description = "Watch a short video and receive 3 hint tokens immediately.",
-                    buttonText = "Watch Ad (+3 🪙)",
-                    icon = Icons.Default.Lightbulb,
+                    title = "100x Free Coins (+100 🪙)",
+                    description = "Watch a short video and receive 100 coins immediately.",
+                    buttonText = "Watch Ad (+100 🪙)",
+                    icon = Icons.Default.MonetizationOn,
                     accentColor = Color(0xFFD97706),
                     isDarkTheme = isDarkTheme,
                     cooldownSeconds = coinRewardCooldownSeconds,

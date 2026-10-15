@@ -253,7 +253,7 @@ private fun QuestCard(
 
                 // Rewards Badges
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (quest.rewardTokens > 0) {
+                    if (quest.rewardCoins > 0) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -266,10 +266,31 @@ private fun QuestCard(
                                 .padding(horizontal = 7.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = "🪙 +${quest.rewardTokens}",
+                                text = "🪙 +${quest.rewardCoins}",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color(0xFF451A03)
+                            )
+                        }
+                    }
+                    if (quest.rewardTokens > 0) {
+                        if (quest.rewardCoins > 0) Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
+                                    )
+                                )
+                                .border(1.dp, Color(0xFF0369A1), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 7.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "💡 +${quest.rewardTokens}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
                             )
                         }
                     }

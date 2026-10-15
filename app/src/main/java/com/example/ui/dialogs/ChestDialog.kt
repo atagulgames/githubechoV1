@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LockReset
@@ -360,20 +361,56 @@ private fun ChestRewardRevealView(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (reward.coins > 0) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, Color(0xFFFFB703)),
+                    modifier = Modifier.padding(4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(imageVector = Icons.Default.MonetizationOn, contentDescription = null, tint = Color(0xFFFFD54F), modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(text = "+${reward.coins} Coins", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFE082))
+                    }
+                }
+            }
+
             if (reward.tokens > 0) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = Color(0xFF1E293B),
-                    border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                    border = BorderStroke(1.dp, Color(0xFF38BDF8)),
                     modifier = Modifier.padding(4.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(imageVector = Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "+${reward.tokens} Tokens", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFDE68A))
+                        Icon(imageVector = Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(text = "+${reward.tokens} Tokens", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFBAE6FD))
+                    }
+                }
+            }
+
+            if (reward.diamonds > 0) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, Color(0xFF0284C7)),
+                    modifier = Modifier.padding(4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(imageVector = Icons.Default.Diamond, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(text = "+${reward.diamonds} 💎", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFBAE6FD))
                     }
                 }
             }
@@ -386,12 +423,12 @@ private fun ChestRewardRevealView(
                     modifier = Modifier.padding(4.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(imageVector = Icons.Default.ElectricBolt, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "+${reward.breakers} Drills", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5))
+                        Icon(imageVector = Icons.Default.ElectricBolt, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(text = "+${reward.breakers} Drills", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5))
                     }
                 }
             }
@@ -404,12 +441,12 @@ private fun ChestRewardRevealView(
                     modifier = Modifier.padding(4.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = reward.unlockedThemeName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE9D5FF))
+                        Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(text = reward.unlockedThemeName, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE9D5FF))
                     }
                 }
             }

@@ -41,14 +41,28 @@ data class FirestoreUser(
     @ServerTimestamp val updatedAt: Timestamp? = null
 )
 
-class FirestoreUserRepository(private val db: FirebaseFirestore) {
+class FirestoreUserRepository(
+    private val db: FirebaseFirestore? = null,
+    private val auth: FirebaseAuth? = null
+) {
     constructor(context: Context) : this(
-        FirebaseFirestore.getInstance(
-            context.applicationContext.getString(R.string.firestore_database_id)
-        )
+        db = try {
+            if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) {
+                val dbId = context.applicationContext.getString(R.string.firestore_database_id)
+                FirebaseFirestore.getInstance(dbId)
+            } else null
+        } catch (e: Exception) {
+            Log.w("FirestoreUserRepo", "Firestore not available: ${e.message}")
+            null
+        },
+        auth = try {
+            if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) {
+                FirebaseAuth.getInstance()
+            } else null
+        } catch (_: Exception) {
+            null
+        }
     )
-
-    private val auth = FirebaseAuth.getInstance()
 
     companion object {
         private const val TAG = "FirestoreUserRepo"
@@ -61,7 +75,7 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
     private var lastSaveDigest: String = ""
 
     fun requireUserId(): String {
-        return auth.currentUser?.uid
+        return auth?.currentUser?.uid
             ?: throw IllegalStateException("User must be signed in before accessing Firestore.")
     }
 
@@ -69,8 +83,9 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
      * Loads the current user's profile from Firestore.
      */
     suspend fun getUserProfile(): Result<FirestoreUser?> {
-        val uid = auth.currentUser?.uid ?: return Result.success(null)
-        val docRef = db.collection("users").document(uid)
+        val uid = auth?.currentUser?.uid ?: return Result.success(null)
+        val firestore = db ?: return Result.success(null)
+        val docRef = firestore.collection("users").document(uid)
         return try {
             val snapshot = docRef.get().await()
             val user = snapshot.toObject(FirestoreUser::class.java)
@@ -108,8 +123,9 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
         totalPlayTimeSec: Long,
         forceImmediate: Boolean = false
     ): Result<FirestoreUser> {
-        val uid = auth.currentUser?.uid ?: return Result.failure(IllegalStateException("Not authenticated"))
-        val docRef = db.collection("users").document(uid)
+        val uid = auth?.currentUser?.uid ?: return Result.failure(IllegalStateException("Not authenticated"))
+        val firestore = db ?: return Result.failure(IllegalStateException("Firestore not available"))
+        val docRef = firestore.collection("users").document(uid)
 
         // Quota optimization: digest comparison and 30-second throttling unless forced
         val now = System.currentTimeMillis()
@@ -283,8 +299,9 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
             return Result.success(cachedLeaderboard!!)
         }
 
+        val firestore = db ?: return Result.success(emptyList())
         return try {
-            val querySnapshot = db.collection("users")
+            val querySnapshot = firestore.collection("users")
                 .orderBy("trophies", Query.Direction.DESCENDING)
                 .limit(50)
                 .get()
@@ -336,55 +353,62 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
     fun listenToLeaderboard(
         currentUsername: String,
         onUpdate: (List<LeaderboardPlayer>) -> Unit
-    ): com.google.firebase.firestore.ListenerRegistration {
+    ): com.google.firebase.firestore.ListenerRegistration? {
+        val firestore = db ?: return null
         val avatarEmojis = listOf("⚡", "🌌", "🔮", "💠", "🌟", "✨", "🎯", "🌀", "🪐", "🚀", "🔥")
-        return db.collection("users")
-            .orderBy("trophies", Query.Direction.DESCENDING)
-            .limit(50)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) {
-                    return@addSnapshotListener
-                }
-                val players = snapshot.documents.mapIndexed { index, doc ->
-                    val username = doc.getString("username") ?: "Player_${doc.id.take(4)}"
-                    val photoUrl = doc.getString("photoUrl") ?: ""
-                    val trophies = (doc.getLong("trophies") ?: 0L).toInt()
-                    val totalEchoes = (doc.getLong("totalEchoes") ?: 0L).toInt()
-                    val totalPlayTimeSec = doc.getLong("totalPlayTimeSec") ?: 0L
-                    val maxCombo = (doc.getLong("maxCombo") ?: 0L).toInt()
-                    val completedCount = (doc.get("completedLevels") as? List<*>)?.size ?: 0
-                    val title = when {
-                        trophies >= 1000 -> "Grand Master"
-                        trophies >= 500 -> "Echo Master"
-                        trophies >= 200 -> "Harmonic Adept"
-                        else -> "Seeker"
+        return try {
+            firestore.collection("users")
+                .orderBy("trophies", Query.Direction.DESCENDING)
+                .limit(50)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) {
+                        return@addSnapshotListener
                     }
-                    LeaderboardPlayer(
-                        id = doc.id,
-                        rank = index + 1,
-                        username = username,
-                        avatarEmoji = avatarEmojis[index % avatarEmojis.size],
-                        avatarUri = photoUrl,
-                        title = title,
-                        trophies = trophies,
-                        totalEchoes = totalEchoes,
-                        totalPlayTimeSec = totalPlayTimeSec,
-                        maxCombo = maxCombo,
-                        completedLevelsCount = completedCount,
-                        isCurrentUser = username.equals(currentUsername, ignoreCase = true)
-                    )
+                    val players = snapshot.documents.mapIndexed { index, doc ->
+                        val username = doc.getString("username") ?: "Player_${doc.id.take(4)}"
+                        val photoUrl = doc.getString("photoUrl") ?: ""
+                        val trophies = (doc.getLong("trophies") ?: 0L).toInt()
+                        val totalEchoes = (doc.getLong("totalEchoes") ?: 0L).toInt()
+                        val totalPlayTimeSec = doc.getLong("totalPlayTimeSec") ?: 0L
+                        val maxCombo = (doc.getLong("maxCombo") ?: 0L).toInt()
+                        val completedCount = (doc.get("completedLevels") as? List<*>)?.size ?: 0
+                        val title = when {
+                            trophies >= 1000 -> "Grand Master"
+                            trophies >= 500 -> "Echo Master"
+                            trophies >= 200 -> "Harmonic Adept"
+                            else -> "Seeker"
+                        }
+                        LeaderboardPlayer(
+                            id = doc.id,
+                            rank = index + 1,
+                            username = username,
+                            avatarEmoji = avatarEmojis[index % avatarEmojis.size],
+                            avatarUri = photoUrl,
+                            title = title,
+                            trophies = trophies,
+                            totalEchoes = totalEchoes,
+                            totalPlayTimeSec = totalPlayTimeSec,
+                            maxCombo = maxCombo,
+                            completedLevelsCount = completedCount,
+                            isCurrentUser = username.equals(currentUsername, ignoreCase = true)
+                        )
+                    }
+                    cachedLeaderboard = players
+                    onUpdate(players)
                 }
-                cachedLeaderboard = players
-                onUpdate(players)
-            }
+        } catch (e: Exception) {
+            Log.w(TAG, "listenToLeaderboard error: ${e.message}")
+            null
+        }
     }
 
     /**
      * Updates user profile picture in Firestore.
      */
     suspend fun updateUserProfilePhoto(photoUrl: String): Result<Unit> {
-        val uid = auth.currentUser?.uid ?: return Result.failure(IllegalStateException("Not signed in"))
-        val docRef = db.collection("users").document(uid)
+        val uid = auth?.currentUser?.uid ?: return Result.failure(IllegalStateException("Not signed in"))
+        val firestore = db ?: return Result.failure(IllegalStateException("Firestore not available"))
+        val docRef = firestore.collection("users").document(uid)
         return try {
             docRef.update("photoUrl", photoUrl, "updatedAt", FieldValue.serverTimestamp()).await()
             Result.success(Unit)
@@ -405,11 +429,12 @@ class FirestoreUserRepository(private val db: FirebaseFirestore) {
         stars: Int,
         durationSec: Long
     ): Result<Int> {
-        val uid = auth.currentUser?.uid ?: return Result.success(if (levelId == 150) baseTrophies else baseTrophies)
-        val userRef = db.collection("users").document(uid)
+        val uid = auth?.currentUser?.uid ?: return Result.success(if (levelId == 150) baseTrophies else baseTrophies)
+        val firestore = db ?: return Result.success(baseTrophies)
+        val userRef = firestore.collection("users").document(uid)
 
         return try {
-            val earnedTrophies = db.runTransaction { tx ->
+            val earnedTrophies = firestore.runTransaction { tx ->
                 val snapshot = tx.get(userRef)
                 val completedList = (snapshot.get("completedLevels") as? List<*>)?.mapNotNull { (it as? Number)?.toLong() } ?: emptyList()
                 val alreadyCompleted = completedList.contains(levelId.toLong())

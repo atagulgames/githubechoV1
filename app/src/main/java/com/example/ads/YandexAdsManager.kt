@@ -147,7 +147,10 @@ object YandexAdsManager {
         }
     }
 
-    private fun loadFallbackInterstitial(context: Context) {
+    private fun loadFallbackInterstitial(context: Context, retryWithRaw: Boolean = true) {
+        val rawId = INTERSTITIAL_AD_UNIT_ID
+        val normalizedId = normalizeAdUnitId(rawId)
+        val idToTry = if (retryWithRaw && rawId != normalizedId) rawId else DEMO_INTERSTITIAL_ID
         try {
             val loader = interstitialLoader ?: InterstitialAdLoader(context.applicationContext).also {
                 interstitialLoader = it
@@ -155,14 +158,17 @@ object YandexAdsManager {
             loader.setAdLoadListener(object : InterstitialAdLoadListener {
                 override fun onAdLoaded(interstitialAd: InterstitialAd) {
                     preloadedInterstitialAd = interstitialAd
-                    Log.d(TAG, "Yandex Interstitial Fallback Ad loaded successfully ($DEMO_INTERSTITIAL_ID)")
+                    Log.d(TAG, "Yandex Interstitial Ad loaded successfully ($idToTry)")
                 }
 
                 override fun onAdFailedToLoad(error: AdRequestError) {
-                    Log.w(TAG, "Fallback Interstitial failed: ${error.description}")
+                    Log.w(TAG, "Interstitial load failed for $idToTry: ${error.description}")
+                    if (idToTry != DEMO_INTERSTITIAL_ID) {
+                        loadFallbackInterstitial(context, retryWithRaw = false)
+                    }
                 }
             })
-            val config = AdRequestConfiguration.Builder(DEMO_INTERSTITIAL_ID).build()
+            val config = AdRequestConfiguration.Builder(idToTry).build()
             loader.loadAd(config)
         } catch (e: Exception) {
             Log.e(TAG, "Error loading fallback interstitial", e)
@@ -213,7 +219,10 @@ object YandexAdsManager {
         }
     }
 
-    private fun loadFallbackRewarded(context: Context) {
+    private fun loadFallbackRewarded(context: Context, retryWithRaw: Boolean = true) {
+        val rawId = REWARDED_AD_UNIT_ID
+        val normalizedId = normalizeAdUnitId(rawId)
+        val idToTry = if (retryWithRaw && rawId != normalizedId) rawId else DEMO_REWARDED_ID
         try {
             val loader = rewardedLoader ?: RewardedAdLoader(context.applicationContext).also {
                 rewardedLoader = it
@@ -221,14 +230,17 @@ object YandexAdsManager {
             loader.setAdLoadListener(object : RewardedAdLoadListener {
                 override fun onAdLoaded(rewardedAd: RewardedAd) {
                     preloadedRewardedAd = rewardedAd
-                    Log.d(TAG, "Yandex Rewarded Fallback Ad loaded successfully ($DEMO_REWARDED_ID)")
+                    Log.d(TAG, "Yandex Rewarded Fallback Ad loaded successfully ($idToTry)")
                 }
 
                 override fun onAdFailedToLoad(error: AdRequestError) {
-                    Log.w(TAG, "Fallback Rewarded failed: ${error.description}")
+                    Log.w(TAG, "Rewarded load failed for $idToTry: ${error.description}")
+                    if (idToTry != DEMO_REWARDED_ID) {
+                        loadFallbackRewarded(context, retryWithRaw = false)
+                    }
                 }
             })
-            val config = AdRequestConfiguration.Builder(DEMO_REWARDED_ID).build()
+            val config = AdRequestConfiguration.Builder(idToTry).build()
             loader.loadAd(config)
         } catch (e: Exception) {
             Log.e(TAG, "Error loading fallback rewarded", e)

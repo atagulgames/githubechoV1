@@ -704,13 +704,17 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         prefs.isKvkkConsentAccepted = true
 
         val app = getApplication<android.app.Application>()
-        val firebaseAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        val firebaseAuth = try {
+            if (com.google.firebase.FirebaseApp.getApps(app).isNotEmpty()) {
+                com.google.firebase.auth.FirebaseAuth.getInstance()
+            } else null
+        } catch (_: Exception) { null }
         val hasSavedSession = (prefs.rememberMe && prefs.isAuthenticated && prefs.authenticatedUsername.isNotBlank()) ||
-                (firebaseAuth.currentUser != null && prefs.rememberMe)
+                (firebaseAuth?.currentUser != null && prefs.rememberMe)
 
         if (hasSavedSession) {
             val savedUsername = prefs.authenticatedUsername.ifBlank {
-                firebaseAuth.currentUser?.displayName ?: "Player"
+                firebaseAuth?.currentUser?.displayName ?: "Player"
             }
             _uiState.update {
                 it.copy(
@@ -870,7 +874,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         }
         prefs.clearAuthentication()
         prefs.resetSessionProgressToDefaults()
-        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+        try {
+            if (com.google.firebase.FirebaseApp.getApps(getApplication()).isNotEmpty()) {
+                com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+            }
+        } catch (_: Exception) {}
         com.example.data.security.SecureTokenManager.clearToken(getApplication())
         _uiState.update {
             it.copy(
@@ -1928,23 +1936,20 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 prefs.recordFreeCoinAdWatched(todayStr)
                 prefs.recordRewardClaimed("FREE_COINS")
-                prefs.addTokens(3)
-                prefs.addCoins(30)
+                prefs.addCoins(100)
                 updateRewardCooldowns()
                 _uiState.update {
                     it.copy(
                         isRewardedSimulating = false,
                         isAdLoading = false,
-                        tokens = prefs.tokens,
                         coins = prefs.coins
                     )
                 }
                 RewardClaimedInfo(
-                    title = "Token & Coins Pack!",
-                    subtitle = "+3 Hint Tokens and +30 Coins added (Available again in 3 hours).",
+                    title = "100 Coins Pack!",
+                    subtitle = "+100 Coins added to your balance (Available again in 3 hours).",
                     rewardType = type,
-                    tokensAdded = 3,
-                    coinsAdded = 30
+                    coinsAdded = 100
                 )
             }
             "HINT_TOKEN" -> {
@@ -2587,6 +2592,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             rewardTokens = 5,
             rewardBreakers = 2,
             rewardDiamonds = 2,
+            rewardCoins = 50,
             isClaimed = prefs.isQuestClaimed(1)
         )
         val q2 = DailyQuest(
@@ -2598,6 +2604,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             rewardTokens = 8,
             rewardBreakers = 3,
             rewardDiamonds = 3,
+            rewardCoins = 75,
             isClaimed = prefs.isQuestClaimed(2)
         )
         val q3 = DailyQuest(
@@ -2609,6 +2616,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             rewardTokens = 10,
             rewardBreakers = 2,
             rewardDiamonds = 4,
+            rewardCoins = 100,
             isClaimed = prefs.isQuestClaimed(3)
         )
         val q4 = DailyQuest(
@@ -2620,6 +2628,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             rewardTokens = 12,
             rewardBreakers = 4,
             rewardDiamonds = 5,
+            rewardCoins = 150,
             isClaimed = prefs.isQuestClaimed(4)
         )
         val quests = listOf(q1, q2, q3, q4)
@@ -2630,49 +2639,52 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val isClaimedToday = lastClaim == todayStr
         val currentStreak = prefs.loginStreak
 
-        val streakToUse: Int
-        if (!isClaimedToday && lastClaim.isNotEmpty()) {
-            val cal = Calendar.getInstance()
-            cal.add(Calendar.DAY_OF_YEAR, -1)
-            val yesterdayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
-            if (lastClaim != yesterdayStr) {
-                // Streak broken due to missed day
-                prefs.loginStreak = 1
-                streakToUse = 1
-            } else {
-                streakToUse = currentStreak
-            }
+        val activeDay: Int
+        if (isClaimedToday) {
+            activeDay = currentStreak.coerceIn(1, 7)
         } else {
-            streakToUse = currentStreak
+            if (lastClaim.isNotEmpty()) {
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.DAY_OF_YEAR, -1)
+                val yesterdayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
+                activeDay = if (lastClaim == yesterdayStr) {
+                    if (currentStreak >= 7) 1 else currentStreak + 1
+                } else {
+                    1
+                }
+            } else {
+                activeDay = 1
+            }
         }
 
         val loginDays = (1..7).map { day ->
-            val isClaimed = if (isClaimedToday) day <= streakToUse else day < streakToUse
-            val isToday = if (isClaimedToday) false else day == streakToUse
-            val isPast = day < streakToUse
-            val (tok, brk, dia) = when (day) {
-                1 -> Triple(5, 1, 2)
-                2 -> Triple(10, 2, 5)
-                3 -> Triple(15, 3, 8)
-                4 -> Triple(20, 4, 10)
-                5 -> Triple(25, 5, 15)
-                6 -> Triple(35, 6, 20)
-                else -> Triple(100, 10, 50) // Day 7
+            val isClaimed = if (isClaimedToday) day <= activeDay else day < activeDay
+            val isToday = if (isClaimedToday) false else day == activeDay
+            val isPast = day < activeDay
+            val (tok, brk, dia, coin) = when (day) {
+                1 -> listOf(5, 1, 2, 100)
+                2 -> listOf(10, 2, 5, 150)
+                3 -> listOf(15, 3, 8, 200)
+                4 -> listOf(20, 4, 10, 250)
+                5 -> listOf(25, 5, 15, 300)
+                6 -> listOf(35, 6, 20, 400)
+                else -> listOf(100, 10, 50, 1000) // Day 7
             }
             DailyLoginDay(
                 dayNumber = day,
                 title = when (day) {
-                    1 -> "+5 Tokens +2💎"
-                    2 -> "+10 Tokens +2 Drills"
-                    3 -> "+15 Tokens +8💎"
-                    4 -> "+20 Tokens +4 Drills"
-                    5 -> "+25 Tokens +15💎"
-                    6 -> "+35 Tokens +6 Drills"
-                    else -> "Mega Legendary Reward"
+                    1 -> "+100 🪙 Coin, +5 Jeton, +2 💎"
+                    2 -> "+150 🪙 Coin, +10 Jeton, +2 ⚡"
+                    3 -> "+200 🪙 Coin, +15 Jeton, +8 💎"
+                    4 -> "+250 🪙 Coin, +20 Jeton, +4 ⚡"
+                    5 -> "+300 🪙 Coin, +25 Jeton, +15 💎"
+                    6 -> "+400 🪙 Coin, +35 Jeton, +6 ⚡"
+                    else -> "+1000 🪙 Coin, +100 Jeton, +50 💎 & Tema"
                 },
                 tokens = tok,
                 breakers = brk,
                 diamonds = dia,
+                coins = coin,
                 isLegendary = day == 7,
                 isClaimed = isClaimed,
                 isToday = isToday,
@@ -2693,7 +2705,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 dailyQuests = quests,
                 unclaimedQuestsCount = unclaimedCount,
-                loginStreak = streakToUse,
+                loginStreak = activeDay,
                 isLoginRewardAvailableToday = !isClaimedToday,
                 loginDays = loginDays,
                 isFreeChestAvailable = freeChestAvail,
@@ -2713,60 +2725,81 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         if (quest.rewardTokens > 0) prefs.addTokens(quest.rewardTokens)
         if (quest.rewardBreakers > 0) prefs.addBreakers(quest.rewardBreakers)
         if (quest.rewardDiamonds > 0) prefs.addDiamonds(quest.rewardDiamonds)
+        if (quest.rewardCoins > 0) prefs.addCoins(quest.rewardCoins)
 
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
-        showToast("Quest Reward Claimed! (+${quest.rewardTokens} Tokens, +${quest.rewardBreakers} Drills, +${quest.rewardDiamonds} Diamonds)")
+        showToast("Görev Tamamlandı! (+${quest.rewardCoins} Coin, +${quest.rewardTokens} Jeton)")
         refreshDailySystems()
         _uiState.update {
             it.copy(
+                coins = prefs.coins,
                 tokens = prefs.tokens,
                 echoBreakers = prefs.echoBreakers,
                 diamonds = prefs.diamonds
             )
         }
+        syncSaveToCloud()
     }
 
     fun claimDailyLoginReward() {
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         if (prefs.isLoginRewardClaimedToday(todayStr)) {
-            showToast("Today's login reward has already been claimed!")
+            showToast("Bugünkü günlük ödülünüz zaten alındı! Yarın tekrar gelin.")
             return
         }
 
-        val streak = _uiState.value.loginStreak
-        val (tok, brk, dia) = when (streak) {
-            1 -> Triple(5, 1, 2)
-            2 -> Triple(10, 2, 5)
-            3 -> Triple(15, 3, 8)
-            4 -> Triple(20, 4, 10)
-            5 -> Triple(25, 5, 15)
-            6 -> Triple(35, 6, 20)
-            else -> Triple(100, 10, 50)
+        val lastClaim = prefs.lastLoginClaimDate
+        val currentStreak = prefs.loginStreak
+        val activeDay: Int = if (lastClaim.isNotEmpty()) {
+            val cal = Calendar.getInstance()
+            cal.add(Calendar.DAY_OF_YEAR, -1)
+            val yesterdayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
+            if (lastClaim == yesterdayStr) {
+                if (currentStreak >= 7) 1 else currentStreak + 1
+            } else {
+                1
+            }
+        } else {
+            1
         }
 
+        val (tok, brk, dia, coin) = when (activeDay) {
+            1 -> listOf(5, 1, 2, 100)
+            2 -> listOf(10, 2, 5, 150)
+            3 -> listOf(15, 3, 8, 200)
+            4 -> listOf(20, 4, 10, 250)
+            5 -> listOf(25, 5, 15, 300)
+            6 -> listOf(35, 6, 20, 400)
+            else -> listOf(100, 10, 50, 1000)
+        }
+
+        prefs.addCoins(coin)
         prefs.addTokens(tok)
         if (brk > 0) prefs.addBreakers(brk)
         if (dia > 0) prefs.addDiamonds(dia)
-        if (streak == 7) {
+        if (activeDay == 7) {
             prefs.unlockTheme("GOLDEN_PULSE")
         }
 
         prefs.lastLoginClaimDate = todayStr
-        prefs.loginStreak = if (streak >= 7) 1 else streak + 1
+        prefs.loginStreak = activeDay
 
         HarmonicAudioEngine.playVictoryCascade()
         triggerHapticVictory()
 
-        showToast("Day $streak Reward! (+$tok Tokens, +$brk Drills, +$dia Diamonds)")
+        showToast("🎉 Günlük Ödül Alındı! (+$coin Coin, +$tok Jeton, +$dia Elmas)")
         refreshDailySystems()
         _uiState.update {
             it.copy(
+                coins = prefs.coins,
                 tokens = prefs.tokens,
                 echoBreakers = prefs.echoBreakers,
-                diamonds = prefs.diamonds
+                diamonds = prefs.diamonds,
+                isLoginRewardAvailableToday = false
             )
         }
+        syncSaveToCloud()
     }
 
     fun openEchoChest(isAd: Boolean) {
@@ -2832,35 +2865,43 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             roll <= 50 -> {
                 val t = (10..20).random()
                 val d = (2..5).random()
+                val c = (50..80).random()
+                prefs.addCoins(c)
                 prefs.addTokens(t)
                 prefs.addDiamonds(d)
                 ChestReward(
                     rarity = ThemeRarity.COMMON,
                     title = sourceTitle,
-                    subtitle = "You earned $t Tokens and $d Diamonds!",
+                    subtitle = "You earned $c Coins, $t Tokens and $d Diamonds!",
                     tokens = t,
                     breakers = 0,
-                    diamonds = d
+                    diamonds = d,
+                    coins = c
                 )
             }
             roll <= 80 -> {
                 val t = (25..40).random()
                 val d = (6..10).random()
+                val c = (100..150).random()
+                prefs.addCoins(c)
                 prefs.addTokens(t)
                 prefs.addBreakers(2)
                 prefs.addDiamonds(d)
                 ChestReward(
                     rarity = ThemeRarity.RARE,
                     title = "Rare $sourceTitle",
-                    subtitle = "You earned $t Tokens, 2 Drills and $d Diamonds!",
+                    subtitle = "You earned $c Coins, $t Tokens, 2 Drills and $d Diamonds!",
                     tokens = t,
                     breakers = 2,
-                    diamonds = d
+                    diamonds = d,
+                    coins = c
                 )
             }
             roll <= 95 -> {
                 val t = 60
                 val d = 18
+                val c = 250
+                prefs.addCoins(c)
                 prefs.addTokens(t)
                 prefs.addBreakers(4)
                 prefs.addDiamonds(d)
@@ -2868,16 +2909,19 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 ChestReward(
                     rarity = ThemeRarity.EPIC,
                     title = "Epic $sourceTitle",
-                    subtitle = "You earned $t Tokens, 4 Drills, $d Diamonds, and unlocked 'Polar Emerald' Theme!",
+                    subtitle = "You earned $c Coins, $t Tokens, 4 Drills, $d Diamonds, and unlocked 'Polar Emerald' Theme!",
                     tokens = t,
                     breakers = 4,
                     diamonds = d,
+                    coins = c,
                     unlockedThemeName = "Polar Emerald"
                 )
             }
             else -> {
                 val t = 150
                 val d = 40
+                val c = 500
+                prefs.addCoins(c)
                 prefs.addTokens(t)
                 prefs.addBreakers(8)
                 prefs.addDiamonds(d)
@@ -2885,10 +2929,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 ChestReward(
                     rarity = ThemeRarity.LEGENDARY,
                     title = "Legendary $sourceTitle",
-                    subtitle = "You earned $t Tokens, 8 Drills, $d Diamonds, and unlocked Legendary 'Golden Laser' Theme!",
+                    subtitle = "You earned $c Coins, $t Tokens, 8 Drills, $d Diamonds, and unlocked Legendary 'Golden Laser' Theme!",
                     tokens = t,
                     breakers = 8,
                     diamonds = d,
+                    coins = c,
                     unlockedThemeName = "Golden Laser"
                 )
             }
