@@ -274,19 +274,6 @@ fun EchoMainMenu(
                     onOpenLevels = onOpenLevelSelect,
                     onOpenLeaderboard = onOpenLeaderboard
                 )
-
-                // Docked Live Yandex Banner Ad at bottom of Main Menu (RM-20228995-1)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    com.example.ads.YandexBannerAdView(
-                        onAdLoaded = onBannerAdLoaded,
-                        onAdFailedToLoad = onBannerAdFailed
-                    )
-                }
             }
         }
     }

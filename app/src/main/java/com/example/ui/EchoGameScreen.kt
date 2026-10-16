@@ -82,14 +82,20 @@ fun EchoGameScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Handle system back button to return to Main Menu from game (with mandatory transition ad)
+    // Handle system back button to return to Main Menu from game (with smart pacing transition ad)
     BackHandler(
         enabled = state.screenState != ScreenState.MAIN_MENU &&
                 state.screenState != ScreenState.INTRO &&
                 state.screenState != ScreenState.LEGAL_CONSENT &&
                 state.screenState != ScreenState.LOGIN
     ) {
-        onShowInterstitialAd {
+        if (viewModel.shouldShowInterstitialAd()) {
+            onShowInterstitialAd {
+                viewModel.onInterstitialAdShownOrSkipped(true)
+                viewModel.returnToMainMenu()
+            }
+        } else {
+            viewModel.onInterstitialAdShownOrSkipped(false)
             viewModel.returnToMainMenu()
         }
     }
@@ -100,12 +106,12 @@ fun EchoGameScreen(
             .testTag("echo_game_scaffold"),
         containerColor = if (state.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC),
         bottomBar = {
-            if (state.screenState != ScreenState.INTRO && state.screenState != ScreenState.LEGAL_CONSENT) {
+            if (state.screenState != ScreenState.INTRO && state.screenState != ScreenState.LEGAL_CONSENT && state.screenState != ScreenState.LOGIN) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding(),
-                    color = Color(0xFF030D2B)
+                    color = Color.Transparent
                 ) {
                     com.example.ads.YandexBannerAdView(
                         modifier = Modifier.fillMaxWidth(),
@@ -159,9 +165,7 @@ fun EchoGameScreen(
                     EchoMainMenu(
                         state = state,
                         onPlay = {
-                            onShowInterstitialAd {
-                                viewModel.startPlayingLevel()
-                            }
+                            viewModel.startPlayingLevel()
                         },
                         onDailyChallenge = { viewModel.startDailyChallenge() },
                         onOpenLevelSelect = { viewModel.setLevelSelectVisible(true) },
@@ -193,7 +197,13 @@ fun EchoGameScreen(
                         EchoTopHUD(
                             state = state,
                             onBackToMenu = {
-                                onShowInterstitialAd {
+                                if (viewModel.shouldShowInterstitialAd()) {
+                                    onShowInterstitialAd {
+                                        viewModel.onInterstitialAdShownOrSkipped(true)
+                                        viewModel.returnToMainMenu()
+                                    }
+                                } else {
+                                    viewModel.onInterstitialAdShownOrSkipped(false)
                                     viewModel.returnToMainMenu()
                                 }
                             },
@@ -255,14 +265,25 @@ fun EchoGameScreen(
                                 return@VictoryDialog
                             }
                             isNextLevelTransitioning = true
-                            onShowInterstitialAd {
-                                viewModel.onInterstitialAdShownOrSkipped(true)
+                            if (viewModel.shouldShowInterstitialAd()) {
+                                onShowInterstitialAd {
+                                    viewModel.onInterstitialAdShownOrSkipped(true)
+                                    viewModel.nextLevel()
+                                }
+                            } else {
+                                viewModel.onInterstitialAdShownOrSkipped(false)
                                 viewModel.nextLevel()
                             }
                         }
                     },
                     onReplay = {
-                        onShowInterstitialAd {
+                        if (viewModel.shouldShowInterstitialAd()) {
+                            onShowInterstitialAd {
+                                viewModel.onInterstitialAdShownOrSkipped(true)
+                                viewModel.restartLevel(clearEchoes = true)
+                            }
+                        } else {
+                            viewModel.onInterstitialAdShownOrSkipped(false)
                             viewModel.restartLevel(clearEchoes = true)
                         }
                     }
@@ -300,7 +321,13 @@ fun EchoGameScreen(
                     onClearWithAd = if (!state.isGameOverTimeUpDialogVisible) { { onShowRewardedAd("CLEAR_ECHOES") } } else null,
                     onAddTimeWithAd = if (state.isGameOverTimeUpDialogVisible) { { onShowRewardedAd("EXTRA_TIME_15S") } } else null,
                     onRestartLevel = {
-                        onShowInterstitialAd {
+                        if (viewModel.shouldShowInterstitialAd()) {
+                            onShowInterstitialAd {
+                                viewModel.onInterstitialAdShownOrSkipped(true)
+                                viewModel.restartLevel(clearEchoes = true)
+                            }
+                        } else {
+                            viewModel.onInterstitialAdShownOrSkipped(false)
                             viewModel.restartLevel(clearEchoes = true)
                         }
                     }
@@ -363,9 +390,7 @@ fun EchoGameScreen(
                     isDarkTheme = state.isDarkTheme,
                     onSelectLevel = { idx ->
                         viewModel.setLevelSelectVisible(false)
-                        onShowInterstitialAd {
-                            viewModel.startPlayingLevel(idx)
-                        }
+                        viewModel.startPlayingLevel(idx)
                     },
                     onOpenRulesGuide = {
                         viewModel.setLevelSelectVisible(false)

@@ -288,6 +288,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 authRepo.registerOrUpdateExternalUser(user, prefs.authenticatedEmail, user)
                 try {
                     com.example.data.CloudSaveSyncManager(application).syncOnLogin(user)
+                    loadSavedPreferences()
+                    val finalIdx = prefs.currentLevelIndex.coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
+                    val lvl = repo.getLevelData(finalIdx + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.getAllLevels()[finalIdx])
+                    _uiState.update {
+                        it.copy(
+                            currentLevelIndex = finalIdx,
+                            level = lvl,
+                            coins = prefs.coins,
+                            tokens = prefs.tokens,
+                            diamonds = prefs.diamonds,
+                            echoBreakers = prefs.echoBreakers,
+                            trophies = prefs.trophies,
+                            completedLevels = prefs.getCompletedLevels()
+                        )
+                    }
                 } catch (_: Exception) {}
             }
         } else {
@@ -324,12 +339,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun listenToLiveLeaderboard() {
         try {
-            val username = prefs.authenticatedUsername.ifBlank { "Guest" }
+            val username = prefs.authenticatedUsername
             liveLeaderboardListener?.remove()
             liveLeaderboardListener = firestoreRepo.listenToLeaderboard(username) { livePlayers ->
-                if (livePlayers.isNotEmpty()) {
-                    _uiState.update { it.copy(leaderboardPlayers = livePlayers) }
+                val filtered = livePlayers.filter {
+                    it.trophies > 0 && it.username.isNotBlank() &&
+                            !it.username.startsWith("Guest", ignoreCase = true) &&
+                            !it.username.startsWith("Misafir", ignoreCase = true)
                 }
+                _uiState.update { it.copy(leaderboardPlayers = filtered) }
             }
         } catch (e: Exception) {
             android.util.Log.w("EchoGameViewModel", "Live leaderboard listener warning: ${e.message}")
@@ -451,6 +469,27 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
     fun startPlayingLevel(levelIndex: Int? = null) {
         val targetIdx = (levelIndex ?: _uiState.value.currentLevelIndex).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
+        val isAuth = _uiState.value.isAuthenticated && _uiState.value.authenticatedUser.isNotBlank() &&
+                !_uiState.value.authenticatedUser.startsWith("Guest", ignoreCase = true) &&
+                !_uiState.value.authenticatedUser.startsWith("Misafir", ignoreCase = true)
+
+        if (!isAuth && targetIdx >= 3) {
+            // Guest players can only play up to Level 3 (levels 1, 2, 3)
+            showToast(
+                if (prefs.languageCode == "tr")
+                    "3. bölümden sonra devam etmek için lütfen kayıt olun veya giriş yapın."
+                else
+                    "Please register or log in to play beyond Level 3."
+            )
+            _uiState.update {
+                it.copy(
+                    screenState = ScreenState.LOGIN,
+                    isVictoryCelebrationActive = false
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             loadAndStartLevel(targetIdx)
         }
@@ -792,6 +831,15 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun onLoginSuccess(username: String, rememberMe: Boolean) {
         viewModelScope.launch {
             HarmonicAudioEngine.startBgm()
+            // 1. Sync with Firebase Firestore FIRST so all cloud saved data is fetched from the user's account
+            val app = getApplication<android.app.Application>()
+            try {
+                com.example.data.CloudSaveSyncManager(app).syncOnLogin(username)
+            } catch (e: Exception) {
+                android.util.Log.w("EchoGameViewModel", "Cloud sync on login notice: ${e.message}")
+            }
+
+            // 2. Hydrate from restored account state (Room + Prefs)
             val user = authRepo.getUserAccount(username)
             val actualUsername = user?.username ?: username
             val userLevel = (user?.currentLevelIndex ?: prefs.currentLevelIndex).coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
@@ -820,10 +868,6 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
             prefs.levelStatsCsv = user?.levelStatsCsv ?: prefs.levelStatsCsv
             prefs.isDarkTheme = userDark
             prefs.setCompletedLevelsRaw(userCompleted.map { it.toString() }.toSet())
-
-            // Sync with Firebase Firestore
-            val app = getApplication<android.app.Application>()
-            com.example.data.CloudSaveSyncManager(app).syncOnLogin(actualUsername)
 
             val finalLevelIdx = prefs.currentLevelIndex.coerceIn(0, LevelCatalog.TOTAL_LEVELS - 1)
             val levelData = repo.getLevelData(finalLevelIdx + 1) ?: LevelCatalog.entityToLevelData(LevelCatalog.getAllLevels()[finalLevelIdx])
@@ -1372,12 +1416,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         val speedBonus = if (durationSeconds <= 12f) 5 else 0
         val isDoubleBoosterActive = System.currentTimeMillis() < prefs.doubleTrophiesExpiresAt
 
-        // User gameplay rule: replaying completed level awards NO trophies, EXCEPT Level 150 (which can be replayed repeatedly for trophies)
-        val isLevel150 = state.level.levelId == 150 || state.currentLevelIndex == 149
+        // User gameplay rule: replaying completed levels awards NO trophies on ANY level
         val isLevelAlreadyCompleted = prefs.getCompletedLevels().contains(state.level.levelId) ||
                 prefs.getCompletedLevels().contains(state.currentLevelIndex) ||
                 prefs.getCompletedLevels().contains(state.level.levelId - 1)
-        val canEarnTrophiesThisRun = !isLevelAlreadyCompleted || isLevel150
+        val canEarnTrophiesThisRun = !isLevelAlreadyCompleted
 
         val rawTrophies = if (canEarnTrophiesThisRun) {
             baseTrophies + zeroEchoBonus + comboBonus + speedBonus
@@ -1388,8 +1431,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
 
         if (totalLevelTrophies > 0) {
             prefs.addTrophies(totalLevelTrophies)
-        } else if (isLevelAlreadyCompleted && !isLevel150) {
-            showToast("Level previously completed. Trophies are awarded on first clear only!")
+        } else if (isLevelAlreadyCompleted) {
+            showToast(
+                if (prefs.languageCode == "tr")
+                    "Bu bölüm daha önce tamamlandı. Kupalar yalnızca ilk tamamlamada kazanılır!"
+                else
+                    "Level previously completed. Trophies are awarded on first clear only!"
+            )
         }
         prefs.addPlayTime(durationSeconds.toLong())
 
@@ -2193,17 +2241,21 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
         showToast("Reward not granted because ad was not completed.")
     }
 
-    fun shouldShowInterstitialOnNextLevel(): Boolean {
+    fun shouldShowInterstitialAd(): Boolean {
         val currentLevelId = _uiState.value.level.levelId
+        prefs.recordGameTransition()
         return prefs.shouldShowInterstitial(currentLevelId)
+    }
+
+    fun shouldShowInterstitialOnNextLevel(): Boolean {
+        return shouldShowInterstitialAd()
     }
 
     fun onInterstitialAdShownOrSkipped(wasShown: Boolean) {
         val currentLevelId = _uiState.value.level.levelId
         if (wasShown) {
             prefs.onInterstitialDisplayed(currentLevelId)
-        } else {
-            prefs.incrementLevelsSinceInterstitial()
+            com.example.ads.YandexAdsManager.recordInterstitialShown()
         }
     }
 
@@ -2284,7 +2336,7 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     fun toggleTestAds(enabled: Boolean) {
         prefs.isTestAdsEnabled = enabled
         _uiState.update { it.copy(testAdsEnabled = enabled) }
-        showToast("Yandex Canlı Reklamlar Aktif (RM-20228995-*)")
+        showToast("Yandex Canlı Reklamlar Aktif (R-M-20228995-*)")
     }
 
     fun checkAdBlocker(autoStartPending: Boolean = true) {
@@ -3091,19 +3143,27 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
     private fun loadLeaderboardData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLeaderboardRefreshing = true) }
-            val username = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername }
+            val rawUsername = _uiState.value.authenticatedUser.ifBlank { prefs.authenticatedUsername }
+            val isRegisteredUser = _uiState.value.isAuthenticated && rawUsername.isNotBlank() &&
+                    !rawUsername.startsWith("Guest", ignoreCase = true) &&
+                    !rawUsername.startsWith("Misafir", ignoreCase = true)
+            val username = if (isRegisteredUser) rawUsername else ""
 
-            // Sync trophies to cloud if any
-            if (username.isNotBlank() && prefs.trophies > 0) {
+            // Sync trophies to cloud if registered user
+            if (isRegisteredUser && prefs.trophies > 0) {
                 lootLocker.submitScore(username, prefs.trophies)
             }
 
             // Fetch live scores from Firebase Firestore Leaderboard
             val firestoreResult = firestoreRepo.getLeaderboard(currentUsername = username, forceRefresh = true)
             val finalPlayers = if (firestoreResult.isSuccess && !firestoreResult.getOrNull().isNullOrEmpty()) {
-                val list = firestoreResult.getOrNull()!!.filter { it.trophies > 0 }
-                val hasMe = list.any { it.isCurrentUser }
-                if (!hasMe && prefs.trophies > 0) {
+                val list = firestoreResult.getOrNull()!!.filter {
+                    it.trophies > 0 && it.username.isNotBlank() &&
+                            !it.username.startsWith("Guest", ignoreCase = true) &&
+                            !it.username.startsWith("Misafir", ignoreCase = true)
+                }
+                val hasMe = isRegisteredUser && list.any { it.isCurrentUser }
+                if (!hasMe && isRegisteredUser && prefs.trophies > 0) {
                     val me = com.example.model.LeaderboardPlayer(
                         id = "current_user",
                         rank = list.size + 1,
@@ -3126,9 +3186,13 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                 // Secondary fallback: Try LootLocker or curated local players if Firestore query is empty
                 val remoteResult = lootLocker.fetchLeaderboard(count = 50, currentUsername = username)
                 if (remoteResult.isSuccess && !remoteResult.getOrNull().isNullOrEmpty()) {
-                    val remoteList = remoteResult.getOrNull()!!.filter { it.trophies > 0 }
-                    val hasMe = remoteList.any { it.isCurrentUser }
-                    if (!hasMe && prefs.trophies > 0) {
+                    val remoteList = remoteResult.getOrNull()!!.filter {
+                        it.trophies > 0 && it.username.isNotBlank() &&
+                                !it.username.startsWith("Guest", ignoreCase = true) &&
+                                !it.username.startsWith("Misafir", ignoreCase = true)
+                    }
+                    val hasMe = isRegisteredUser && remoteList.any { it.isCurrentUser }
+                    if (!hasMe && isRegisteredUser && prefs.trophies > 0) {
                         val me = com.example.model.LeaderboardPlayer(
                             id = "current_user",
                             rank = remoteList.size + 1,
@@ -3148,7 +3212,11 @@ class EchoGameViewModel(application: Application) : AndroidViewModel(application
                         remoteList.sortedByDescending { it.trophies }.mapIndexed { idx, p -> p.copy(rank = idx + 1) }
                     }
                 } else {
-                    authRepo.getLeaderboardPlayers()
+                    authRepo.getLeaderboardPlayers().filter {
+                        it.trophies > 0 && it.username.isNotBlank() &&
+                                !it.username.startsWith("Guest", ignoreCase = true) &&
+                                !it.username.startsWith("Misafir", ignoreCase = true)
+                    }
                 }
             }
 

@@ -349,9 +349,9 @@ private fun Day7SpecialCard(day: DailyLoginDay) {
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (day.isClaimed) Color(0xFF334155)
-                            else Brush.verticalGradient(listOf(Color(0xFFFFD54F), Color(0xFFFF8F00)))
+                        .then(
+                            if (day.isClaimed) Modifier.background(Color(0xFF334155))
+                            else Modifier.background(Brush.verticalGradient(listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))))
                         ),
                     contentAlignment = Alignment.Center
                 ) {

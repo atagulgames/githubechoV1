@@ -308,35 +308,42 @@ class FirestoreUserRepository(
                 .await()
 
             val avatarEmojis = listOf("⚡", "🌌", "🔮", "💠", "🌟", "✨", "🎯", "🌀", "🪐", "🚀", "🔥")
-            val players = querySnapshot.documents.mapIndexed { index, doc ->
-                val username = doc.getString("username") ?: "Player_${doc.id.take(4)}"
-                val trophies = (doc.getLong("trophies") ?: 0L).toInt()
-                val totalEchoes = (doc.getLong("totalEchoes") ?: 0L).toInt()
-                val totalPlayTimeSec = doc.getLong("totalPlayTimeSec") ?: 0L
-                val maxCombo = (doc.getLong("maxCombo") ?: 0L).toInt()
-                val completedCount = (doc.get("completedLevels") as? List<*>)?.size ?: 0
+            val players = querySnapshot.documents
+                .mapNotNull { doc ->
+                    val username = doc.getString("username") ?: ""
+                    if (username.isBlank() || username.startsWith("Guest", ignoreCase = true) || username.startsWith("Misafir", ignoreCase = true)) {
+                        return@mapNotNull null
+                    }
+                    val trophies = (doc.getLong("trophies") ?: 0L).toInt()
+                    if (trophies <= 0) return@mapNotNull null
+                    val totalEchoes = (doc.getLong("totalEchoes") ?: 0L).toInt()
+                    val totalPlayTimeSec = doc.getLong("totalPlayTimeSec") ?: 0L
+                    val maxCombo = (doc.getLong("maxCombo") ?: 0L).toInt()
+                    val completedCount = (doc.get("completedLevels") as? List<*>)?.size ?: 0
 
-                val title = when {
-                    trophies >= 1000 -> "Grand Master"
-                    trophies >= 500 -> "Echo Master"
-                    trophies >= 200 -> "Harmonic Adept"
-                    else -> "Seeker"
+                    val title = when {
+                        trophies >= 1000 -> "Grand Master"
+                        trophies >= 500 -> "Echo Master"
+                        trophies >= 200 -> "Harmonic Adept"
+                        else -> "Seeker"
+                    }
+
+                    LeaderboardPlayer(
+                        id = doc.id,
+                        rank = 1,
+                        username = username,
+                        avatarEmoji = avatarEmojis[Math.abs(doc.id.hashCode()) % avatarEmojis.size],
+                        title = title,
+                        trophies = trophies,
+                        totalEchoes = totalEchoes,
+                        totalPlayTimeSec = totalPlayTimeSec,
+                        maxCombo = maxCombo,
+                        completedLevelsCount = completedCount,
+                        isCurrentUser = username.equals(currentUsername, ignoreCase = true)
+                    )
                 }
-
-                LeaderboardPlayer(
-                    id = doc.id,
-                    rank = index + 1,
-                    username = username,
-                    avatarEmoji = avatarEmojis[index % avatarEmojis.size],
-                    title = title,
-                    trophies = trophies,
-                    totalEchoes = totalEchoes,
-                    totalPlayTimeSec = totalPlayTimeSec,
-                    maxCombo = maxCombo,
-                    completedLevelsCount = completedCount,
-                    isCurrentUser = username.equals(currentUsername, ignoreCase = true)
-                )
-            }
+                .sortedByDescending { it.trophies }
+                .mapIndexed { index, player -> player.copy(rank = index + 1) }
 
             cachedLeaderboard = players
             cachedLeaderboardTime = now
@@ -364,35 +371,43 @@ class FirestoreUserRepository(
                     if (error != null || snapshot == null) {
                         return@addSnapshotListener
                     }
-                    val players = snapshot.documents.mapIndexed { index, doc ->
-                        val username = doc.getString("username") ?: "Player_${doc.id.take(4)}"
-                        val photoUrl = doc.getString("photoUrl") ?: ""
-                        val trophies = (doc.getLong("trophies") ?: 0L).toInt()
-                        val totalEchoes = (doc.getLong("totalEchoes") ?: 0L).toInt()
-                        val totalPlayTimeSec = doc.getLong("totalPlayTimeSec") ?: 0L
-                        val maxCombo = (doc.getLong("maxCombo") ?: 0L).toInt()
-                        val completedCount = (doc.get("completedLevels") as? List<*>)?.size ?: 0
-                        val title = when {
-                            trophies >= 1000 -> "Grand Master"
-                            trophies >= 500 -> "Echo Master"
-                            trophies >= 200 -> "Harmonic Adept"
-                            else -> "Seeker"
+                    val players = snapshot.documents
+                        .mapNotNull { doc ->
+                            val username = doc.getString("username") ?: ""
+                            if (username.isBlank() || username.startsWith("Guest", ignoreCase = true) || username.startsWith("Misafir", ignoreCase = true)) {
+                                return@mapNotNull null
+                            }
+                            val photoUrl = doc.getString("photoUrl") ?: ""
+                            val trophies = (doc.getLong("trophies") ?: 0L).toInt()
+                            if (trophies <= 0) return@mapNotNull null
+                            val totalEchoes = (doc.getLong("totalEchoes") ?: 0L).toInt()
+                            val totalPlayTimeSec = doc.getLong("totalPlayTimeSec") ?: 0L
+                            val maxCombo = (doc.getLong("maxCombo") ?: 0L).toInt()
+                            val completedCount = (doc.get("completedLevels") as? List<*>)?.size ?: 0
+                            val title = when {
+                                trophies >= 1000 -> "Grand Master"
+                                trophies >= 500 -> "Echo Master"
+                                trophies >= 200 -> "Harmonic Adept"
+                                else -> "Seeker"
+                            }
+                            LeaderboardPlayer(
+                                id = doc.id,
+                                rank = 1,
+                                username = username,
+                                avatarEmoji = avatarEmojis[Math.abs(doc.id.hashCode()) % avatarEmojis.size],
+                                avatarUri = photoUrl,
+                                title = title,
+                                trophies = trophies,
+                                totalEchoes = totalEchoes,
+                                totalPlayTimeSec = totalPlayTimeSec,
+                                maxCombo = maxCombo,
+                                completedLevelsCount = completedCount,
+                                isCurrentUser = username.equals(currentUsername, ignoreCase = true)
+                            )
                         }
-                        LeaderboardPlayer(
-                            id = doc.id,
-                            rank = index + 1,
-                            username = username,
-                            avatarEmoji = avatarEmojis[index % avatarEmojis.size],
-                            avatarUri = photoUrl,
-                            title = title,
-                            trophies = trophies,
-                            totalEchoes = totalEchoes,
-                            totalPlayTimeSec = totalPlayTimeSec,
-                            maxCombo = maxCombo,
-                            completedLevelsCount = completedCount,
-                            isCurrentUser = username.equals(currentUsername, ignoreCase = true)
-                        )
-                    }
+                        .sortedByDescending { it.trophies }
+                        .mapIndexed { index, player -> player.copy(rank = index + 1) }
+
                     cachedLeaderboard = players
                     onUpdate(players)
                 }

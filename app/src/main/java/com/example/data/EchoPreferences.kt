@@ -191,8 +191,16 @@ class EchoPreferences(context: Context) {
         get() = prefs.getInt(KEY_LEVELS_SINCE_LAST_AD, 0)
         set(value) = prefs.edit().putInt(KEY_LEVELS_SINCE_LAST_AD, value).apply()
 
+    var totalGameTransitions: Int
+        get() = prefs.getInt("echo_total_game_transitions", 0)
+        set(value) = prefs.edit().putInt("echo_total_game_transitions", value).apply()
+
+    var lastInterstitialTimeMs: Long
+        get() = prefs.getLong("echo_last_interstitial_time_ms", 0L)
+        set(value) = prefs.edit().putLong("echo_last_interstitial_time_ms", value).apply()
+
     var nextInterstitialThreshold: Int
-        get() = prefs.getInt(KEY_NEXT_INTERSTITIAL_THRESHOLD, 2)
+        get() = prefs.getInt(KEY_NEXT_INTERSTITIAL_THRESHOLD, 4)
         set(value) = prefs.edit().putInt(KEY_NEXT_INTERSTITIAL_THRESHOLD, value).apply()
 
     var trophies: Int
@@ -735,12 +743,38 @@ class EchoPreferences(context: Context) {
         return getUnlockedThemes().contains(themeName)
     }
 
+    fun recordGameTransition(): Int {
+        val total = totalGameTransitions + 1
+        totalGameTransitions = total
+        levelsSinceLastInterstitial += 1
+        return total
+    }
+
+    /**
+     * User Ad Pacing Rules:
+     * 1. No interstitial ads during initial app launch, and strictly no ads for the first 3 levels/transitions.
+     * 2. After level 3, show an interstitial ad every 2 levels (her 2 bölümde bir).
+     * 3. 60-second minimum cooldown to ensure user comfort.
+     */
     fun shouldShowInterstitial(levelId: Int): Boolean {
-        return true // Mandatory live ads on every level transition
+        // First 3 levels and first 3 transitions are strictly exempt
+        if (levelId <= 3 || totalGameTransitions <= 3) {
+            return false
+        }
+
+        // Minimum cooldown between ads
+        val now = System.currentTimeMillis()
+        if (lastInterstitialTimeMs > 0L && (now - lastInterstitialTimeMs < 60_000L)) {
+            return false
+        }
+
+        // Every 2 levels after level 3
+        return levelsSinceLastInterstitial >= 2
     }
 
     fun onInterstitialDisplayed(levelId: Int) {
         levelsSinceLastInterstitial = 0
+        lastInterstitialTimeMs = System.currentTimeMillis()
     }
 
     fun incrementLevelsSinceInterstitial() {

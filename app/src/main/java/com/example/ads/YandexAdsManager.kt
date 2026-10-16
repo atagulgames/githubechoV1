@@ -38,10 +38,10 @@ import com.yandex.mobile.ads.rewarded.RewardedAdLoader
 object YandexAdsManager {
     private const val TAG = "YandexAdsManager"
 
-    // Raw Ad Unit IDs configured in user's Yandex Partner interface
-    const val BANNER_AD_UNIT_ID = "RM-20228995-1"
-    const val REWARDED_AD_UNIT_ID = "RM-20228995-2"
-    const val INTERSTITIAL_AD_UNIT_ID = "RM-20228995-3"
+    // Official Yandex Partner Ad Unit IDs (R-M-20228995-*)
+    const val BANNER_AD_UNIT_ID = "R-M-20228995-1"
+    const val REWARDED_AD_UNIT_ID = "R-M-20228995-2"
+    const val INTERSTITIAL_AD_UNIT_ID = "R-M-20228995-3"
 
     // Official Yandex Demo IDs for guaranteed fill during testing/moderation
     const val DEMO_BANNER_ID = "demo-banner-yandex"
@@ -59,20 +59,26 @@ object YandexAdsManager {
 
     private var isInterstitialLoading = false
     private var isRewardedLoading = false
+    private var lastInterstitialShownTime = 0L
+
+    fun recordInterstitialShown() {
+        lastInterstitialShownTime = System.currentTimeMillis()
+    }
 
     /**
-     * Normalizes "RM-XXXX-Y" to standard Yandex Partner format "R-M-XXXX-Y".
+     * Normalizes "RM-XXXX-Y" or "R-M-XXXX-Y" to standard Yandex Partner format "R-M-XXXX-Y".
      */
     fun normalizeAdUnitId(rawId: String): String {
-        return if (rawId.startsWith("RM-", ignoreCase = true)) {
-            "R-" + rawId.substring(1)
-        } else {
-            rawId
+        val trimmed = rawId.trim()
+        return when {
+            trimmed.startsWith("RM-", ignoreCase = true) -> "R-M-" + trimmed.substring(3)
+            trimmed.startsWith("R-M-", ignoreCase = true) -> trimmed
+            else -> trimmed
         }
     }
 
     /**
-     * Initializes Yandex Mobile Ads SDK.
+     * Initializes Yandex Mobile Ads SDK with full diagnostic logging and user consent.
      */
     fun initialize(context: Context, onInitialized: (() -> Unit)? = null) {
         if (isInitialized) {
@@ -82,7 +88,11 @@ object YandexAdsManager {
         }
 
         try {
-            Log.d(TAG, "Initializing Yandex Mobile Ads SDK...")
+            Log.d(TAG, "Initializing Yandex Mobile Ads SDK (Banner: $BANNER_AD_UNIT_ID)...")
+            // Enable diagnostic logging to logcat to track ad load and fill states
+            MobileAds.enableLogging(true)
+            MobileAds.setUserConsent(true)
+            MobileAds.setLocationConsent(true)
             MobileAds.initialize(context) {
                 isInitialized = true
                 Log.d(TAG, "Yandex Mobile Ads SDK initialized successfully")
